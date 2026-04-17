@@ -1,0 +1,142 @@
+fluidVersion: "0.7.2"
+kind: DataProduct
+id: bronze.telco.subscriber_support_posture_v1
+name: Telco Subscriber Support Posture
+description: Snowflake contract over staged TM Forum SID-inspired telco seed data for a live FLUID demo path.
+domain: telco
+
+metadata:
+  layer: Bronze
+  owner:
+    team: telco-data-platform
+    email: data-platform@example.com
+
+builds:
+  - id: build_subscriber_support_posture
+    description: Materialize a demo-friendly support posture table from staged telco entities.
+    pattern: embedded-logic
+    engine: sql
+    properties:
+      sql: |
+        CREATE SCHEMA IF NOT EXISTS "{{ env.SNOWFLAKE_DATABASE }}"."{{ env.SNOWFLAKE_FLUID_SCHEMA }}";
+
+        CREATE OR REPLACE TABLE "{{ env.SNOWFLAKE_DATABASE }}"."{{ env.SNOWFLAKE_FLUID_SCHEMA }}"."TELCO_SUBSCRIBER_SUPPORT_POSTURE" AS
+        WITH usage_30d AS (
+          SELECT
+            service_id,
+            COUNT(*) AS usage_events_30d,
+            ROUND(SUM(CASE WHEN usage_type = 'data_mb' THEN quantity ELSE 0 END), 2) AS data_mb_30d
+          FROM "{{ env.SNOWFLAKE_DATABASE }}"."{{ env.SNOWFLAKE_STAGE_SCHEMA }}"."USAGE_EVENT"
+          WHERE event_timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP())
+          GROUP BY service_id
+        ),
+        interactions_30d AS (
+          SELECT
+            account_id,
+            COUNT(*) AS interaction_count_30d,
+            MAX(interaction_timestamp) AS latest_interaction_at
+          FROM "{{ env.SNOWFLAKE_DATABASE }}"."{{ env.SNOWFLAKE_STAGE_SCHEMA }}"."CUSTOMER_INTERACTION"
+          WHERE interaction_timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP())
+          GROUP BY account_id
+        ),
+        open_tickets AS (
+          SELECT
+            service_id,
+            COUNT(*) AS open_ticket_count
+          FROM "{{ env.SNOWFLAKE_DATABASE }}"."{{ env.SNOWFLAKE_STAGE_SCHEMA }}"."TROUBLE_TICKET"
+          WHERE status <> 'resolved'
+          GROUP BY service_id
+        ),
+        latest_lifecycle AS (
+          SELECT
+            service_id,
+            MAX(event_timestamp) AS latest_lifecycle_event_at
+          FROM "{{ env.SNOWFLAKE_DATABASE }}"."{{ env.SNOWFLAKE_STAGE_SCHEMA }}"."SERVICE_LIFECYCLE_EVENT"
+          GROUP BY service_id
+        )
+        SELECT
+          s.service_id,
+          s.account_id,
+          s.service_type,
+          s.status AS service_status,
+          sub.subscription_id,
+          po.name AS product_offering_name,
+          COALESCE(u.usage_events_30d, 0) AS usage_events_30d,
+          COALESCE(u.data_mb_30d, 0) AS data_mb_30d,
+          COALESCE(i.interaction_count_30d, 0) AS interaction_count_30d,
+          COALESCE(t.open_ticket_count, 0) AS open_ticket_count,
+          i.latest_interaction_at,
+          l.latest_lifecycle_event_at
+        FROM "{{ env.SNOWFLAKE_DATABASE }}"."{{ env.SNOWFLAKE_STAGE_SCHEMA }}"."SERVICE" s
+        LEFT JOIN "{{ env.SNOWFLAKE_DATABASE }}"."{{ env.SNOWFLAKE_STAGE_SCHEMA }}"."SUBSCRIPTION" sub
+          ON s.service_id = sub.service_id
+          AND sub.status <> 'cancelled'
+        LEFT JOIN "{{ env.SNOWFLAKE_DATABASE }}"."{{ env.SNOWFLAKE_STAGE_SCHEMA }}"."PRODUCT_OFFERING" po
+          ON sub.product_offering_id = po.product_offering_id
+        LEFT JOIN usage_30d u
+          ON s.service_id = u.service_id
+        LEFT JOIN interactions_30d i
+          ON s.account_id = i.account_id
+        LEFT JOIN open_tickets t
+          ON s.service_id = t.service_id
+        LEFT JOIN latest_lifecycle l
+          ON s.service_id = l.service_id
+        WHERE s.status <> 'terminated';
+    execution:
+      trigger:
+        type: manual
+      runtime:
+        platform: snowflake
+        resources:
+          warehouse: "{{ env.SNOWFLAKE_WAREHOUSE }}"
+          database: "{{ env.SNOWFLAKE_DATABASE }}"
+          schema: "{{ env.SNOWFLAKE_FLUID_SCHEMA }}"
+          role: "{{ env.SNOWFLAKE_ROLE }}"
+
+exposes:
+  - exposeId: subscriber_support_posture
+    kind: table
+    version: "1.0.0"
+    title: Telco Subscriber Support Posture
+    binding:
+      platform: snowflake
+      format: snowflake_table
+      location:
+        account: "{{ env.SNOWFLAKE_ACCOUNT }}"
+        database: "{{ env.SNOWFLAKE_DATABASE }}"
+        schema: "{{ env.SNOWFLAKE_FLUID_SCHEMA }}"
+        table: TELCO_SUBSCRIBER_SUPPORT_POSTURE
+    contract:
+      schema:
+        - name: SERVICE_ID
+          type: STRING
+          required: true
+        - name: ACCOUNT_ID
+          type: STRING
+          required: true
+        - name: SERVICE_TYPE
+          type: STRING
+          required: true
+        - name: SERVICE_STATUS
+          type: STRING
+          required: true
+        - name: SUBSCRIPTION_ID
+          type: STRING
+        - name: PRODUCT_OFFERING_NAME
+          type: STRING
+        - name: USAGE_EVENTS_30D
+          type: INTEGER
+          required: true
+        - name: DATA_MB_30D
+          type: NUMBER
+          required: true
+        - name: INTERACTION_COUNT_30D
+          type: INTEGER
+          required: true
+        - name: OPEN_TICKET_COUNT
+          type: INTEGER
+          required: true
+        - name: LATEST_INTERACTION_AT
+          type: TIMESTAMP
+        - name: LATEST_LIFECYCLE_EVENT_AT
+          type: TIMESTAMP

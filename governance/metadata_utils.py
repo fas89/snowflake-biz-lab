@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 from config.snowflake_utils import fq_name, get_env, quote_ident, sql_string
-from seed.telco_seed_data import TABLE_SPECS
+from seed.telco_seed_data import TABLE_SPECS, TableSpec
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST_PATH = REPO_ROOT / "governance" / "metadata.yml"
@@ -17,6 +18,7 @@ def load_manifest(path: Path = DEFAULT_MANIFEST_PATH) -> dict[str, Any]:
     manifest = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(manifest, dict):
         raise RuntimeError("Governance manifest must be a YAML mapping.")
+    manifest = complete_manifest(manifest)
     validate_manifest(manifest)
     return manifest
 
@@ -72,6 +74,273 @@ def validate_manifest(manifest: dict[str, Any]) -> None:
                     raise RuntimeError(
                         f"Column '{table_name}.{column_name}' references undefined tag '{tag_name}'."
                     )
+
+
+def infer_record_grain(table_name: str) -> str:
+    if table_name in {"usage_event", "app_event", "customer_interaction", "service_lifecycle_event"}:
+        return "event_level"
+    if table_name in {"invoice", "invoice_charge", "payment", "agreement", "service_order", "trouble_ticket"}:
+        return "document_level"
+    if table_name in {"contact_medium", "party_role", "subscription", "product_inventory", "resource", "sim_card"}:
+        return "assignment_level"
+    return "entity_level"
+
+
+def infer_primary_key_column(table_name: str, spec: TableSpec) -> str:
+    for column in spec.columns:
+        if column.name == f"{table_name}_id":
+            return column.name
+    for column in spec.columns:
+        if column.name.endswith("_id"):
+            return column.name
+    return spec.columns[0].name
+
+
+def infer_semantic_type(column_name: str) -> str:
+    if column_name == "address_id":
+        return "address_identifier"
+    if column_name in {"street_name", "city", "region_code", "postal_code", "country_code"}:
+        return "address_attribute"
+    if column_name == "contact_medium_id":
+        return "contact_identifier"
+    if column_name == "medium_value":
+        return "contact_value"
+    if column_name == "party_role_id":
+        return "role_identifier"
+    if column_name == "role_type":
+        return "role_type"
+    if column_name in {"product_offering_id", "product_id"}:
+        return "product_identifier"
+    if column_name == "resource_id":
+        return "resource_identifier"
+    if column_name in {"resource_type", "resource_name"}:
+        return "resource_attribute"
+    if column_name == "ticket_id":
+        return "ticket_identifier"
+    if column_name == "charge_id":
+        return "charge_identifier"
+    if column_name in {"charge_description"}:
+        return "narrative_text"
+    if column_name in {"severity"}:
+        return "priority_code"
+    if column_name in {"party_id", "individual_id"}:
+        return "party_identifier"
+    if column_name == "account_id":
+        return "account_identifier"
+    if column_name == "account_number":
+        return "account_number"
+    if column_name == "date_of_birth":
+        return "birth_date"
+    if column_name == "agreement_id":
+        return "contract_identifier"
+    if column_name in {"created_at", "assigned_at", "activated_at", "registered_at"}:
+        return "created_timestamp"
+    if column_name in {
+        "invoice_date",
+        "due_date",
+        "payment_date",
+        "signed_date",
+        "effective_date",
+        "termination_date",
+        "start_date",
+        "end_date",
+        "renewal_date",
+        "valid_from",
+        "valid_to",
+        "charge_date",
+    }:
+        return "date_value"
+    if column_name in {"price_chf", "total_amount_chf", "amount_chf"}:
+        return "currency_amount"
+    if column_name == "device_id":
+        return "device_identifier"
+    if column_name == "email":
+        return "email_handle"
+    if column_name in {"usage_id", "app_event_id", "interaction_id", "lifecycle_event_id"}:
+        return "event_identifier"
+    if column_name in {
+        "updated_at",
+        "terminated_at",
+        "event_timestamp",
+        "interaction_timestamp",
+        "opened_at",
+        "resolved_at",
+        "order_date",
+        "fulfillment_date",
+    }:
+        return "event_timestamp"
+    if column_name == "invoice_id":
+        return "invoice_identifier"
+    if column_name == "order_id":
+        return "order_identifier"
+    if column_name == "payment_id":
+        return "payment_identifier"
+    if column_name in {"first_name", "last_name"}:
+        return "person_name"
+    if column_name == "msisdn":
+        return "phone_number"
+    if column_name in {"name", "model", "manufacturer", "event_reason"}:
+        return "product_attribute"
+    if column_name == "service_id":
+        return "service_identifier"
+    if column_name == "sim_id":
+        return "sim_identifier"
+    if column_name in {
+        "status",
+        "rating_status",
+        "resource_status",
+    }:
+        return "status_code"
+    if column_name in {"quantity", "session_minutes", "data_limit_gb", "voice_limit_min", "preference_rank"}:
+        return "usage_measure"
+    return "category_code"
+
+
+def infer_sensitivity(column_name: str) -> str:
+    if column_name in {
+        "first_name",
+        "last_name",
+        "email",
+        "date_of_birth",
+        "medium_value",
+        "street_name",
+        "city",
+        "region_code",
+        "postal_code",
+        "country_code",
+        "msisdn",
+    }:
+        return "restricted_contact"
+    if column_name.endswith("_id") or column_name in {
+        "account_number",
+        "imei",
+        "iccid",
+        "invoice_number",
+    }:
+        return "restricted_identifier"
+    if column_name in {"name", "category", "data_limit_gb", "voice_limit_min", "price_chf"}:
+        return "public_synthetic"
+    return "internal_operational"
+
+
+def infer_identifier_role(column_name: str, primary_key: str) -> str:
+    if column_name == primary_key:
+        return "primary_key"
+    if column_name in {"account_number", "email", "msisdn", "iccid", "imei", "invoice_number"}:
+        return "natural_key"
+    if column_name.endswith("_id"):
+        return "foreign_key"
+    return "descriptive"
+
+
+def humanize_identifier(value: str) -> str:
+    return value.replace("_", " ")
+
+
+def default_column_comment(table_name: str, column_name: str, primary_key: str) -> str:
+    if column_name == primary_key:
+        return f"Stable synthetic identifier for the {humanize_identifier(table_name)} record."
+    if column_name.endswith("_id"):
+        return f"Reference to the related {humanize_identifier(column_name[:-3])} record."
+    if column_name in {"status", "rating_status", "resource_status"}:
+        return f"Lifecycle or operational status for the {humanize_identifier(table_name)} record."
+    if column_name in {"created_at", "assigned_at", "activated_at", "registered_at"}:
+        return f"Timestamp when the {humanize_identifier(table_name)} record was created or assigned."
+    if column_name in {"updated_at", "terminated_at", "event_timestamp", "interaction_timestamp", "opened_at", "resolved_at"}:
+        return f"Timestamp describing when the {humanize_identifier(column_name)} occurred."
+    if column_name.endswith("_date") or column_name in {"valid_from", "valid_to"}:
+        return f"Date value for {humanize_identifier(column_name)} on the {humanize_identifier(table_name)} record."
+    if column_name in {"first_name", "last_name"}:
+        return f"Synthetic {humanize_identifier(column_name)} for the customer contact."
+    if column_name == "email":
+        return "Synthetic email address used for contact and governance demonstrations."
+    if column_name == "medium_value":
+        return "Synthetic contact detail captured for the selected contact medium."
+    if column_name in {"street_name", "city", "region_code", "postal_code", "country_code"}:
+        return f"Synthetic address attribute for the {humanize_identifier(table_name)} record."
+    if column_name in {"name", "model", "manufacturer", "charge_description", "resource_name", "event_reason"}:
+        return f"Descriptive attribute for {humanize_identifier(table_name)}."
+    if column_name in {"quantity", "session_minutes", "data_limit_gb", "voice_limit_min"}:
+        return f"Measured quantity captured in {humanize_identifier(column_name)}."
+    if column_name in {"price_chf", "total_amount_chf", "amount_chf"}:
+        return "Synthetic monetary value expressed in Swiss francs."
+    return f"Business attribute for {humanize_identifier(column_name)} on the {humanize_identifier(table_name)} record."
+
+
+def default_dmf_config(table_name: str, primary_key: str) -> dict[str, Any]:
+    pk_metric_name = primary_key.replace("_", "")
+    return {
+        "metrics": [
+            {
+                "name": "SNOWFLAKE.CORE.ROW_COUNT",
+                "arguments": [],
+                "expectations": [
+                    {
+                        "name": f"{table_name}_has_rows",
+                        "expression": "VALUE > 0",
+                    }
+                ],
+            },
+            {
+                "name": "SNOWFLAKE.CORE.NULL_COUNT",
+                "arguments": [primary_key],
+                "expectations": [
+                    {
+                        "name": f"{pk_metric_name}_not_null",
+                        "expression": "VALUE = 0",
+                    }
+                ],
+            },
+            {
+                "name": "SNOWFLAKE.CORE.DUPLICATE_COUNT",
+                "arguments": [primary_key],
+                "expectations": [
+                    {
+                        "name": f"{pk_metric_name}_unique",
+                        "expression": "VALUE = 0",
+                    }
+                ],
+            },
+        ]
+    }
+
+
+def complete_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
+    completed = deepcopy(manifest)
+    tag_definitions = completed.setdefault("tag_definitions", {})
+    tables_cfg = completed.setdefault("tables", {})
+
+    if "source_entity" in tag_definitions:
+        tag_definitions["source_entity"]["allowed_values"] = sorted(TABLE_SPECS)
+
+    for table_name, spec in TABLE_SPECS.items():
+        table_cfg = tables_cfg.setdefault(table_name, {})
+        table_cfg.setdefault("comment", spec.description)
+        table_cfg.setdefault(
+            "tags",
+            {
+                "source_entity": table_name,
+                "record_grain": infer_record_grain(table_name),
+            },
+        )
+
+        primary_key = infer_primary_key_column(table_name, spec)
+        if "dmf" not in table_cfg:
+            table_cfg["dmf"] = default_dmf_config(table_name, primary_key)
+
+        columns_cfg = table_cfg.setdefault("columns", {})
+        for column in spec.columns:
+            column_cfg = columns_cfg.setdefault(column.name, {})
+            column_cfg.setdefault(
+                "comment",
+                default_column_comment(table_name, column.name, primary_key),
+            )
+            tags = column_cfg.setdefault("tags", {})
+            tags.setdefault("semantic_type", infer_semantic_type(column.name))
+            tags.setdefault("sensitivity", infer_sensitivity(column.name))
+            tags.setdefault("identifier_role", infer_identifier_role(column.name, primary_key))
+
+    return completed
 
 
 def database_name() -> str:

@@ -38,6 +38,7 @@ x-airflow-common: &airflow-common
     DBT_PROFILES_DIR: /opt/project/config/dbt
   volumes:
     - ../../airflow/dags:/opt/airflow/dags
+    - ${FLUID_DEMO_GITLAB_WORKSPACE:-../../runtime/demo-workspace}/generated/airflow:/opt/airflow/dags/workspace
     - ../../airflow/plugins:/opt/airflow/plugins
     - ../../airflow/config:/opt/airflow/config
     - ../../dbt:/opt/project/dbt
