@@ -6,13 +6,15 @@ vars:
   COMPOSE: docker compose -f deploy/docker/docker-compose.yml --env-file .env
   CATALOGS_COMPOSE: docker compose -f deploy/docker/catalogs/docker-compose.catalogs.yml --env-file .env.catalogs
   DBT_RUNNER: '{{.COMPOSE}} exec -T dbt-runner'
+  FLUID_DEMO_VENV: .venv.fluid-demo
+  FLUID_DEV_VENV: .venv.fluid-dev
 
 tasks:
   up:
     desc: Start Postgres, Airflow, and dbt-runner
     cmds:
       - "{{.COMPOSE}} up -d --build postgres airflow-init airflow-webserver airflow-scheduler dbt-runner"
-      - echo "Airflow: http://localhost:${AIRFLOW_WEB_PORT:-8085}"
+      - 'echo "Airflow: http://localhost:${AIRFLOW_WEB_PORT:-8085}"'
 
   down:
     desc: Stop the core stack
@@ -25,6 +27,28 @@ tasks:
   logs:
     desc: Tail logs for a service, or all services when SVC is empty
     cmd: "{{.COMPOSE}} logs -f {{.SVC | default \"\"}}"
+
+  fluid:bootstrap:demo:
+    desc: Create the demo-release FLUID runtime from TestPyPI
+    cmds:
+      - python3 -m venv {{.FLUID_DEMO_VENV}}
+      - "{{.FLUID_DEMO_VENV}}/bin/pip install --upgrade pip"
+      - "{{.FLUID_DEMO_VENV}}/bin/pip install --index-url \"${FLUID_TESTPYPI_SIMPLE_URL:-https://test.pypi.org/simple/}\" --extra-index-url \"${FLUID_PYPI_FALLBACK_URL:-https://pypi.org/simple/}\" \"${FLUID_DEMO_PACKAGE_SPEC:-data-product-forge==0.7.10}\""
+
+  fluid:bootstrap:dev:
+    desc: Create the dev-source FLUID runtime from the sibling forge-cli checkout
+    cmds:
+      - python3 -m venv {{.FLUID_DEV_VENV}}
+      - "{{.FLUID_DEV_VENV}}/bin/pip install --upgrade pip"
+      - "{{.FLUID_DEV_VENV}}/bin/pip install -e \"${FLUID_DEV_SOURCE_REPO:-../forge-cli}\""
+
+  fluid:check:demo:
+    desc: Verify the pinned demo-release FLUID runtime and bundled contract schema support
+    cmd: "{{.FLUID_DEMO_VENV}}/bin/python fluid/scripts/check_demo_release.py --fluid {{.FLUID_DEMO_VENV}}/bin/fluid --expected-package-spec \"${FLUID_DEMO_PACKAGE_SPEC:-data-product-forge==0.7.10}\" --expected-schema-version \"${FLUID_DEFAULT_CONTRACT_SCHEMA_VERSION:-0.7.2}\""
+
+  fluid:check:dev:
+    desc: Verify the dev-source checkout is pointed at forge-cli main expectations
+    cmd: "{{.FLUID_DEV_VENV}}/bin/python fluid/scripts/check_dev_source.py --repo \"${FLUID_DEV_SOURCE_REPO:-../forge-cli}\" --expected-schema-version \"${FLUID_DEFAULT_CONTRACT_SCHEMA_VERSION:-0.7.2}\""
 
   dbt:parse:
     desc: Parse the dbt project

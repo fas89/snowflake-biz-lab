@@ -1,0 +1,73 @@
+fluidVersion: "0.7.2"
+kind: DataProduct
+id: bronze.telco.snowflake_smoke_072
+name: Snowflake Smoke Starter
+description: Minimal native-SQL Snowflake contract used for first-time FLUID proofs in the telco lab.
+domain: telco
+
+metadata:
+  layer: Bronze
+  owner:
+    team: telco-data-platform
+    email: data-platform@example.com
+
+builds:
+  - id: seed_smoke_table
+    description: Create and seed the smallest possible Snowflake table for the lab.
+    pattern: embedded-logic
+    engine: sql
+    properties:
+      sql: |
+        CREATE SCHEMA IF NOT EXISTS "{{ env.SNOWFLAKE_DATABASE }}"."{{ env.SNOWFLAKE_FLUID_SCHEMA }}";
+
+        CREATE OR REPLACE TABLE "{{ env.SNOWFLAKE_DATABASE }}"."{{ env.SNOWFLAKE_FLUID_SCHEMA }}"."TELCO_SMOKE_TABLE" (
+          "ID" NUMBER(38,0) NOT NULL,
+          "MESSAGE" VARCHAR,
+          "TRACK" VARCHAR,
+          "CREATED_AT" TIMESTAMP_NTZ
+        );
+
+        INSERT INTO "{{ env.SNOWFLAKE_DATABASE }}"."{{ env.SNOWFLAKE_FLUID_SCHEMA }}"."TELCO_SMOKE_TABLE"
+        SELECT
+          1,
+          'snowflake telco lab is ready',
+          'demo-release',
+          CURRENT_TIMESTAMP();
+    execution:
+      trigger:
+        type: manual
+      runtime:
+        platform: snowflake
+        resources:
+          warehouse: "{{ env.SNOWFLAKE_WAREHOUSE }}"
+          database: "{{ env.SNOWFLAKE_DATABASE }}"
+          schema: "{{ env.SNOWFLAKE_FLUID_SCHEMA }}"
+          role: "{{ env.SNOWFLAKE_ROLE }}"
+
+exposes:
+  - exposeId: telco_smoke_table
+    kind: table
+    version: "1.0.0"
+    title: Telco Smoke Table
+    binding:
+      platform: snowflake
+      format: snowflake_table
+      location:
+        account: "{{ env.SNOWFLAKE_ACCOUNT }}"
+        database: "{{ env.SNOWFLAKE_DATABASE }}"
+        schema: "{{ env.SNOWFLAKE_FLUID_SCHEMA }}"
+        table: TELCO_SMOKE_TABLE
+    contract:
+      schema:
+        - name: ID
+          type: INTEGER
+          required: true
+        - name: MESSAGE
+          type: STRING
+          required: true
+        - name: TRACK
+          type: STRING
+          required: true
+        - name: CREATED_AT
+          type: TIMESTAMP
+          required: true

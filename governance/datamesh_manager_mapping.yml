@@ -35,19 +35,28 @@ assets:
     include_tables:
       - party
       - individual
+      - geographic_address
+      - contact_medium
       - account
+      - party_role
       - product_offering
       - service
       - subscription
+      - product_inventory
+      - resource
       - device
       - sim_card
       - usage_event
       - app_event
+      - customer_interaction
+      - trouble_ticket
+      - service_lifecycle_event
       - invoice
+      - invoice_charge
       - payment
       - agreement
       - service_order
-    description: Full set of stage-load telco entities governed by this repo.
+    description: Full set of stage-load telco entities governed by this repo, including contact, support, inventory, and lifecycle history surfaces.
 
 supporting_artifacts:
   governance_manifest: governance/metadata.yml
@@ -61,4 +70,3 @@ publish_readiness:
     - Create an organization-scoped API key and place it in DMM_API_KEY.
     - Review the metadata manifest and table descriptions before first publish.
     - Confirm Snowflake object names and tags are present in Horizon.
-

@@ -1,0 +1,162 @@
+# Mac Greenfield Demo
+
+This is the primary target end-state demo.
+
+It starts with local apps on your Mac, seeds Snowflake staging, creates a GitLab-based FLUID workspace, and ends with standards export plus local DMM publish.
+
+## Standard Shell Variables
+
+```bash
+export LAB_REPO="/Users/A200004702/Documents/Open-Source Community/snowflake-biz-lab"
+export GREENFIELD_WORKSPACE="$HOME/gitlab/telco-silver-product-demo"
+export FLUID_SECRETS_FILE="$LAB_REPO/runtime/generated/fluid.local.env"
+```
+
+## Step 1: Bring Up The Local Platform
+
+```bash
+cd "$LAB_REPO"
+task up
+task jenkins:up
+task catalogs:up
+task ps
+```
+
+Checkpoint:
+
+- Airflow opens at [http://localhost:8085](http://localhost:8085)
+- Jenkins opens at [http://localhost:8081](http://localhost:8081)
+- Entropy / DMM opens at [http://localhost:8095](http://localhost:8095)
+
+## Step 2: Seed Snowflake Staging
+
+```bash
+cd "$LAB_REPO"
+task seed:generate
+task seed:load
+task seed:verify
+task metadata:apply
+task metadata:verify
+```
+
+Checkpoint:
+
+- the telco landing tables exist in `SNOWFLAKE_STAGE_SCHEMA`
+- Horizon metadata is applied before FLUID starts building the silver story
+
+## Step 3: Install `data-product-forge` In The GitLab Workspace
+
+```bash
+cd "$GREENFIELD_WORKSPACE"
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ data-product-forge==0.7.10
+fluid version
+fluid doctor
+```
+
+Checkpoint:
+
+- you have shown the install step live
+- the room sees the released CLI, not a hidden local checkout
+
+## Step 4: Start The FLUID Workspace
+
+```bash
+cd "$GREENFIELD_WORKSPACE"
+fluid init telco-silver-product --provider snowflake --yes
+cd telco-silver-product
+```
+
+Checkpoint:
+
+- you are now working in the GitLab path on your Mac
+- the demo has moved from platform prep into data-product authoring
+
+## Step 5: Load Runtime Secrets
+
+```bash
+set -a
+source "$FLUID_SECRETS_FILE"
+set +a
+```
+
+Checkpoint:
+
+- you can say clearly that secrets live outside the contract
+
+## Step 6: Forge The Silver-Layer Data Product
+
+Run:
+
+```bash
+fluid forge --provider snowflake --domain telco --target-dir .
+```
+
+Suggested spoken prompt for the AI step:
+
+See [Greenfield Forge Prompt](greenfield-forge-prompt.md).
+
+Checkpoint:
+
+- the story is now clearly about a silver aggregated telco product
+- you have shown AI-assisted contract authoring, not just a static file
+
+## Step 7: Generate Airflow And Jenkins
+
+```bash
+fluid generate schedule contract.fluid.yaml --scheduler airflow -o generated/airflow --overwrite
+fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
+```
+
+Checkpoint:
+
+- local Airflow can now watch the generated DAG directory through the workspace bridge
+- a `Jenkinsfile` exists in the workspace for the CI/CD part of the story
+
+## Step 8: Validate And Plan
+
+```bash
+fluid validate contract.fluid.yaml
+fluid plan contract.fluid.yaml --out runtime/plan.json --html
+```
+
+Checkpoint:
+
+- the plan JSON is saved in `runtime/plan.json`
+- the HTML view is saved in `runtime/plan.html`
+- this is the best moment to narrate what FLUID will do before you apply it
+
+## Step 9: Apply
+
+```bash
+fluid apply contract.fluid.yaml --yes --report runtime/apply_report.html
+```
+
+Checkpoint:
+
+- the data product deployment step has run
+- the apply report is saved in `runtime/apply_report.html`
+
+The desired follow-on Jenkins handoff is tracked in the [FLUID Gap Register](../../docs/fluid-gap-register.md).
+
+## Step 10: Export Standards And Publish To DMM
+
+```bash
+fluid generate standard contract.fluid.yaml --format opds -o runtime/exports/product.opds.json
+fluid generate standard contract.fluid.yaml --format odcs -o runtime/exports/product.odcs.yaml
+fluid generate standard contract.fluid.yaml --format odps -o runtime/exports/product.odps.yaml
+fluid dmm publish contract.fluid.yaml --with-contract --validate-generated-contracts
+```
+
+Checkpoint:
+
+- you end with standards artifacts plus marketplace publication
+- Entropy / DMM becomes the closing product-discovery story
+
+## Presenter Notes
+
+- Say out loud that the demo uses the released CLI from TestPyPI.
+- Say out loud that `fluidVersion` inside the contract is a separate compatibility layer.
+- Keep the [FLUID Gap Register](../../docs/fluid-gap-register.md) open so you can note any release gaps you want to fix later in `forge-cli`.

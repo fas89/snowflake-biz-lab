@@ -4,6 +4,8 @@
 .env.jenkins
 .pytest_cache/
 .venv/
+.venv.fluid-demo/
+.venv.fluid-dev/
 __pycache__/
 *.pyc
 
@@ -17,5 +19,16 @@ seed/output/manifest.json
 
 runtime/*
 !runtime/.gitkeep
+!runtime/generated/
+runtime/generated/*
+!runtime/generated/README.md
+!runtime/wheels/
+runtime/wheels/*
+!runtime/wheels/README.md
+
+fluid/generated/*
+!fluid/generated/README.md
+fluid/reports/*
+!fluid/reports/README.md
 
 jenkins_home/

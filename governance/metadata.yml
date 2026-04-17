@@ -37,20 +37,28 @@ tag_definitions:
   source_entity:
     comment: Source entity represented by the Snowflake table.
     allowed_values:
-      - party
-      - individual
       - account
-      - product_offering
-      - service
-      - subscription
-      - device
-      - sim_card
-      - usage_event
-      - app_event
-      - invoice
-      - payment
       - agreement
+      - app_event
+      - contact_medium
+      - device
+      - geographic_address
+      - individual
+      - invoice
+      - invoice_charge
+      - party
+      - party_role
+      - payment
+      - product_inventory
+      - product_offering
+      - resource
+      - service
+      - service_lifecycle_event
       - service_order
+      - sim_card
+      - subscription
+      - trouble_ticket
+      - usage_event
   record_grain:
     comment: Business grain represented by each row.
     allowed_values: [entity_level, assignment_level, event_level, document_level]
@@ -59,8 +67,13 @@ tag_definitions:
     allowed_values:
       - account_identifier
       - account_number
+      - address_attribute
+      - address_identifier
       - birth_date
       - category_code
+      - charge_identifier
+      - contact_identifier
+      - contact_value
       - contract_identifier
       - created_timestamp
       - currency_amount
@@ -70,16 +83,23 @@ tag_definitions:
       - event_identifier
       - event_timestamp
       - invoice_identifier
+      - narrative_text
       - order_identifier
       - party_identifier
       - payment_identifier
       - person_name
       - phone_number
+      - priority_code
       - product_attribute
       - product_identifier
+      - resource_attribute
+      - resource_identifier
+      - role_identifier
+      - role_type
       - service_identifier
       - sim_identifier
       - status_code
+      - ticket_identifier
       - usage_measure
   sensitivity:
     comment: Business-safe sensitivity label for a column.
@@ -774,3 +794,56 @@ tables:
         comment: Timestamp when fulfillment completed.
         tags: {semantic_type: event_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
 
+  geographic_address:
+    comment: Address inventory for party billing, installation, and service locations.
+    tags:
+      source_entity: geographic_address
+      record_grain: entity_level
+
+  contact_medium:
+    comment: Preferred contact channels and contact details for each party.
+    tags:
+      source_entity: contact_medium
+      record_grain: assignment_level
+
+  party_role:
+    comment: Party-to-account role assignments such as customer, billing contact, or technical contact.
+    tags:
+      source_entity: party_role
+      record_grain: assignment_level
+
+  product_inventory:
+    comment: Customer-owned product instances derived from commercial product offerings.
+    tags:
+      source_entity: product_inventory
+      record_grain: assignment_level
+
+  resource:
+    comment: Assigned technical resources that support provisioned services.
+    tags:
+      source_entity: resource
+      record_grain: assignment_level
+
+  customer_interaction:
+    comment: Sales and support interactions across assisted and digital channels.
+    tags:
+      source_entity: customer_interaction
+      record_grain: event_level
+
+  trouble_ticket:
+    comment: Support tickets raised for billing, connectivity, and service-quality issues.
+    tags:
+      source_entity: trouble_ticket
+      record_grain: document_level
+
+  service_lifecycle_event:
+    comment: Lifecycle history for operational services, including activation and change events.
+    tags:
+      source_entity: service_lifecycle_event
+      record_grain: event_level
+
+  invoice_charge:
+    comment: Detailed charge lines that roll up into customer invoices.
+    tags:
+      source_entity: invoice_charge
+      record_grain: document_level
