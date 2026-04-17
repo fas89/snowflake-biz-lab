@@ -1,0 +1,100 @@
+jenkins:
+  systemMessage: "Snowflake Telco Lab controller configured from JCasC.\n"
+  numExecutors: ${JENKINS_EXECUTORS:-2}
+  mode: NORMAL
+  slaveAgentPort: 50000
+  scmCheckoutRetryCount: 2
+  disableRememberMe: true
+  remotingSecurity:
+    enabled: true
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: ${JENKINS_ADMIN_ID:-admin}
+          password: ${JENKINS_ADMIN_PASSWORD:-change_me}
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+  markupFormatter:
+    antisamyMarkupFormatter: {}
+  globalNodeProperties:
+    - envVars:
+        env:
+          - key: DBT_PROFILES_DIR
+            value: /workspace/config/dbt
+          - key: DBT_PROJECT_DIR
+            value: /workspace/dbt
+          - key: PYTHONUNBUFFERED
+            value: "1"
+
+unclassified:
+  location:
+    url: ${JENKINS_URL:-http://localhost:8081/}
+    adminAddress: admin@snowflake-telco-lab.local
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - string:
+              scope: GLOBAL
+              id: snowflake-account
+              secret: ${SNOWFLAKE_ACCOUNT:-}
+              description: Snowflake account identifier
+          - string:
+              scope: GLOBAL
+              id: snowflake-user
+              secret: ${SNOWFLAKE_USER:-}
+              description: Snowflake user name
+          - string:
+              scope: GLOBAL
+              id: snowflake-password
+              secret: ${SNOWFLAKE_PASSWORD:-}
+              description: Snowflake password placeholder
+          - string:
+              scope: GLOBAL
+              id: snowflake-private-key-path
+              secret: ${SNOWFLAKE_PRIVATE_KEY_PATH:-}
+              description: Snowflake private key path placeholder
+          - string:
+              scope: GLOBAL
+              id: snowflake-private-key-passphrase
+              secret: ${SNOWFLAKE_PRIVATE_KEY_PASSPHRASE:-}
+              description: Snowflake private key passphrase placeholder
+          - string:
+              scope: GLOBAL
+              id: snowflake-oauth-token
+              secret: ${SNOWFLAKE_OAUTH_TOKEN:-}
+              description: Snowflake OAuth token placeholder
+          - string:
+              scope: GLOBAL
+              id: snowflake-authenticator
+              secret: ${SNOWFLAKE_AUTHENTICATOR:-}
+              description: Snowflake authenticator override
+          - string:
+              scope: GLOBAL
+              id: snowflake-warehouse
+              secret: ${SNOWFLAKE_WAREHOUSE:-}
+              description: Snowflake warehouse name
+          - string:
+              scope: GLOBAL
+              id: snowflake-database
+              secret: ${SNOWFLAKE_DATABASE:-}
+              description: Snowflake database name
+          - string:
+              scope: GLOBAL
+              id: snowflake-role
+              secret: ${SNOWFLAKE_ROLE:-}
+              description: Snowflake role name
+          - string:
+              scope: GLOBAL
+              id: dmm-api-url
+              secret: ${DMM_API_URL:-http://localhost:8095}
+              description: Data Mesh Manager API URL placeholder
+          - string:
+              scope: GLOBAL
+              id: dmm-api-key
+              secret: ${DMM_API_KEY:-}
+              description: Data Mesh Manager API key placeholder
+

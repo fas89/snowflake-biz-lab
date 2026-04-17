@@ -1,0 +1,776 @@
+version: 1
+
+tag_definitions:
+  dataset_domain:
+    comment: Business domain that owns the staged dataset.
+    allowed_values: [telco]
+  data_product:
+    comment: Logical data product name for the staged dataset.
+    allowed_values: [telco_stage_seed]
+  source_system:
+    comment: Source process that created the landed dataset.
+    allowed_values: [telco_seed_generator]
+  owner_team:
+    comment: Engineering team accountable for the dataset.
+    allowed_values: [telco_data_platform]
+  steward_team:
+    comment: Stewardship team accountable for metadata quality.
+    allowed_values: [telco_data_stewardship]
+  support_team:
+    comment: Operational team supporting the dataset.
+    allowed_values: [telco_operations]
+  lifecycle:
+    comment: Dataset lifecycle state.
+    allowed_values: [sandbox, development, production]
+  refresh_cadence:
+    comment: Expected refresh cadence for the dataset.
+    allowed_values: [on_demand, daily, hourly]
+  quality_tier:
+    comment: Intended quality tier for the asset.
+    allowed_values: [bronze, silver, gold]
+  retention_class:
+    comment: Retention posture for the dataset.
+    allowed_values: [rolling_60_day_history, rolling_365_day_history]
+  compliance_zone:
+    comment: Internal usage zone for the dataset.
+    allowed_values: [internal, restricted]
+  source_entity:
+    comment: Source entity represented by the Snowflake table.
+    allowed_values:
+      - party
+      - individual
+      - account
+      - product_offering
+      - service
+      - subscription
+      - device
+      - sim_card
+      - usage_event
+      - app_event
+      - invoice
+      - payment
+      - agreement
+      - service_order
+  record_grain:
+    comment: Business grain represented by each row.
+    allowed_values: [entity_level, assignment_level, event_level, document_level]
+  semantic_type:
+    comment: Business semantic attached to a column.
+    allowed_values:
+      - account_identifier
+      - account_number
+      - birth_date
+      - category_code
+      - contract_identifier
+      - created_timestamp
+      - currency_amount
+      - date_value
+      - device_identifier
+      - email_handle
+      - event_identifier
+      - event_timestamp
+      - invoice_identifier
+      - order_identifier
+      - party_identifier
+      - payment_identifier
+      - person_name
+      - phone_number
+      - product_attribute
+      - product_identifier
+      - service_identifier
+      - sim_identifier
+      - status_code
+      - usage_measure
+  sensitivity:
+    comment: Business-safe sensitivity label for a column.
+    allowed_values:
+      - internal_operational
+      - public_synthetic
+      - restricted_contact
+      - restricted_identifier
+  identifier_role:
+    comment: Relational role of the column.
+    allowed_values: [descriptive, foreign_key, natural_key, primary_key]
+
+contacts:
+  telco_access_approvals:
+    method: EMAIL_DISTRIBUTION_LIST
+    value: access.approvals@example.com
+    comment: Contact for access approval decisions on staged telco data.
+  telco_security_compliance:
+    method: EMAIL_DISTRIBUTION_LIST
+    value: security.compliance@example.com
+    comment: Contact for governance and compliance questions on staged telco data.
+  telco_data_stewards:
+    method: EMAIL_DISTRIBUTION_LIST
+    value: data.stewards@example.com
+    comment: Contact for metadata stewardship and glossary alignment.
+  telco_support:
+    method: EMAIL_DISTRIBUTION_LIST
+    value: telco.support@example.com
+    comment: Contact for operational support and issue triage.
+
+dataset:
+  name: telco_stage_seed
+  schema_comment: >
+    Snowflake landing schema for deterministic telco seed files. Tables in this schema
+    preserve source-shaped records for downstream staging in dbt and governance
+    demonstrations in Horizon.
+  tags:
+    dataset_domain: telco
+    data_product: telco_stage_seed
+    source_system: telco_seed_generator
+    owner_team: telco_data_platform
+    steward_team: telco_data_stewardship
+    support_team: telco_operations
+    lifecycle: sandbox
+    refresh_cadence: on_demand
+    quality_tier: bronze
+    retention_class: rolling_60_day_history
+    compliance_zone: internal
+  contacts: &dataset_contacts
+    ACCESS_APPROVAL: telco_access_approvals
+    SECURITY_COMPLIANCE: telco_security_compliance
+    STEWARD: telco_data_stewards
+    SUPPORT: telco_support
+
+table_defaults:
+  contacts: *dataset_contacts
+  classification:
+    enabled: true
+    sample_count: 1000
+    auto_tag: true
+  dmf:
+    schedule: USING CRON 0 6,12,18 * * * UTC
+
+tables:
+  party:
+    comment: Master registry for parties in the telco operating model.
+    tags:
+      source_entity: party
+      record_grain: entity_level
+    dmf:
+      metrics:
+        - name: SNOWFLAKE.CORE.ROW_COUNT
+          arguments: []
+          expectations:
+            - name: party_has_rows
+              expression: VALUE > 0
+        - name: SNOWFLAKE.CORE.NULL_COUNT
+          arguments: [party_id]
+          expectations:
+            - name: party_id_not_null
+              expression: VALUE = 0
+        - name: SNOWFLAKE.CORE.DUPLICATE_COUNT
+          arguments: [party_id]
+          expectations:
+            - name: party_id_unique
+              expression: VALUE = 0
+    columns:
+      party_id:
+        comment: Stable synthetic identifier for the party record.
+        tags: {semantic_type: party_identifier, sensitivity: restricted_identifier, identifier_role: primary_key}
+      party_type:
+        comment: Party category such as individual or organization.
+        tags: {semantic_type: category_code, sensitivity: public_synthetic, identifier_role: descriptive}
+      status:
+        comment: Lifecycle status assigned to the party record.
+        tags: {semantic_type: status_code, sensitivity: internal_operational, identifier_role: descriptive}
+      created_at:
+        comment: Timestamp when the synthetic party record was created.
+        tags: {semantic_type: created_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+      updated_at:
+        comment: Timestamp of the most recent update applied to the party record.
+        tags: {semantic_type: event_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+
+  individual:
+    comment: Individual customer details linked to a party.
+    tags:
+      source_entity: individual
+      record_grain: entity_level
+    dmf:
+      metrics:
+        - name: SNOWFLAKE.CORE.ROW_COUNT
+          arguments: []
+          expectations:
+            - name: individual_has_rows
+              expression: VALUE > 0
+        - name: SNOWFLAKE.CORE.NULL_COUNT
+          arguments: [individual_id]
+          expectations:
+            - name: individual_id_not_null
+              expression: VALUE = 0
+        - name: SNOWFLAKE.CORE.DUPLICATE_COUNT
+          arguments: [individual_id]
+          expectations:
+            - name: individual_id_unique
+              expression: VALUE = 0
+    columns:
+      individual_id:
+        comment: Stable synthetic identifier for the individual record.
+        tags: {semantic_type: party_identifier, sensitivity: restricted_identifier, identifier_role: primary_key}
+      party_id:
+        comment: Reference back to the owning party record.
+        tags: {semantic_type: party_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      first_name:
+        comment: Synthetic given name for the individual.
+        tags: {semantic_type: person_name, sensitivity: restricted_contact, identifier_role: descriptive}
+      last_name:
+        comment: Synthetic family name for the individual.
+        tags: {semantic_type: person_name, sensitivity: restricted_contact, identifier_role: descriptive}
+      email:
+        comment: Synthetic email address used for governance and classification demos.
+        tags: {semantic_type: email_handle, sensitivity: restricted_contact, identifier_role: natural_key}
+      date_of_birth:
+        comment: Synthetic date of birth for the customer record.
+        tags: {semantic_type: birth_date, sensitivity: restricted_contact, identifier_role: descriptive}
+      created_at:
+        comment: Timestamp when the individual record was created.
+        tags: {semantic_type: created_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+
+  account:
+    comment: Billing and service account records for parties.
+    tags:
+      source_entity: account
+      record_grain: entity_level
+    dmf:
+      metrics:
+        - name: SNOWFLAKE.CORE.ROW_COUNT
+          arguments: []
+          expectations:
+            - name: account_has_rows
+              expression: VALUE > 0
+        - name: SNOWFLAKE.CORE.NULL_COUNT
+          arguments: [account_id]
+          expectations:
+            - name: account_id_not_null
+              expression: VALUE = 0
+        - name: SNOWFLAKE.CORE.DUPLICATE_COUNT
+          arguments: [account_id]
+          expectations:
+            - name: account_id_unique
+              expression: VALUE = 0
+    columns:
+      account_id:
+        comment: Stable synthetic identifier for the account.
+        tags: {semantic_type: account_identifier, sensitivity: restricted_identifier, identifier_role: primary_key}
+      party_id:
+        comment: Party that owns the account.
+        tags: {semantic_type: party_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      account_number:
+        comment: Human-readable account number used in operations.
+        tags: {semantic_type: account_number, sensitivity: restricted_identifier, identifier_role: natural_key}
+      account_type:
+        comment: Type of account such as business, individual, or prepaid.
+        tags: {semantic_type: category_code, sensitivity: internal_operational, identifier_role: descriptive}
+      status:
+        comment: Current lifecycle status of the account.
+        tags: {semantic_type: status_code, sensitivity: internal_operational, identifier_role: descriptive}
+      created_at:
+        comment: Timestamp when the account record was created.
+        tags: {semantic_type: created_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+      closed_at:
+        comment: Timestamp when the account was closed, if applicable.
+        tags: {semantic_type: event_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+
+  product_offering:
+    comment: Sellable product plans and add-on offerings.
+    tags:
+      source_entity: product_offering
+      record_grain: entity_level
+    dmf:
+      metrics:
+        - name: SNOWFLAKE.CORE.ROW_COUNT
+          arguments: []
+          expectations:
+            - name: product_offering_has_rows
+              expression: VALUE > 0
+        - name: SNOWFLAKE.CORE.NULL_COUNT
+          arguments: [product_offering_id]
+          expectations:
+            - name: product_offering_id_not_null
+              expression: VALUE = 0
+        - name: SNOWFLAKE.CORE.DUPLICATE_COUNT
+          arguments: [product_offering_id]
+          expectations:
+            - name: product_offering_id_unique
+              expression: VALUE = 0
+    columns:
+      product_offering_id:
+        comment: Stable synthetic identifier for the product offering.
+        tags: {semantic_type: product_identifier, sensitivity: internal_operational, identifier_role: primary_key}
+      name:
+        comment: Marketing-facing name for the plan or bundle.
+        tags: {semantic_type: product_attribute, sensitivity: public_synthetic, identifier_role: descriptive}
+      category:
+        comment: Product category such as data plan, bundle, or voice.
+        tags: {semantic_type: category_code, sensitivity: public_synthetic, identifier_role: descriptive}
+      data_limit_gb:
+        comment: Included data limit in gigabytes when applicable.
+        tags: {semantic_type: usage_measure, sensitivity: public_synthetic, identifier_role: descriptive}
+      voice_limit_min:
+        comment: Included voice minutes when applicable.
+        tags: {semantic_type: usage_measure, sensitivity: public_synthetic, identifier_role: descriptive}
+      price_chf:
+        comment: Recurring product price expressed in Swiss francs.
+        tags: {semantic_type: currency_amount, sensitivity: public_synthetic, identifier_role: descriptive}
+      status:
+        comment: Commercial status of the product offering.
+        tags: {semantic_type: status_code, sensitivity: internal_operational, identifier_role: descriptive}
+      created_at:
+        comment: Timestamp when the product offering was introduced.
+        tags: {semantic_type: created_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+
+  service:
+    comment: Active service instances provisioned for accounts.
+    tags:
+      source_entity: service
+      record_grain: entity_level
+    dmf:
+      metrics:
+        - name: SNOWFLAKE.CORE.ROW_COUNT
+          arguments: []
+          expectations:
+            - name: service_has_rows
+              expression: VALUE > 0
+        - name: SNOWFLAKE.CORE.NULL_COUNT
+          arguments: [service_id]
+          expectations:
+            - name: service_id_not_null
+              expression: VALUE = 0
+        - name: SNOWFLAKE.CORE.DUPLICATE_COUNT
+          arguments: [service_id]
+          expectations:
+            - name: service_id_unique
+              expression: VALUE = 0
+    columns:
+      service_id:
+        comment: Stable synthetic identifier for the service instance.
+        tags: {semantic_type: service_identifier, sensitivity: restricted_identifier, identifier_role: primary_key}
+      account_id:
+        comment: Account that owns the service instance.
+        tags: {semantic_type: account_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      service_type:
+        comment: Technical or commercial type of service being delivered.
+        tags: {semantic_type: category_code, sensitivity: internal_operational, identifier_role: descriptive}
+      status:
+        comment: Current provisioning or lifecycle status of the service.
+        tags: {semantic_type: status_code, sensitivity: internal_operational, identifier_role: descriptive}
+      activated_at:
+        comment: Timestamp when the service became active.
+        tags: {semantic_type: event_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+      terminated_at:
+        comment: Timestamp when the service terminated, if applicable.
+        tags: {semantic_type: event_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+
+  subscription:
+    comment: Subscriptions that connect services to product offerings.
+    tags:
+      source_entity: subscription
+      record_grain: assignment_level
+    dmf:
+      metrics:
+        - name: SNOWFLAKE.CORE.ROW_COUNT
+          arguments: []
+          expectations:
+            - name: subscription_has_rows
+              expression: VALUE > 0
+        - name: SNOWFLAKE.CORE.NULL_COUNT
+          arguments: [subscription_id]
+          expectations:
+            - name: subscription_id_not_null
+              expression: VALUE = 0
+        - name: SNOWFLAKE.CORE.DUPLICATE_COUNT
+          arguments: [subscription_id]
+          expectations:
+            - name: subscription_id_unique
+              expression: VALUE = 0
+    columns:
+      subscription_id:
+        comment: Stable synthetic identifier for the subscription.
+        tags: {semantic_type: contract_identifier, sensitivity: restricted_identifier, identifier_role: primary_key}
+      service_id:
+        comment: Service instance covered by the subscription.
+        tags: {semantic_type: service_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      product_offering_id:
+        comment: Product offering attached to the subscription.
+        tags: {semantic_type: product_identifier, sensitivity: internal_operational, identifier_role: foreign_key}
+      status:
+        comment: Subscription lifecycle status.
+        tags: {semantic_type: status_code, sensitivity: internal_operational, identifier_role: descriptive}
+      start_date:
+        comment: Subscription start date.
+        tags: {semantic_type: date_value, sensitivity: internal_operational, identifier_role: descriptive}
+      end_date:
+        comment: Subscription end date, when present.
+        tags: {semantic_type: date_value, sensitivity: internal_operational, identifier_role: descriptive}
+      renewal_date:
+        comment: Planned renewal date for the subscription.
+        tags: {semantic_type: date_value, sensitivity: internal_operational, identifier_role: descriptive}
+      created_at:
+        comment: Timestamp when the subscription record was created.
+        tags: {semantic_type: created_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+
+  device:
+    comment: Devices registered against customer accounts.
+    tags:
+      source_entity: device
+      record_grain: entity_level
+    dmf:
+      metrics:
+        - name: SNOWFLAKE.CORE.ROW_COUNT
+          arguments: []
+          expectations:
+            - name: device_has_rows
+              expression: VALUE > 0
+        - name: SNOWFLAKE.CORE.NULL_COUNT
+          arguments: [device_id]
+          expectations:
+            - name: device_id_not_null
+              expression: VALUE = 0
+        - name: SNOWFLAKE.CORE.DUPLICATE_COUNT
+          arguments: [device_id]
+          expectations:
+            - name: device_id_unique
+              expression: VALUE = 0
+    columns:
+      device_id:
+        comment: Stable synthetic identifier for the registered device.
+        tags: {semantic_type: device_identifier, sensitivity: restricted_identifier, identifier_role: primary_key}
+      account_id:
+        comment: Account linked to the device registration.
+        tags: {semantic_type: account_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      device_type:
+        comment: Device category such as smartphone, tablet, or router.
+        tags: {semantic_type: category_code, sensitivity: internal_operational, identifier_role: descriptive}
+      manufacturer:
+        comment: Device manufacturer name.
+        tags: {semantic_type: product_attribute, sensitivity: public_synthetic, identifier_role: descriptive}
+      model:
+        comment: Device model name.
+        tags: {semantic_type: product_attribute, sensitivity: public_synthetic, identifier_role: descriptive}
+      imei:
+        comment: Synthetic equipment identifier associated with the device.
+        tags: {semantic_type: device_identifier, sensitivity: restricted_identifier, identifier_role: natural_key}
+      status:
+        comment: Registration status of the device.
+        tags: {semantic_type: status_code, sensitivity: internal_operational, identifier_role: descriptive}
+      registered_at:
+        comment: Timestamp when the device was registered.
+        tags: {semantic_type: event_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+
+  sim_card:
+    comment: SIM assignments that link accounts and devices.
+    tags:
+      source_entity: sim_card
+      record_grain: assignment_level
+    dmf:
+      metrics:
+        - name: SNOWFLAKE.CORE.ROW_COUNT
+          arguments: []
+          expectations:
+            - name: sim_card_has_rows
+              expression: VALUE > 0
+        - name: SNOWFLAKE.CORE.NULL_COUNT
+          arguments: [sim_id]
+          expectations:
+            - name: sim_id_not_null
+              expression: VALUE = 0
+        - name: SNOWFLAKE.CORE.DUPLICATE_COUNT
+          arguments: [sim_id]
+          expectations:
+            - name: sim_id_unique
+              expression: VALUE = 0
+    columns:
+      sim_id:
+        comment: Stable synthetic identifier for the SIM assignment.
+        tags: {semantic_type: sim_identifier, sensitivity: restricted_identifier, identifier_role: primary_key}
+      account_id:
+        comment: Account associated with the SIM card.
+        tags: {semantic_type: account_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      device_id:
+        comment: Device currently paired with the SIM card.
+        tags: {semantic_type: device_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      msisdn:
+        comment: Synthetic dialable mobile number tied to the SIM card.
+        tags: {semantic_type: phone_number, sensitivity: restricted_contact, identifier_role: natural_key}
+      iccid:
+        comment: Synthetic integrated circuit card identifier for the SIM.
+        tags: {semantic_type: sim_identifier, sensitivity: restricted_identifier, identifier_role: natural_key}
+      status:
+        comment: Operational status of the SIM card.
+        tags: {semantic_type: status_code, sensitivity: internal_operational, identifier_role: descriptive}
+      activated_at:
+        comment: Timestamp when the SIM card was activated.
+        tags: {semantic_type: event_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+
+  usage_event:
+    comment: Usage records for data, voice, and messaging events.
+    tags:
+      source_entity: usage_event
+      record_grain: event_level
+    dmf:
+      metrics:
+        - name: SNOWFLAKE.CORE.ROW_COUNT
+          arguments: []
+          expectations:
+            - name: usage_event_has_rows
+              expression: VALUE > 0
+        - name: SNOWFLAKE.CORE.NULL_COUNT
+          arguments: [usage_id]
+          expectations:
+            - name: usage_id_not_null
+              expression: VALUE = 0
+        - name: SNOWFLAKE.CORE.DUPLICATE_COUNT
+          arguments: [usage_id]
+          expectations:
+            - name: usage_id_unique
+              expression: VALUE = 0
+    columns:
+      usage_id:
+        comment: Stable synthetic identifier for the raw usage event.
+        tags: {semantic_type: event_identifier, sensitivity: restricted_identifier, identifier_role: primary_key}
+      account_id:
+        comment: Account that incurred the usage event.
+        tags: {semantic_type: account_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      service_id:
+        comment: Service instance that produced the usage event.
+        tags: {semantic_type: service_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      usage_type:
+        comment: Usage category such as data, voice, or SMS.
+        tags: {semantic_type: category_code, sensitivity: internal_operational, identifier_role: descriptive}
+      quantity:
+        comment: Measured usage quantity for the event.
+        tags: {semantic_type: usage_measure, sensitivity: internal_operational, identifier_role: descriptive}
+      event_timestamp:
+        comment: Event timestamp captured from the synthetic source.
+        tags: {semantic_type: event_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+      rating_status:
+        comment: Status of downstream rating for the usage event.
+        tags: {semantic_type: status_code, sensitivity: internal_operational, identifier_role: descriptive}
+
+  app_event:
+    comment: Digital engagement events emitted by the telco application.
+    tags:
+      source_entity: app_event
+      record_grain: event_level
+    dmf:
+      metrics:
+        - name: SNOWFLAKE.CORE.ROW_COUNT
+          arguments: []
+          expectations:
+            - name: app_event_has_rows
+              expression: VALUE > 0
+        - name: SNOWFLAKE.CORE.NULL_COUNT
+          arguments: [app_event_id]
+          expectations:
+            - name: app_event_id_not_null
+              expression: VALUE = 0
+        - name: SNOWFLAKE.CORE.DUPLICATE_COUNT
+          arguments: [app_event_id]
+          expectations:
+            - name: app_event_id_unique
+              expression: VALUE = 0
+    columns:
+      app_event_id:
+        comment: Stable synthetic identifier for the app event.
+        tags: {semantic_type: event_identifier, sensitivity: restricted_identifier, identifier_role: primary_key}
+      account_id:
+        comment: Account associated with the digital event.
+        tags: {semantic_type: account_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      device_id:
+        comment: Device associated with the app session.
+        tags: {semantic_type: device_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      event_type:
+        comment: Digital event type such as login, browse, or support contact.
+        tags: {semantic_type: category_code, sensitivity: internal_operational, identifier_role: descriptive}
+      session_minutes:
+        comment: Session duration captured for the event.
+        tags: {semantic_type: usage_measure, sensitivity: internal_operational, identifier_role: descriptive}
+      event_timestamp:
+        comment: Timestamp when the app event occurred.
+        tags: {semantic_type: event_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+
+  invoice:
+    comment: Monthly billing invoices produced for accounts.
+    tags:
+      source_entity: invoice
+      record_grain: document_level
+    dmf:
+      metrics:
+        - name: SNOWFLAKE.CORE.ROW_COUNT
+          arguments: []
+          expectations:
+            - name: invoice_has_rows
+              expression: VALUE > 0
+        - name: SNOWFLAKE.CORE.NULL_COUNT
+          arguments: [invoice_id]
+          expectations:
+            - name: invoice_id_not_null
+              expression: VALUE = 0
+        - name: SNOWFLAKE.CORE.DUPLICATE_COUNT
+          arguments: [invoice_id]
+          expectations:
+            - name: invoice_id_unique
+              expression: VALUE = 0
+    columns:
+      invoice_id:
+        comment: Stable synthetic identifier for the invoice.
+        tags: {semantic_type: invoice_identifier, sensitivity: restricted_identifier, identifier_role: primary_key}
+      account_id:
+        comment: Account billed by the invoice.
+        tags: {semantic_type: account_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      invoice_number:
+        comment: Human-readable invoice number.
+        tags: {semantic_type: invoice_identifier, sensitivity: restricted_identifier, identifier_role: natural_key}
+      invoice_date:
+        comment: Invoice issue date.
+        tags: {semantic_type: date_value, sensitivity: internal_operational, identifier_role: descriptive}
+      due_date:
+        comment: Invoice due date.
+        tags: {semantic_type: date_value, sensitivity: internal_operational, identifier_role: descriptive}
+      total_amount_chf:
+        comment: Total invoice amount in Swiss francs.
+        tags: {semantic_type: currency_amount, sensitivity: internal_operational, identifier_role: descriptive}
+      status:
+        comment: Invoice payment status.
+        tags: {semantic_type: status_code, sensitivity: internal_operational, identifier_role: descriptive}
+      created_at:
+        comment: Timestamp when the invoice record was created.
+        tags: {semantic_type: created_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+
+  payment:
+    comment: Payments received against invoices.
+    tags:
+      source_entity: payment
+      record_grain: document_level
+    dmf:
+      metrics:
+        - name: SNOWFLAKE.CORE.ROW_COUNT
+          arguments: []
+          expectations:
+            - name: payment_has_rows
+              expression: VALUE > 0
+        - name: SNOWFLAKE.CORE.NULL_COUNT
+          arguments: [payment_id]
+          expectations:
+            - name: payment_id_not_null
+              expression: VALUE = 0
+        - name: SNOWFLAKE.CORE.DUPLICATE_COUNT
+          arguments: [payment_id]
+          expectations:
+            - name: payment_id_unique
+              expression: VALUE = 0
+    columns:
+      payment_id:
+        comment: Stable synthetic identifier for the payment.
+        tags: {semantic_type: payment_identifier, sensitivity: restricted_identifier, identifier_role: primary_key}
+      invoice_id:
+        comment: Invoice settled by the payment.
+        tags: {semantic_type: invoice_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      amount_chf:
+        comment: Paid amount in Swiss francs.
+        tags: {semantic_type: currency_amount, sensitivity: internal_operational, identifier_role: descriptive}
+      payment_method:
+        comment: Method used to settle the invoice.
+        tags: {semantic_type: category_code, sensitivity: internal_operational, identifier_role: descriptive}
+      payment_date:
+        comment: Date when payment was captured.
+        tags: {semantic_type: date_value, sensitivity: internal_operational, identifier_role: descriptive}
+      status:
+        comment: Processing status for the payment.
+        tags: {semantic_type: status_code, sensitivity: internal_operational, identifier_role: descriptive}
+      created_at:
+        comment: Timestamp when the payment record was created.
+        tags: {semantic_type: created_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+
+  agreement:
+    comment: Agreements and contracts related to customer accounts.
+    tags:
+      source_entity: agreement
+      record_grain: document_level
+    dmf:
+      metrics:
+        - name: SNOWFLAKE.CORE.ROW_COUNT
+          arguments: []
+          expectations:
+            - name: agreement_has_rows
+              expression: VALUE > 0
+        - name: SNOWFLAKE.CORE.NULL_COUNT
+          arguments: [agreement_id]
+          expectations:
+            - name: agreement_id_not_null
+              expression: VALUE = 0
+        - name: SNOWFLAKE.CORE.DUPLICATE_COUNT
+          arguments: [agreement_id]
+          expectations:
+            - name: agreement_id_unique
+              expression: VALUE = 0
+    columns:
+      agreement_id:
+        comment: Stable synthetic identifier for the agreement.
+        tags: {semantic_type: contract_identifier, sensitivity: restricted_identifier, identifier_role: primary_key}
+      account_id:
+        comment: Account covered by the agreement.
+        tags: {semantic_type: account_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      agreement_type:
+        comment: Agreement category such as service contract or data processing terms.
+        tags: {semantic_type: category_code, sensitivity: internal_operational, identifier_role: descriptive}
+      status:
+        comment: Current status of the agreement.
+        tags: {semantic_type: status_code, sensitivity: internal_operational, identifier_role: descriptive}
+      signed_date:
+        comment: Date when the agreement was signed.
+        tags: {semantic_type: date_value, sensitivity: internal_operational, identifier_role: descriptive}
+      effective_date:
+        comment: Effective date of the agreement.
+        tags: {semantic_type: date_value, sensitivity: internal_operational, identifier_role: descriptive}
+      termination_date:
+        comment: Termination date of the agreement, when present.
+        tags: {semantic_type: date_value, sensitivity: internal_operational, identifier_role: descriptive}
+      created_at:
+        comment: Timestamp when the agreement record was created.
+        tags: {semantic_type: created_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+
+  service_order:
+    comment: Requests to activate, modify, or cancel services.
+    tags:
+      source_entity: service_order
+      record_grain: document_level
+    dmf:
+      metrics:
+        - name: SNOWFLAKE.CORE.ROW_COUNT
+          arguments: []
+          expectations:
+            - name: service_order_has_rows
+              expression: VALUE > 0
+        - name: SNOWFLAKE.CORE.NULL_COUNT
+          arguments: [order_id]
+          expectations:
+            - name: order_id_not_null
+              expression: VALUE = 0
+        - name: SNOWFLAKE.CORE.DUPLICATE_COUNT
+          arguments: [order_id]
+          expectations:
+            - name: order_id_unique
+              expression: VALUE = 0
+    columns:
+      order_id:
+        comment: Stable synthetic identifier for the service order.
+        tags: {semantic_type: order_identifier, sensitivity: restricted_identifier, identifier_role: primary_key}
+      account_id:
+        comment: Account requesting the service order.
+        tags: {semantic_type: account_identifier, sensitivity: restricted_identifier, identifier_role: foreign_key}
+      order_type:
+        comment: Requested order action such as activation or suspension.
+        tags: {semantic_type: category_code, sensitivity: internal_operational, identifier_role: descriptive}
+      status:
+        comment: Current fulfillment status of the order.
+        tags: {semantic_type: status_code, sensitivity: internal_operational, identifier_role: descriptive}
+      order_date:
+        comment: Timestamp when the order was submitted.
+        tags: {semantic_type: event_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+      fulfillment_date:
+        comment: Timestamp when fulfillment completed.
+        tags: {semantic_type: event_timestamp, sensitivity: internal_operational, identifier_role: descriptive}
+

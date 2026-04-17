@@ -1,0 +1,170 @@
+name: snowflake-telco-lab
+
+x-snowflake-env: &snowflake-env
+  SNOWFLAKE_ACCOUNT: ${SNOWFLAKE_ACCOUNT}
+  SNOWFLAKE_USER: ${SNOWFLAKE_USER}
+  SNOWFLAKE_PASSWORD: ${SNOWFLAKE_PASSWORD:-}
+  SNOWFLAKE_PRIVATE_KEY_PATH: ${SNOWFLAKE_PRIVATE_KEY_PATH:-}
+  SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: ${SNOWFLAKE_PRIVATE_KEY_PASSPHRASE:-}
+  SNOWFLAKE_OAUTH_TOKEN: ${SNOWFLAKE_OAUTH_TOKEN:-}
+  SNOWFLAKE_AUTHENTICATOR: ${SNOWFLAKE_AUTHENTICATOR:-}
+  SNOWFLAKE_WAREHOUSE: ${SNOWFLAKE_WAREHOUSE}
+  SNOWFLAKE_DATABASE: ${SNOWFLAKE_DATABASE}
+  SNOWFLAKE_ROLE: ${SNOWFLAKE_ROLE:-}
+  SNOWFLAKE_STAGE_SCHEMA: ${SNOWFLAKE_STAGE_SCHEMA:-TELCO_STAGE_LOAD}
+  SNOWFLAKE_DBT_SCHEMA: ${SNOWFLAKE_DBT_SCHEMA:-TELCO_STAGE_DBT}
+  SNOWFLAKE_GOVERNANCE_SCHEMA: ${SNOWFLAKE_GOVERNANCE_SCHEMA:-TELCO_GOVERNANCE}
+  SNOWFLAKE_INTERNAL_STAGE: ${SNOWFLAKE_INTERNAL_STAGE:-TELCO_SEED_STAGE}
+  SNOWFLAKE_FILE_FORMAT: ${SNOWFLAKE_FILE_FORMAT:-TELCO_SEED_CSV}
+  SNOWFLAKE_ENABLE_DMF: ${SNOWFLAKE_ENABLE_DMF:-false}
+  SNOWFLAKE_ENABLE_CLASSIFICATION: ${SNOWFLAKE_ENABLE_CLASSIFICATION:-false}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+x-airflow-common: &airflow-common
+  build:
+    context: ../..
+    dockerfile: deploy/docker/airflow/Dockerfile
+  user: "${AIRFLOW_UID:-50000}:0"
+  environment:
+    <<: *snowflake-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "false"
+    AIRFLOW_CONN_SNOWFLAKE_DEFAULT: snowflake://
+    DBT_PROFILES_DIR: /opt/project/config/dbt
+  volumes:
+    - ../../airflow/dags:/opt/airflow/dags
+    - ../../airflow/plugins:/opt/airflow/plugins
+    - ../../airflow/config:/opt/airflow/config
+    - ../../dbt:/opt/project/dbt
+    - ../../config/dbt:/opt/project/config/dbt
+    - ../../seed:/opt/project/seed
+    - ../../governance:/opt/project/governance
+    - ../../runtime:/opt/project/runtime
+    - airflow-logs:/opt/airflow/logs
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: snowflake-telco-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES:-airflow}
+    ports:
+      - "${LOCAL_POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres_init.sh:/docker-entrypoint-initdb.d/00_init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: snowflake-telco-airflow-init
+    entrypoint: /bin/bash
+    command: >
+      -c "
+        airflow db migrate &&
+        airflow users create
+          --username ${AIRFLOW_ADMIN_USER:-admin}
+          --password ${AIRFLOW_ADMIN_PASSWORD:-change_me}
+          --firstname Admin
+          --lastname User
+          --role Admin
+          --email admin@snowflake-telco-lab.local
+      "
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: snowflake-telco-airflow-web
+    command: webserver
+    ports:
+      - "${AIRFLOW_WEB_PORT:-8085}:8080"
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: snowflake-telco-airflow-scheduler
+    command: scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  dbt-runner:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/dbt-runner/Dockerfile
+    container_name: snowflake-telco-dbt-runner
+    working_dir: /opt/project
+    command: sleep infinity
+    environment:
+      <<: *snowflake-env
+      DBT_PROFILES_DIR: /opt/project/config/dbt
+      TELCO_SEED_RANDOM_SEED: ${TELCO_SEED_RANDOM_SEED:-42}
+      TELCO_SEED_PARTY_COUNT: ${TELCO_SEED_PARTY_COUNT:-200}
+      TELCO_SEED_USAGE_EVENT_COUNT: ${TELCO_SEED_USAGE_EVENT_COUNT:-10000}
+      TELCO_SEED_APP_EVENT_COUNT: ${TELCO_SEED_APP_EVENT_COUNT:-2000}
+      TELCO_SEED_HISTORY_DAYS: ${TELCO_SEED_HISTORY_DAYS:-60}
+    volumes:
+      - ../../dbt:/opt/project/dbt
+      - ../../config/dbt:/opt/project/config/dbt
+      - ../../seed:/opt/project/seed
+      - ../../governance:/opt/project/governance
+      - ../../docs:/opt/project/docs
+      - ../../runtime:/opt/project/runtime
+      - ../../README.md:/opt/project/README.md:ro
+
+  jenkins:
+    profiles: ["jenkins"]
+    build:
+      context: ../..
+      dockerfile: deploy/docker/jenkins/Dockerfile
+    container_name: snowflake-telco-jenkins
+    environment:
+      <<: *snowflake-env
+      CASC_JENKINS_CONFIG: /var/jenkins_home/casc_configs/jenkins.yaml
+      JENKINS_ADMIN_ID: ${JENKINS_ADMIN_ID:-admin}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:-change_me}
+      JENKINS_URL: ${JENKINS_URL:-http://localhost:8081/}
+      JENKINS_EXECUTORS: ${JENKINS_EXECUTORS:-2}
+      DBT_TARGET: ${DBT_TARGET:-snowflake}
+      DMM_API_URL: ${DMM_API_URL:-http://localhost:8095}
+      DMM_API_KEY: ${DMM_API_KEY:-}
+      JAVA_OPTS: -Djenkins.install.runSetupWizard=false
+    ports:
+      - "${JENKINS_WEB_PORT:-8081}:8080"
+      - "${JENKINS_AGENT_PORT:-50000}:50000"
+    volumes:
+      - jenkins-home:/var/jenkins_home
+      - ../../:/workspace
+      - ../../jenkins/casc:/var/jenkins_home/casc_configs:ro
+      - ../../runtime:/workspace/runtime
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  postgres-data:
+  airflow-logs:
+  jenkins-home:

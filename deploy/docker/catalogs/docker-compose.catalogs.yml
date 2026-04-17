@@ -1,0 +1,70 @@
+services:
+  entropy-postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${ENTROPY_DB_NAME:-entropy_data}
+      POSTGRES_USER: ${ENTROPY_DB_USER:-entropy}
+      POSTGRES_PASSWORD: ${ENTROPY_DB_PASSWORD:-change_me}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - entropy-postgres-data:/var/lib/postgresql/data
+      - ./entropy-postgres-init.sql:/docker-entrypoint-initdb.d/00-extensions.sql:ro
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    restart: unless-stopped
+    ports:
+      - "${MAILHOG_UI_PORT:-8026}:8025"
+      - "${MAILHOG_SMTP_PORT:-1026}:1025"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --spider -q http://localhost:8025 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  entropy-data:
+    image: entropydata/entropy-data-ce:${ENTROPY_IMAGE_TAG:-latest}
+    platform: linux/amd64
+    restart: unless-stopped
+    depends_on:
+      entropy-postgres:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    environment:
+      APPLICATION_HOST_WEB: ${ENTROPY_EXTERNAL_URL:-http://localhost:8095}
+      APPLICATION_SUPERADMINS: ${ENTROPY_SUPERADMINS:-admin@example.com}
+      APPLICATION_MAIL_FROM: ${ENTROPY_MAIL_FROM:-Entropy Data <noreply@snowflake-telco-lab.local>}
+      APPLICATION_DATACONTRACT_SPECIFICATIONS: ${ENTROPY_DATACONTRACT_SPECIFICATIONS:-odcs}
+      APPLICATION_DATAPRODUCT_SPECIFICATIONTYPES: ${ENTROPY_DATAPRODUCT_SPECIFICATIONTYPES:-odps}
+      APPLICATION_COMPROMISEDPASSWORDCHECKER_ENABLED: ${ENTROPY_COMPROMISEDPASSWORDCHECKER_ENABLED:-false}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://entropy-postgres:5432/${ENTROPY_DB_NAME:-entropy_data}
+      SPRING_DATASOURCE_USERNAME: ${ENTROPY_DB_USER:-entropy}
+      SPRING_DATASOURCE_PASSWORD: ${ENTROPY_DB_PASSWORD:-change_me}
+      SPRING_MAIL_HOST: mailhog
+      SPRING_MAIL_PORT: 1025
+      SPRING_MAIL_USERNAME: ""
+      SPRING_MAIL_PASSWORD: ""
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "false"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "false"
+    ports:
+      - "${ENTROPY_WEB_PORT:-8095}:8080"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --spider -q http://localhost:8080/login || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  entropy-postgres-data:

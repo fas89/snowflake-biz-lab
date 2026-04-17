@@ -1,0 +1,123 @@
+version: 2
+
+models:
+  - name: stg_telco__party
+    description: Cleaned party records from the telco landing schema.
+    meta: {owner: telco_data_platform}
+    columns:
+      - {name: party_id, tests: [unique, not_null], description: Stable party identifier.}
+      - {name: party_type, description: Party category such as individual or organization.}
+      - {name: status, description: Lifecycle status of the party.}
+      - {name: created_at, description: Party creation timestamp.}
+      - {name: updated_at, description: Most recent update timestamp.}
+
+  - name: stg_telco__individual
+    description: Cleaned individual customer details.
+    meta: {owner: telco_data_platform}
+    columns:
+      - {name: individual_id, tests: [unique, not_null], description: Stable individual identifier.}
+      - {name: party_id, tests: [not_null], description: Owning party identifier.}
+      - {name: email, tests: [unique], description: Synthetic email address.}
+
+  - name: stg_telco__account
+    description: Cleaned account records.
+    meta: {owner: telco_data_platform}
+    columns:
+      - {name: account_id, tests: [unique, not_null], description: Stable account identifier.}
+      - {name: party_id, tests: [not_null], description: Owning party identifier.}
+      - {name: account_number, tests: [unique, not_null], description: Human-readable account number.}
+      - {name: account_type, description: Commercial account type.}
+      - {name: status, description: Account lifecycle status.}
+
+  - name: stg_telco__product_offering
+    description: Cleaned product offering records.
+    meta: {owner: telco_data_platform}
+    columns:
+      - {name: product_offering_id, tests: [unique, not_null], description: Stable product offering identifier.}
+      - {name: name, tests: [not_null], description: Product offering name.}
+      - {name: category, description: Product offering category.}
+      - {name: price_chf, tests: [not_null], description: Price in Swiss francs.}
+
+  - name: stg_telco__service
+    description: Cleaned service instance records.
+    meta: {owner: telco_data_platform}
+    columns:
+      - {name: service_id, tests: [unique, not_null], description: Stable service identifier.}
+      - {name: account_id, tests: [not_null], description: Owning account identifier.}
+      - {name: service_type, description: Service category.}
+      - {name: status, description: Service lifecycle status.}
+
+  - name: stg_telco__subscription
+    description: Cleaned subscription records.
+    meta: {owner: telco_data_platform}
+    columns:
+      - {name: subscription_id, tests: [unique, not_null], description: Stable subscription identifier.}
+      - {name: service_id, tests: [not_null], description: Service identifier.}
+      - {name: product_offering_id, tests: [not_null], description: Product offering identifier.}
+      - {name: start_date, tests: [not_null], description: Subscription start date.}
+
+  - name: stg_telco__device
+    description: Cleaned device records.
+    meta: {owner: telco_data_platform}
+    columns:
+      - {name: device_id, tests: [unique, not_null], description: Stable device identifier.}
+      - {name: imei, tests: [unique], description: Synthetic IMEI value.}
+
+  - name: stg_telco__sim_card
+    description: Cleaned SIM assignment records.
+    meta: {owner: telco_data_platform}
+    columns:
+      - {name: sim_id, tests: [unique, not_null], description: Stable SIM identifier.}
+      - {name: msisdn, tests: [unique], description: Synthetic dialable number.}
+      - {name: iccid, tests: [unique], description: Synthetic ICCID value.}
+
+  - name: stg_telco__usage_event
+    description: Cleaned usage event records.
+    meta: {owner: telco_data_platform}
+    columns:
+      - {name: usage_id, tests: [unique, not_null], description: Stable usage-event identifier.}
+      - {name: account_id, tests: [not_null], description: Account identifier.}
+      - {name: usage_type, description: Usage category.}
+      - {name: quantity, tests: [not_null], description: Measured quantity for the event.}
+      - {name: event_timestamp, tests: [not_null], description: Event timestamp.}
+
+  - name: stg_telco__app_event
+    description: Cleaned application event records.
+    meta: {owner: telco_data_platform}
+    columns:
+      - {name: app_event_id, tests: [unique, not_null], description: Stable app-event identifier.}
+      - {name: account_id, tests: [not_null], description: Account identifier.}
+      - {name: event_type, tests: [not_null], description: App event type.}
+      - {name: event_timestamp, tests: [not_null], description: Event timestamp.}
+
+  - name: stg_telco__invoice
+    description: Cleaned invoice records.
+    meta: {owner: telco_data_platform}
+    columns:
+      - {name: invoice_id, tests: [unique, not_null], description: Stable invoice identifier.}
+      - {name: account_id, tests: [not_null], description: Account identifier.}
+      - {name: invoice_number, tests: [unique, not_null], description: Human-readable invoice number.}
+      - {name: total_amount_chf, tests: [not_null], description: Total invoice amount in Swiss francs.}
+
+  - name: stg_telco__payment
+    description: Cleaned payment records.
+    meta: {owner: telco_data_platform}
+    columns:
+      - {name: payment_id, tests: [unique, not_null], description: Stable payment identifier.}
+      - {name: invoice_id, tests: [not_null], description: Invoice identifier.}
+      - {name: amount_chf, tests: [not_null], description: Paid amount in Swiss francs.}
+
+  - name: stg_telco__agreement
+    description: Cleaned agreement records.
+    meta: {owner: telco_data_platform}
+    columns:
+      - {name: agreement_id, tests: [unique, not_null], description: Stable agreement identifier.}
+      - {name: account_id, tests: [not_null], description: Account identifier.}
+
+  - name: stg_telco__service_order
+    description: Cleaned service order records.
+    meta: {owner: telco_data_platform}
+    columns:
+      - {name: order_id, tests: [unique, not_null], description: Stable service-order identifier.}
+      - {name: account_id, tests: [not_null], description: Account identifier.}
+

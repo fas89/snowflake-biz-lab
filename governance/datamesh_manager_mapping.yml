@@ -1,0 +1,64 @@
+version: 1
+catalog_platform: entropy_data_ce
+publication_automation_enabled: false
+
+data_product:
+  key: telco-stage-seed
+  display_name: Telco Stage Seed
+  domain: telco
+  visibility: internal
+  maturity: draft
+  description: >
+    Draft Data Mesh Manager mapping for the Snowflake telco landing-zone dataset.
+    This file is intentionally publish-ready in shape but not wired into any automated
+    DMM publish command in this phase.
+
+ownership:
+  owner_team: telco-data-platform
+  steward_team: telco-data-stewardship
+  support_team: telco-operations
+
+catalog_endpoints:
+  api_url_env: DMM_API_URL
+  api_key_env: DMM_API_KEY
+  ui_url_env: ENTROPY_EXTERNAL_URL
+
+assets:
+  - kind: snowflake_schema
+    database_env: SNOWFLAKE_DATABASE
+    schema_env: SNOWFLAKE_STAGE_SCHEMA
+    description: Telco landing schema populated from deterministic seed files.
+
+  - kind: snowflake_table_group
+    database_env: SNOWFLAKE_DATABASE
+    schema_env: SNOWFLAKE_STAGE_SCHEMA
+    include_tables:
+      - party
+      - individual
+      - account
+      - product_offering
+      - service
+      - subscription
+      - device
+      - sim_card
+      - usage_event
+      - app_event
+      - invoice
+      - payment
+      - agreement
+      - service_order
+    description: Full set of stage-load telco entities governed by this repo.
+
+supporting_artifacts:
+  governance_manifest: governance/metadata.yml
+  rendered_sql: governance/sql/rendered_metadata.sql
+  dbt_project: dbt/dbt_project.yml
+  source_catalog: dbt/models/staging/sources.yml
+
+publish_readiness:
+  checklist:
+    - Bootstrap the Entropy organization and team structure manually.
+    - Create an organization-scoped API key and place it in DMM_API_KEY.
+    - Review the metadata manifest and table descriptions before first publish.
+    - Confirm Snowflake object names and tags are present in Horizon.
+

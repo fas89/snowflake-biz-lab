@@ -1,0 +1,190 @@
+version: 2
+
+sources:
+  - name: telco_stage
+    description: Source-aligned telco landing tables loaded into Snowflake staging.
+    database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+    schema: "{{ env_var('SNOWFLAKE_STAGE_SCHEMA', 'TELCO_STAGE_LOAD') }}"
+    loader: snowflake_put_copy
+
+    tables:
+      - name: party
+        description: Master registry for parties in the telco operating model.
+        loaded_at_field: updated_at
+        columns:
+          - name: party_id
+            description: Stable synthetic identifier for the party record.
+            tests: [unique, not_null]
+          - name: party_type
+            tests: [not_null]
+
+      - name: individual
+        description: Individual customer details linked to a party.
+        loaded_at_field: created_at
+        columns:
+          - name: individual_id
+            description: Stable synthetic identifier for the individual record.
+            tests: [unique, not_null]
+          - name: party_id
+            tests: [not_null]
+          - name: email
+            tests: [unique]
+
+      - name: account
+        description: Billing and service account records for parties.
+        loaded_at_field: created_at
+        columns:
+          - name: account_id
+            description: Stable synthetic identifier for the account.
+            tests: [unique, not_null]
+          - name: party_id
+            tests: [not_null]
+          - name: account_number
+            tests: [unique, not_null]
+
+      - name: product_offering
+        description: Sellable product plans and add-on offerings.
+        loaded_at_field: created_at
+        columns:
+          - name: product_offering_id
+            description: Stable synthetic identifier for the product offering.
+            tests: [unique, not_null]
+          - name: name
+            tests: [not_null]
+          - name: price_chf
+            tests: [not_null]
+
+      - name: service
+        description: Active service instances provisioned for accounts.
+        loaded_at_field: activated_at
+        columns:
+          - name: service_id
+            description: Stable synthetic identifier for the service instance.
+            tests: [unique, not_null]
+          - name: account_id
+            tests: [not_null]
+
+      - name: subscription
+        description: Subscriptions that connect services to product offerings.
+        loaded_at_field: created_at
+        columns:
+          - name: subscription_id
+            description: Stable synthetic identifier for the subscription.
+            tests: [unique, not_null]
+          - name: service_id
+            tests: [not_null]
+          - name: product_offering_id
+            tests: [not_null]
+          - name: start_date
+            tests: [not_null]
+
+      - name: device
+        description: Devices registered against customer accounts.
+        loaded_at_field: registered_at
+        columns:
+          - name: device_id
+            description: Stable synthetic identifier for the registered device.
+            tests: [unique, not_null]
+          - name: account_id
+            tests: [not_null]
+          - name: imei
+            tests: [unique]
+
+      - name: sim_card
+        description: SIM assignments that link accounts and devices.
+        loaded_at_field: activated_at
+        columns:
+          - name: sim_id
+            description: Stable synthetic identifier for the SIM assignment.
+            tests: [unique, not_null]
+          - name: account_id
+            tests: [not_null]
+          - name: msisdn
+            tests: [unique]
+          - name: iccid
+            tests: [unique]
+
+      - name: usage_event
+        description: Usage records for data, voice, and messaging events.
+        loaded_at_field: event_timestamp
+        columns:
+          - name: usage_id
+            description: Stable synthetic identifier for the raw usage event.
+            tests: [unique, not_null]
+          - name: account_id
+            tests: [not_null]
+          - name: service_id
+            tests: [not_null]
+          - name: usage_type
+            tests: [not_null]
+          - name: quantity
+            tests: [not_null]
+          - name: event_timestamp
+            tests: [not_null]
+
+      - name: app_event
+        description: Digital engagement events emitted by the telco application.
+        loaded_at_field: event_timestamp
+        columns:
+          - name: app_event_id
+            description: Stable synthetic identifier for the app event.
+            tests: [unique, not_null]
+          - name: account_id
+            tests: [not_null]
+          - name: event_type
+            tests: [not_null]
+          - name: event_timestamp
+            tests: [not_null]
+
+      - name: invoice
+        description: Monthly billing invoices produced for accounts.
+        loaded_at_field: created_at
+        columns:
+          - name: invoice_id
+            description: Stable synthetic identifier for the invoice.
+            tests: [unique, not_null]
+          - name: account_id
+            tests: [not_null]
+          - name: invoice_number
+            tests: [unique, not_null]
+          - name: invoice_date
+            tests: [not_null]
+          - name: due_date
+            tests: [not_null]
+          - name: total_amount_chf
+            tests: [not_null]
+
+      - name: payment
+        description: Payments received against invoices.
+        loaded_at_field: created_at
+        columns:
+          - name: payment_id
+            description: Stable synthetic identifier for the payment.
+            tests: [unique, not_null]
+          - name: invoice_id
+            tests: [not_null]
+          - name: amount_chf
+            tests: [not_null]
+          - name: payment_date
+            tests: [not_null]
+
+      - name: agreement
+        description: Agreements and contracts related to customer accounts.
+        loaded_at_field: created_at
+        columns:
+          - name: agreement_id
+            description: Stable synthetic identifier for the agreement.
+            tests: [unique, not_null]
+          - name: account_id
+            tests: [not_null]
+
+      - name: service_order
+        description: Requests to activate, modify, or cancel services.
+        loaded_at_field: order_date
+        columns:
+          - name: order_id
+            description: Stable synthetic identifier for the service order.
+            tests: [unique, not_null]
+          - name: account_id
+            tests: [not_null]
+

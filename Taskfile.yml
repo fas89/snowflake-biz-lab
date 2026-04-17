@@ -1,0 +1,83 @@
+version: "3"
+dotenv:
+  - .env
+
+vars:
+  COMPOSE: docker compose -f deploy/docker/docker-compose.yml --env-file .env
+  CATALOGS_COMPOSE: docker compose -f deploy/docker/catalogs/docker-compose.catalogs.yml --env-file .env.catalogs
+  DBT_RUNNER: '{{.COMPOSE}} exec -T dbt-runner'
+
+tasks:
+  up:
+    desc: Start Postgres, Airflow, and dbt-runner
+    cmds:
+      - "{{.COMPOSE}} up -d --build postgres airflow-init airflow-webserver airflow-scheduler dbt-runner"
+      - echo "Airflow: http://localhost:${AIRFLOW_WEB_PORT:-8085}"
+
+  down:
+    desc: Stop the core stack
+    cmd: "{{.COMPOSE}} down"
+
+  ps:
+    desc: Show core stack container status
+    cmd: "{{.COMPOSE}} ps"
+
+  logs:
+    desc: Tail logs for a service, or all services when SVC is empty
+    cmd: "{{.COMPOSE}} logs -f {{.SVC | default \"\"}}"
+
+  dbt:parse:
+    desc: Parse the dbt project
+    cmd: "{{.DBT_RUNNER}} dbt parse --project-dir /opt/project/dbt --profiles-dir /opt/project/config/dbt --profile telco"
+
+  dbt:compile:
+    desc: Compile the dbt project
+    cmd: "{{.DBT_RUNNER}} dbt compile --project-dir /opt/project/dbt --profiles-dir /opt/project/config/dbt --profile telco"
+
+  dbt:run:
+    desc: Run staging dbt models on Snowflake
+    cmd: "{{.DBT_RUNNER}} dbt run --project-dir /opt/project/dbt --profiles-dir /opt/project/config/dbt --profile telco"
+
+  dbt:test:
+    desc: Run dbt tests on Snowflake
+    cmd: "{{.DBT_RUNNER}} dbt test --project-dir /opt/project/dbt --profiles-dir /opt/project/config/dbt --profile telco"
+
+  seed:generate:
+    desc: Generate deterministic telco CSV seeds
+    cmd: "{{.DBT_RUNNER}} python /opt/project/seed/generate_seed_data.py"
+
+  seed:load:
+    desc: Create Snowflake landing objects and load generated CSV seeds
+    cmd: "{{.DBT_RUNNER}} python /opt/project/seed/load_to_snowflake.py"
+
+  seed:verify:
+    desc: Verify generated seed artifacts and Snowflake row counts
+    cmd: "{{.DBT_RUNNER}} python /opt/project/seed/verify_seed_data.py"
+
+  metadata:apply:
+    desc: Render and apply Horizon metadata SQL
+    cmd: "{{.DBT_RUNNER}} python /opt/project/governance/apply_metadata.py"
+
+  metadata:verify:
+    desc: Verify comments, contacts, tags, and DMF hooks in Snowflake
+    cmd: "{{.DBT_RUNNER}} python /opt/project/governance/verify_metadata.py"
+
+  jenkins:up:
+    desc: Start Jenkins only
+    cmd: "{{.COMPOSE}} --profile jenkins up -d --build jenkins"
+
+  jenkins:down:
+    desc: Stop Jenkins only
+    cmd: "{{.COMPOSE}} --profile jenkins stop jenkins"
+
+  catalogs:up:
+    desc: Start the local Entropy Data CE stack
+    cmd: "{{.CATALOGS_COMPOSE}} up -d"
+
+  catalogs:down:
+    desc: Stop the local Entropy Data CE stack
+    cmd: "{{.CATALOGS_COMPOSE}} down"
+
+  catalogs:logs:
+    desc: Tail logs for the local Entropy Data CE stack
+    cmd: "{{.CATALOGS_COMPOSE}} logs -f {{.SVC | default \"\"}}"
