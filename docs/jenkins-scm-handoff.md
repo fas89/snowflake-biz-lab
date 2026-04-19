@@ -33,8 +33,8 @@ For the ready-made workspace:
 
 For the AI workspace:
 
-- `variants/ai-reference-external/Jenkinsfile`
-- `variants/ai-generate-in-workspace/Jenkinsfile`
+- `variants/ai-reference-external/subscriber360-external/Jenkinsfile`
+- `variants/ai-generate-in-workspace/subscriber360-generated/Jenkinsfile`
 
 ## Operator Flow
 

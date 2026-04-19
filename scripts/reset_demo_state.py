@@ -34,6 +34,7 @@ def clean_lab_repo(lab_repo: Path) -> None:
     clear_directory(lab_repo / "seed" / "output")
     clear_directory(lab_repo / "fluid" / "generated", {"README.md"})
     clear_directory(lab_repo / "fluid" / "reports", {"README.md"})
+    remove_path(lab_repo / "runtime" / "dbt-docs" / "site")
     remove_path(lab_repo / "runtime" / "seed_load_report.json")
 
 

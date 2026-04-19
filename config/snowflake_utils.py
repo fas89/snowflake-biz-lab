@@ -19,8 +19,13 @@ def env_bool(name: str, default: bool = False) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def canonical_ident(identifier: str) -> str:
+    return identifier.strip().upper()
+
+
 def quote_ident(identifier: str) -> str:
-    return f'"{identifier.replace(chr(34), chr(34) * 2)}"'
+    canonical = canonical_ident(identifier)
+    return f'"{canonical.replace(chr(34), chr(34) * 2)}"'
 
 
 def fq_name(*parts: str) -> str:

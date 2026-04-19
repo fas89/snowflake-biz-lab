@@ -26,6 +26,7 @@ task ps
 Checkpoint:
 
 - Airflow opens at [http://localhost:8085](http://localhost:8085)
+- dbt docs opens at [http://localhost:8086](http://localhost:8086)
 - Jenkins opens at [http://localhost:8081](http://localhost:8081)
 - Entropy / DMM opens at [http://localhost:8095](http://localhost:8095)
 - the Entropy admin account is already usable
@@ -37,7 +38,7 @@ This step starts by dropping the full demo database, so only point it at disposa
 
 ```bash
 cd "$LAB_REPO"
-task seed:reset
+task seed:reset:confirm
 task seed:generate
 task seed:load
 task seed:verify
@@ -120,6 +121,7 @@ fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
 Checkpoint:
 
 - local Airflow can now watch the generated DAG directory through the workspace bridge
+- run `task dbt:docs:refresh SCENARIO=B2` from `$LAB_REPO` when you want the generated dbt project visible at [http://localhost:8086](http://localhost:8086)
 - a `Jenkinsfile` exists in the workspace for the CI/CD part of the story
 
 ## Step 8: Validate And Plan
@@ -140,7 +142,20 @@ Checkpoint:
 ## Step 9: Apply
 
 ```bash
-fluid apply contract.fluid.yaml --build --yes --report runtime/apply_report.html
+BUILD_ID="$(python3 - <<'PY'
+from pathlib import Path
+in_builds = False
+for raw in Path('contract.fluid.yaml').read_text().splitlines():
+    stripped = raw.strip()
+    if stripped == 'builds:':
+        in_builds = True
+        continue
+    if in_builds and (stripped.startswith('- id:') or stripped.startswith('id:')):
+        print(stripped.split(':', 1)[1].strip())
+        break
+PY
+)"
+fluid apply contract.fluid.yaml --build "$BUILD_ID" --yes --report runtime/apply_report.html
 ```
 
 Checkpoint:
@@ -156,7 +171,7 @@ The generated Jenkins handoff now follows [Jenkins SCM Handoff](../../docs/jenki
 fluid generate standard contract.fluid.yaml --format opds -o runtime/exports/product.opds.json
 fluid generate standard contract.fluid.yaml --format odcs -o runtime/exports/product.odcs.yaml
 fluid generate standard contract.fluid.yaml --format odps -o runtime/exports/product.odps.yaml
-fluid publish contract.fluid.yaml --catalog entropy-local
+fluid publish contract.fluid.yaml --catalog datamesh-manager
 ```
 
 Checkpoint:

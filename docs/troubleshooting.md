@@ -128,7 +128,7 @@ Prepare them before the live apply:
 
 ```bash
 task up
-task seed:reset
+task seed:reset:confirm
 task seed:generate
 task seed:load
 ```
@@ -144,6 +144,18 @@ The current supported path is:
 3. let Jenkins discover the pipeline from SCM
 
 See [Jenkins SCM Handoff](jenkins-scm-handoff.md).
+
+## dbt Docs UI Is Empty Or Showing The Wrong Scenario
+
+Refresh the docs site for the scenario you just ran:
+
+```bash
+task dbt:docs:refresh SCENARIO=A1
+```
+
+Then reopen [http://localhost:8086](http://localhost:8086).
+
+See [Scenario Validation Matrix](scenario-validation-matrix.md) for the valid scenario names and expected dbt roots.
 
 ## I Want The Shortest Demo Rescue Path
 

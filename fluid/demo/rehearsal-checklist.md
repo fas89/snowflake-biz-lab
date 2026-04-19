@@ -12,7 +12,7 @@ Use this before demo day so you know which steps are off-stage prep, which ones 
 | `task jenkins:up` | Live on-stage step | Jenkins URL should be ready |
 | `task catalogs:up` | Live on-stage step | Entropy / DMM and MailHog should be reachable |
 | `task catalogs:bootstrap` | Live on-stage step | Local Entropy login and `DMM_API_KEY` should be ready before the publish step |
-| `task seed:reset` | Live on-stage step | Drops the full demo database so the Snowflake landing path visibly starts from a clean state |
+| `task seed:reset:confirm` | Live on-stage step | Drops the full demo database so the Snowflake landing path visibly starts from a clean state |
 | `task seed:generate` | Live on-stage step | Makes the data story concrete |
 | `task seed:load` | Live on-stage step | Loads Snowflake staging |
 | `task seed:verify` | Live on-stage step | Confirms the landing schema is ready |
@@ -28,7 +28,7 @@ Use this before demo day so you know which steps are off-stage prep, which ones 
 | `fluid plan --out runtime/plan.json --html` | Live on-stage step | Plan JSON plus HTML view |
 | `fluid apply --yes --report runtime/apply_report.html` | Live on-stage step | Deployment moment |
 | `fluid generate standard --format opds|odcs|odps` | Live on-stage step | Standards export close |
-| `fluid publish --catalog entropy-local` | Live on-stage step | Marketplace close through the local catalog alias |
+| `fluid publish --catalog datamesh-manager` | Live on-stage step | Marketplace close through the local Entropy / DMM catalog config |
 | `apply -> Jenkins handoff` | Future FLUID gap | See [FLUID Gap Register](../../docs/fluid-gap-register.md) |
 | deterministic Snowflake silver `forge` flow | Future FLUID gap | See [FLUID Gap Register](../../docs/fluid-gap-register.md) |
 | stronger import-to-enrichment dbt flow | Future FLUID gap | See [FLUID Gap Register](../../docs/fluid-gap-register.md) |

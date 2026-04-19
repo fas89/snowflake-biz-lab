@@ -4,6 +4,7 @@ Snowflake-first telco lab for staged TM Forum SID-style seed data, Horizon metad
 
 ## Start Here
 
+- Contributor and AI-agent guide: [AGENTS.md](AGENTS.md)
 - Shared setup and reset: [Launchpad Common](docs/launchpad-common.md)
 - First-time setup and repo orientation: [Getting Started](docs/getting-started.md)
 - Ready-made workspace variants live in `gitlab/telco-silver-product-demo`
@@ -22,7 +23,7 @@ After `Launchpad Common`, choose one uninterrupted operator path:
 
 - Deterministic telco seed data shaped around a practical TM Forum SID-style model
 - Snowflake landing-table loaders and Horizon metadata scaffolding
-- Dockerized Airflow, dbt-runner, Jenkins, and Entropy Data CE platform setup
+- Dockerized Airflow, dbt-runner, dbt docs UI, Jenkins, and Entropy Data CE platform setup
 - FLUID prep for two tracks:
   - `dev-source`: install from the sibling `../forge-cli` checkout for fast upstream fixes
   - `demo-release`: install the latest `data-product-forge` release from TestPyPI
@@ -30,7 +31,7 @@ After `Launchpad Common`, choose one uninterrupted operator path:
 
 ## The Main Operator Flow
 
-1. Copy `.env` files and set `FLUID_DEMO_GITLAB_WORKSPACE` to the GitLab working copy you want Airflow to watch.
+1. Copy `.env` files and set `FLUID_DEMO_GITLAB_WORKSPACE` plus `FLUID_AI_GITLAB_WORKSPACE` to the GitLab working copies you want Airflow and the dbt docs refresh flow to watch.
 2. Start local apps from this repo: Airflow, dbt-runner, Jenkins, and Entropy Data CE, then run `task catalogs:bootstrap` so the local Entropy login and `DMM_API_KEY` are ready.
 3. Seed Snowflake staging and apply Horizon metadata from this repo.
 4. Move into a GitLab-cloned workspace on your Mac and install `data-product-forge`.
@@ -44,6 +45,7 @@ The quickest way to run that sequence is:
 ## Local URLs
 
 - Airflow: [http://localhost:8085](http://localhost:8085)
+- dbt docs: [http://localhost:8086](http://localhost:8086)
 - Jenkins: [http://localhost:8081](http://localhost:8081)
 - Entropy / DMM: [http://localhost:8095](http://localhost:8095)
 - MailHog: [http://localhost:8026](http://localhost:8026)

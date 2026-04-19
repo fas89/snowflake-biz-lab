@@ -69,14 +69,16 @@ SNOWFLAKE_USER=your-user
 SNOWFLAKE_PRIVATE_KEY_PATH=/secure/path/to/snowflake_user_key.p8
 SNOWFLAKE_PRIVATE_KEY_PASSPHRASE=
 SNOWFLAKE_OAUTH_TOKEN=
-SNOWFLAKE_WAREHOUSE=TELCO_TRANSFORM_WH
+SNOWFLAKE_WAREHOUSE=your-authorized-warehouse
 SNOWFLAKE_DATABASE=TELCO_LAB
-SNOWFLAKE_ROLE=TRANSFORMER
+SNOWFLAKE_ROLE=your-authorized-role
 SNOWFLAKE_STAGE_SCHEMA=TELCO_STAGE_LOAD
 SNOWFLAKE_FLUID_SCHEMA=TELCO_FLUID_DEMO
 DMM_API_URL=http://localhost:8095
 DMM_API_KEY=
 ```
+
+Use the same authorized Snowflake role and warehouse here that you use in `.env`, unless you intentionally want the FLUID runtime to connect with different credentials.
 
 Load it only when needed:
 

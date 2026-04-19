@@ -26,7 +26,7 @@ This is the fastest safe sequence:
 ./scripts/setup_mac_launchpad.sh --force
 source runtime/generated/launchpad.local.sh
 cd "$LAB_REPO"
-python3 scripts/reset_demo_state.py --lab-repo "$LAB_REPO" --greenfield-workspace "$GREENFIELD_WORKSPACE" --existing-workspace "$EXISTING_DBT_WORKSPACE"
+python3 scripts/reset_demo_state.py --lab-repo "$LAB_REPO" --greenfield-workspace "$GREENFIELD_WORKSPACE" --existing-workspace "$EXISTING_DBT_WORKSPACE" --yes
 task down
 task jenkins:down
 task catalogs:reset
@@ -165,6 +165,7 @@ In `.env`, set:
 
 ```text
 FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/telco-silver-product-demo
+FLUID_AI_GITLAB_WORKSPACE=/absolute/path/to/telco-silver-import-demo
 ```
 
 Create or update:
@@ -183,6 +184,7 @@ The most important local files are:
 Before you continue, make sure:
 
 - `.env` points `FLUID_DEMO_GITLAB_WORKSPACE` at your greenfield workspace
+- `.env` points `FLUID_AI_GITLAB_WORKSPACE` at your AI/import workspace
 - `.env` contains working `SNOWFLAKE_*` values for the Docker-based `task seed:*` and `task metadata:*` commands
 - `runtime/generated/fluid.local.env` contains the Snowflake secrets you want the live demo to use
 - `task catalogs:bootstrap` will fill or refresh `DMM_API_KEY` for you after the catalog stack starts
@@ -199,6 +201,7 @@ Bring up the local Docker applications before opening any of the UI links below.
 This block:
 
 - starts the core platform services
+- starts the local dbt docs UI
 - starts Jenkins
 - starts the catalog stack
 - completes the local Entropy bootstrap flow in the background
@@ -229,6 +232,7 @@ task ps
 ## 5. Open The Browser Tabs
 
 - Airflow: [http://localhost:8085](http://localhost:8085)
+- dbt docs: [http://localhost:8086](http://localhost:8086)
 - Jenkins: [http://localhost:8081](http://localhost:8081)
 - Entropy / DMM: [http://localhost:8095](http://localhost:8095)
 - MailHog: [http://localhost:8026](http://localhost:8026)
@@ -250,6 +254,7 @@ For the local apps, the important values are:
 - Jenkins login: `JENKINS_ADMIN_ID` and `JENKINS_ADMIN_PASSWORD` in `.env` or `.env.jenkins`
 - Entropy / DMM login: `ENTROPY_BOOTSTRAP_ADMIN_EMAIL` and `ENTROPY_BOOTSTRAP_ADMIN_PASSWORD` in `.env.catalogs`
 - DMM API key: `task catalogs:bootstrap` refreshes `DMM_API_KEY` in `runtime/generated/fluid.local.env`
+- dbt docs UI: no login by default
 
 These files are gitignored, so the operator should look in the local copies, not the example templates.
 
@@ -270,7 +275,7 @@ This block:
 
 ```bash
 cd "$LAB_REPO"
-task seed:reset
+task seed:reset:confirm
 task seed:generate
 task seed:load
 task seed:verify
@@ -282,7 +287,7 @@ task metadata:verify
 
 ```powershell
 Set-Location $env:LAB_REPO
-task seed:reset
+task seed:reset:confirm
 task seed:generate
 task seed:load
 task seed:verify
@@ -296,7 +301,7 @@ Step 7 now begins with an explicit destructive wipe of the full Snowflake demo d
 
 The demo is reproducible because:
 
-- `task seed:reset` removes the generated seed artifacts and drops `SNOWFLAKE_DATABASE` before a rerun
+- `task seed:reset:confirm` removes the generated seed artifacts and drops `SNOWFLAKE_DATABASE` before a rerun
 - `task seed:load` truncates and reloads the landing tables each time
 - `task metadata:apply` reapplies the Horizon metadata and column descriptions on the source tables each time
 - the demo contracts create or replace their demo objects in `SNOWFLAKE_FLUID_SCHEMA`

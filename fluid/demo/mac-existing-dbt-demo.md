@@ -20,6 +20,8 @@ task down
 task up
 ```
 
+If you want the local dbt docs UI to refresh against generated assets in this workspace, also set `FLUID_AI_GITLAB_WORKSPACE` in `$LAB_REPO/.env` to this workspace.
+
 ## Step 1: Install `data-product-forge`
 
 ```bash
@@ -91,11 +93,24 @@ open runtime/plan.html
 ## Step 8: Continue Into The Full Tail If The Room Has Time
 
 ```bash
-fluid apply contract.fluid.yaml --build --yes --report runtime/apply_report.html
+BUILD_ID="$(python3 - <<'PY'
+from pathlib import Path
+in_builds = False
+for raw in Path('contract.fluid.yaml').read_text().splitlines():
+    stripped = raw.strip()
+    if stripped == 'builds:':
+        in_builds = True
+        continue
+    if in_builds and (stripped.startswith('- id:') or stripped.startswith('id:')):
+        print(stripped.split(':', 1)[1].strip())
+        break
+PY
+)"
+fluid apply contract.fluid.yaml --build "$BUILD_ID" --yes --report runtime/apply_report.html
 fluid generate standard contract.fluid.yaml --format opds -o runtime/exports/product.opds.json
 fluid generate standard contract.fluid.yaml --format odcs -o runtime/exports/product.odcs.yaml
 fluid generate standard contract.fluid.yaml --format odps -o runtime/exports/product.odps.yaml
-fluid publish contract.fluid.yaml --catalog entropy-local
+fluid publish contract.fluid.yaml --catalog datamesh-manager
 ```
 
 If the current release diverges from the target story here, capture it in the [FLUID Gap Register](../../docs/fluid-gap-register.md).
