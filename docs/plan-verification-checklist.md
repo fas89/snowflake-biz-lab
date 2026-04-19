@@ -19,6 +19,7 @@ The goal is simple: confirm that the plan matches the intended sandbox deploymen
 
 ## Confirm The Build Scope
 
+- The build ID in your `fluid apply --build <build-id>` command matches the intended `builds[].id` entry in the contract.
 - The build step is the expected build for the current variant.
 - The build references the expected dbt repository path for that variant.
 - The build output names match the expected exposes.
@@ -49,3 +50,5 @@ The goal is simple: confirm that the plan matches the intended sandbox deploymen
 - The marketplace target is correct.
 
 If any one of those is wrong, stop and fix the contract, env, or workspace path before running `fluid apply --build`.
+
+After `fluid apply --build`, switch to [Scenario Validation Matrix](scenario-validation-matrix.md) for the end-of-scenario Airflow, dbt, and Jenkins checks.

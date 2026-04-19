@@ -7,6 +7,8 @@ from pathlib import Path
 from config.snowflake_utils import execute_many, fq_name, get_connection, get_env, quote_ident
 from seed.telco_seed_data import TABLE_SPECS
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
 
 def build_ddl_statements() -> list[str]:
     database = get_env("SNOWFLAKE_DATABASE", required=True)
@@ -75,6 +77,7 @@ def load_files(output_dir: Path) -> None:
                 }
 
     report_path = REPO_ROOT / "runtime" / "seed_load_report.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
     print(f"Wrote Snowflake load report to {report_path}")
 

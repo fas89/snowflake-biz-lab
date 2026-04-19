@@ -41,7 +41,7 @@ Make sure the landing data is already present:
 
 ```bash
 task up
-task seed:reset
+task seed:reset:confirm
 task seed:generate
 task seed:load
 task metadata:apply

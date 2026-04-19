@@ -11,10 +11,11 @@ vars:
 
 tasks:
   up:
-    desc: Start Postgres, Airflow, and dbt-runner
+    desc: Start Postgres, Airflow, dbt-runner, and the local dbt docs UI
     cmds:
-      - "{{.COMPOSE}} up -d --build postgres airflow-init airflow-webserver airflow-scheduler dbt-runner"
+      - "{{.COMPOSE}} up -d --build postgres airflow-init airflow-webserver airflow-scheduler dbt-runner dbt-docs"
       - 'echo "Airflow: http://localhost:${AIRFLOW_WEB_PORT:-8085}"'
+      - 'echo "dbt Docs: http://localhost:${DBT_DOCS_PORT:-8086}"'
 
   down:
     desc: Stop the core stack
@@ -66,6 +67,10 @@ tasks:
     desc: Run dbt tests on Snowflake
     cmd: "{{.DBT_RUNNER}} dbt test --project-dir /opt/project/dbt --profiles-dir /opt/project/config/dbt --profile telco"
 
+  dbt:docs:refresh:
+    desc: Refresh the local dbt docs site for a demo scenario (`task dbt:docs:refresh SCENARIO=A1`)
+    cmd: "python3 scripts/refresh_dbt_docs.py --scenario \"{{.SCENARIO}}\""
+
   seed:generate:
     desc: Generate deterministic telco CSV seeds
     cmd: "{{.DBT_RUNNER}} python /opt/project/seed/generate_seed_data.py"
@@ -73,6 +78,10 @@ tasks:
   seed:reset:
     desc: Reset local telco seed artifacts and drop the Snowflake demo database (requires `-- --yes` to confirm)
     cmd: "{{.DBT_RUNNER}} python /opt/project/seed/reset_seed_state.py {{.CLI_ARGS}}"
+
+  seed:reset:confirm:
+    desc: Confirmed destructive reset of local telco seed artifacts and the Snowflake demo database
+    cmd: "{{.DBT_RUNNER}} python /opt/project/seed/reset_seed_state.py --yes"
 
   seed:load:
     desc: Create Snowflake source landing objects and load generated CSV seeds

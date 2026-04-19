@@ -10,7 +10,11 @@ from http.cookiejar import CookieJar
 from pathlib import Path
 from urllib import error, parse, request
 
+import yaml
+
 from local_env_utils import parse_env_file, update_env_file
+
+FLUID_CONFIG_PATH = Path.home() / ".fluid" / "config.yaml"
 
 
 @dataclass
@@ -276,6 +280,34 @@ def validate_api_key(web_base_url: str, api_key: str) -> bool:
     return status == 200
 
 
+def update_fluid_catalog_config(web_base_url: str) -> None:
+    config: dict[str, object] = {}
+    if FLUID_CONFIG_PATH.exists():
+        loaded = yaml.safe_load(FLUID_CONFIG_PATH.read_text(encoding="utf-8")) or {}
+        if not isinstance(loaded, dict):
+            raise RuntimeError(f"Expected {FLUID_CONFIG_PATH} to contain a YAML mapping")
+        config = dict(loaded)
+
+    catalogs = config.setdefault("catalogs", {})
+    if not isinstance(catalogs, dict):
+        raise RuntimeError("Expected the top-level 'catalogs' config section to be a mapping")
+
+    catalogs["datamesh-manager"] = {
+        "endpoint": web_base_url,
+        "enabled": True,
+        "auth": {
+            "type": "api_key",
+            "api_key": "${DMM_API_KEY}",
+        },
+    }
+
+    FLUID_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    FLUID_CONFIG_PATH.write_text(
+        yaml.safe_dump(config, sort_keys=False),
+        encoding="utf-8",
+    )
+
+
 def bootstrap_entropy(config: BootstrapConfig) -> str:
     opener = build_opener()
     if not login(opener, config.web_base_url, config.admin_email, config.admin_password):
@@ -373,8 +405,10 @@ def main() -> None:
                 "DMM_API_KEY": existing_api_key,
             },
         )
+        update_fluid_catalog_config(config.web_base_url)
         print("Existing local DMM_API_KEY is already valid.")
         print(f"DMM_API_URL={config.web_base_url}")
+        print(f"Configured {FLUID_CONFIG_PATH} for the local datamesh-manager catalog.")
         return
 
     api_key = bootstrap_entropy(config)
@@ -388,11 +422,13 @@ def main() -> None:
             "DMM_API_KEY": api_key,
         },
     )
+    update_fluid_catalog_config(config.web_base_url)
     print("Local Entropy bootstrap complete.")
     print(f"Admin email: {config.admin_email}")
     print(f"Organization vanity URL: {config.organization_vanity_url}")
     print(f"DMM_API_URL={config.web_base_url}")
     print(f"Updated {fluid_secrets_file} with a fresh DMM_API_KEY")
+    print(f"Configured {FLUID_CONFIG_PATH} for the local datamesh-manager catalog.")
 
 
 if __name__ == "__main__":

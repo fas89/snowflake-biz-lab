@@ -11,12 +11,14 @@ The fastest way into this repo is:
 
 This page is the short orientation tour.
 
+If you are using an AI coding agent or copilot in this repo, read [../AGENTS.md](../AGENTS.md) before making changes. It captures the repo-wide rules for FLUID limitations, launchpads, scenario vocabulary, and safe mutation.
+
 ## What You Need
 
 - Python `3.9+`
 - `pip`
 - `task` if you want to use the repo helper commands exactly as written
-- Docker Desktop for local Airflow, dbt-runner, Jenkins, and Entropy Data CE
+- Docker Desktop for local Airflow, dbt-runner, dbt docs UI, Jenkins, and Entropy Data CE
 - A Snowflake environment when you are ready to load staging data and run live FLUID commands
 - A hosted GitLab project or clone path for the two demo workspaces
 
@@ -25,7 +27,7 @@ You do not need Snowflake credentials just to read the docs or inspect the repo 
 ## Two Local Config Files, Two Jobs
 
 1. `.env`
-   Put non-secret local settings here, including `FLUID_DEMO_GITLAB_WORKSPACE`.
+   Put non-secret local settings here, including `FLUID_DEMO_GITLAB_WORKSPACE` and `FLUID_AI_GITLAB_WORKSPACE`.
 2. `runtime/generated/fluid.local.env`
    Put Snowflake and DMM secrets here, then load it only before live `fluid apply` or `fluid publish`.
 
@@ -57,12 +59,13 @@ cp .env.catalogs.example .env.catalogs
 cp .env.jenkins.example .env.jenkins
 ```
 
-Then set `FLUID_DEMO_GITLAB_WORKSPACE` in `.env` to the active GitLab working copy you want local Airflow to watch.
+Then set `FLUID_DEMO_GITLAB_WORKSPACE` and `FLUID_AI_GITLAB_WORKSPACE` in `.env` to the GitLab working copies you want local Airflow and dbt docs to watch.
 
 Use an absolute path. For example:
 
 ```text
 FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/telco-silver-product-demo
+FLUID_AI_GITLAB_WORKSPACE=/absolute/path/to/telco-silver-import-demo
 ```
 
 ## The Recommended Reading Order

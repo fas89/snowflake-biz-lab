@@ -39,7 +39,8 @@ x-airflow-common: &airflow-common
     PYTHONPATH: /opt/project
   volumes:
     - ../../airflow/dags:/opt/airflow/dags
-    - ${FLUID_DEMO_GITLAB_WORKSPACE:-../../runtime/demo-workspace}/generated/airflow:/opt/airflow/dags/workspace
+    - ${FLUID_DEMO_GITLAB_WORKSPACE:-../../runtime/demo-workspace}:/opt/airflow/dags/workspace-greenfield
+    - ${FLUID_AI_GITLAB_WORKSPACE:-../../runtime/demo-import-workspace}:/opt/airflow/dags/workspace-import
     - ../../airflow/plugins:/opt/airflow/plugins
     - ../../airflow/config:/opt/airflow/config
     - ../../dbt:/opt/project/dbt
@@ -133,6 +134,23 @@ services:
       - ../../docs:/opt/project/docs
       - ../../runtime:/opt/project/runtime
       - ../../README.md:/opt/project/README.md:ro
+      - ${FLUID_DEMO_GITLAB_WORKSPACE:-../../runtime/demo-workspace}:/workspace/greenfield
+      - ${FLUID_AI_GITLAB_WORKSPACE:-../../runtime/demo-import-workspace}:/workspace/import
+
+  dbt-docs:
+    image: python:3.12-slim
+    container_name: snowflake-telco-dbt-docs
+    working_dir: /site
+    command: python -m http.server 8080 --bind 0.0.0.0 -d /site
+    ports:
+      - "${DBT_DOCS_PORT:-8086}:8080"
+    volumes:
+      - ../../runtime/dbt-docs/site:/site
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080').read()\" >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   jenkins:
     profiles: ["jenkins"]

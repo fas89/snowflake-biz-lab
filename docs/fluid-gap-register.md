@@ -19,6 +19,45 @@ The observations below should be rechecked against the latest `data-product-forg
 - Acceptance criteria:
   After `fluid generate ci --system jenkins`, `fluid apply` can either trigger the generated Jenkins path directly or emit a first-class Jenkins deployment handoff with workspace and plan context.
 
+## `apply --build` requires a raw build ID
+
+- Desired demo behavior:
+  `fluid apply --build` should either accept the contract's primary build implicitly or offer a first-class build selector that is easy to use from the contract and plan output.
+- Current observed behavior:
+  In the current `forge-cli` dev runtime, `fluid apply` expects `--build <build-id>`. The runbooks originally treated `--build` like a boolean flag, which is easy to misread and forces operators to inspect `builds[].id` manually.
+- Why it matters in the demo:
+  It creates friction right after plan verification, and it makes the apply step feel less native than the rest of the FLUID flow.
+- Likely `forge-cli` area to change later:
+  `fluid_build/cli/apply.py`, contract/build resolution utilities, and plan/report output that could surface a default or selected build more explicitly.
+- Acceptance criteria:
+  An operator can run `fluid apply` for a single-build contract without manually copying a raw build ID out of the contract, or the CLI clearly presents the selectable build IDs in a first-class way.
+
+## dbt repository builds fall into the legacy Python-script executor
+
+- Desired demo behavior:
+  A contract build with `engine: dbt`, a `repository` pointing at a dbt project, and `properties.model` pointing at a dbt model should execute as a dbt build or run inside `fluid apply`.
+- Current observed behavior:
+  In the current `forge-cli` dev runtime, `fluid apply --build <build-id>` routes into the absorbed legacy `execute` path. That path resolves builds as Python scripts like `<repository>/<model>.py`, so a dbt build such as `repository: ../../reference-assets/dbt_dv2_subscriber360` and `model: mart_subscriber_health_scorecard` is treated as a missing file `../../reference-assets/dbt_dv2_subscriber360/mart_subscriber_health_scorecard.py`.
+- Why it matters in the demo:
+  The contract says the build is dbt-based, but the current runtime does not execute it natively. That breaks the most important “validate -> plan -> apply/build” moment in the silver demo story.
+- Likely `forge-cli` area to change later:
+  `fluid_build/cli/apply.py`, `fluid_build/cli/execute.py`, and any build-engine dispatch layer that should distinguish Python, SQL, and dbt builds instead of forcing them all through script resolution.
+- Acceptance criteria:
+  `fluid apply --build <build-id>` recognizes `engine: dbt` builds and executes the referenced dbt project natively, including model selection, runtime vars, tests, and clear reporting, without requiring a `.py` script shim.
+
+## Native dbt execution assumes a local adapter-capable dbt runtime
+
+- Desired demo behavior:
+  A dbt-based build can run natively from `fluid apply --build <build-id>` whether the operator uses a local dbt installation or a containerized/project-specific dbt runtime.
+- Current observed behavior:
+  After native dbt dispatch is enabled, the current runtime shells out to `dbt build` on the local machine. In this lab that reaches the next failure immediately if the local dbt installation does not include the required adapter, for example `Could not find adapter type snowflake!`.
+- Why it matters in the demo:
+  The FLUID contract is ready to execute the dbt build, but the demo environment may already have a working dbt runtime inside Docker rather than on the host machine. The current runtime does not provide a first-class way to target that execution environment.
+- Likely `forge-cli` area to change later:
+  `fluid_build/cli/execute.py` and related build-engine configuration so dbt execution can support richer command prefixes, container runners, or provider-aware runtime selection instead of assuming a single local `dbt` executable.
+- Acceptance criteria:
+  An operator can configure a dbt build to run against the intended runtime, including local and containerized dbt environments, without patching the contract or relying on a host-specific adapter install.
+
 ## AI `forge` for Snowflake + dbt silver aggregation
 
 - Desired demo behavior:

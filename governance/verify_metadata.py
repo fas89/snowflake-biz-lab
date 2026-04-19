@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from config.snowflake_utils import fetch_all_dicts, get_connection, sql_string
+from config.snowflake_utils import canonical_ident, fetch_all_dicts, get_connection, sql_string
 from governance.metadata_utils import (
     DEFAULT_MANIFEST_PATH,
     information_schema_fqn,
@@ -18,8 +18,8 @@ def _fetch_table_comment(cursor: Any, table_name: str) -> str:
         cursor,
         "SELECT comment FROM "
         f"{information_schema_fqn()}.TABLES "
-        f"WHERE table_schema = {sql_string(stage_schema_name())} "
-        f"AND table_name = {sql_string(table_name)}",
+        f"WHERE table_schema = {sql_string(canonical_ident(stage_schema_name()))} "
+        f"AND table_name = {sql_string(canonical_ident(table_name))}",
     )
     return str(rows[0]["comment"] or "")
 
@@ -29,8 +29,8 @@ def _fetch_column_comments(cursor: Any, table_name: str) -> dict[str, str]:
         cursor,
         "SELECT column_name, comment FROM "
         f"{information_schema_fqn()}.COLUMNS "
-        f"WHERE table_schema = {sql_string(stage_schema_name())} "
-        f"AND table_name = {sql_string(table_name)}",
+        f"WHERE table_schema = {sql_string(canonical_ident(stage_schema_name()))} "
+        f"AND table_name = {sql_string(canonical_ident(table_name))}",
     )
     return {str(row["column_name"]).lower(): str(row["comment"] or "") for row in rows}
 
@@ -40,7 +40,7 @@ def _fetch_schema_comment(cursor: Any) -> str:
         cursor,
         "SELECT comment FROM "
         f"{information_schema_fqn()}.SCHEMATA "
-        f"WHERE schema_name = {sql_string(stage_schema_name())}",
+        f"WHERE schema_name = {sql_string(canonical_ident(stage_schema_name()))}",
     )
     return str(rows[0]["comment"] or "")
 

@@ -21,10 +21,10 @@ task ps
 
 ## Step 2: Load Staging Data And Metadata
 
-This path now starts from a full database wipe through `task seed:reset`, so use it only against the disposable demo database.
+This path now starts from a full database wipe through `task seed:reset:confirm`, so use it only against the disposable demo database.
 
 ```bash
-task seed:reset
+task seed:reset:confirm
 task seed:generate
 task seed:load
 task seed:verify

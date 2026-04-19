@@ -24,7 +24,7 @@ set +a
 Use this contract for validate, plan, and publish. The actual source-table creation is still handled by:
 
 ```bash
-task seed:reset
+task seed:reset:confirm
 task seed:generate
 task seed:load
 task metadata:apply
