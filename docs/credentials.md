@@ -13,10 +13,10 @@ Use `.env` for non-secret local settings, especially:
 - local Docker defaults
 - GitLab project URL placeholders
 
-For the local Airflow bridge, `FLUID_DEMO_GITLAB_WORKSPACE` should be an absolute macOS path to the active GitLab working copy. Example:
+For the local Airflow bridge, `FLUID_DEMO_GITLAB_WORKSPACE` should be an absolute path to the active GitLab working copy. Example:
 
 ```text
-FLUID_DEMO_GITLAB_WORKSPACE=/Users/A200004702/gitlab/telco-silver-product-demo
+FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/telco-silver-product-demo
 ```
 
 ### `runtime/generated/fluid.local.env`
@@ -37,9 +37,28 @@ set +a
 
 The sample outline lives in [runtime/generated/README.md](../runtime/generated/README.md).
 
+### `.env.catalogs`
+
+Use `.env.catalogs` for the local Entropy bootstrap account and catalog-stack settings.
+
+The most important local values are:
+
+- `ENTROPY_BOOTSTRAP_ADMIN_EMAIL`
+- `ENTROPY_BOOTSTRAP_ADMIN_PASSWORD`
+- `ENTROPY_BOOTSTRAP_ORG_NAME`
+- `ENTROPY_BOOTSTRAP_ORG_VANITY_URL`
+- `ENTROPY_BOOTSTRAP_API_KEY_NAME`
+
+After `task catalogs:up`, run `task catalogs:bootstrap` to:
+
+- complete the local Entropy signup flow in the background
+- create or reuse the local organization
+- generate a fresh organization-scoped API key
+- refresh `DMM_API_KEY` in `runtime/generated/fluid.local.env`
+
 ## The Runtime Rule
 
-`fluid apply` and `fluid dmm publish` should read secrets from environment variables only.
+`fluid apply` and `fluid publish` should read secrets from environment variables only.
 
 Do not put secrets in:
 
@@ -76,7 +95,7 @@ For local Entropy / DMM publication, keep these in `runtime/generated/fluid.loca
 - `DMM_API_URL`
 - `DMM_API_KEY`
 
-The repo defaults the local API URL to `http://localhost:8095`, but the API key should still be injected only at runtime.
+The repo defaults the local API URL to `http://localhost:8095`, and `task catalogs:bootstrap` is the standard way to refresh the local `DMM_API_KEY`.
 
 ## Hosted GitLab
 

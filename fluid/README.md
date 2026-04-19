@@ -21,13 +21,17 @@ This folder is the FLUID home for `snowflake-biz-lab`.
 
 ### `demo-release`
 
-- uses TestPyPI `data-product-forge==0.7.10`
+- uses the latest TestPyPI `data-product-forge` release
 - is the required final demo path
 - is the track to trust for presenter rehearsal
 
 ## Start Here
 
-- [Mac Demo Launchpad](../docs/mac-launchpad.md)
+- [Launchpad Common](../docs/launchpad-common.md)
+- [Demo Release Launchpad (Mac)](../docs/demo-release-launchpad-mac.md)
+- [Demo Release Launchpad (Windows)](../docs/demo-release-launchpad-windows.md)
+- [Dev Source Launchpad (Mac)](../docs/dev-source-launchpad-mac.md)
+- [Dev Source Launchpad (Windows)](../docs/dev-source-launchpad-windows.md)
 - [Mac Greenfield Demo](demo/mac-greenfield-demo.md)
 - [Mac Existing dbt Demo](demo/mac-existing-dbt-demo.md)
 - [Rehearsal Checklist](demo/rehearsal-checklist.md)

@@ -1,13 +1,14 @@
 # Command Reference
 
-These are the commands this repo promotes for the full local-Mac demo.
+These are the commands this repo promotes for the full local demo.
 
 ## Common Shell Variables
 
 ```bash
-export LAB_REPO="/Users/A200004702/Documents/Open-Source Community/snowflake-biz-lab"
-export GREENFIELD_WORKSPACE="$HOME/gitlab/telco-silver-product-demo"
-export EXISTING_DBT_WORKSPACE="$HOME/gitlab/telco-silver-import-demo"
+export LOCAL_REPOS_DIR="/absolute/path/to/your/local/repos"
+export LAB_REPO="$LOCAL_REPOS_DIR/snowflake-biz-lab"
+export GREENFIELD_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/telco-silver-product-demo"
+export EXISTING_DBT_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/telco-silver-import-demo"
 export FLUID_SECRETS_FILE="$LAB_REPO/runtime/generated/fluid.local.env"
 ```
 
@@ -18,15 +19,20 @@ cd "$LAB_REPO"
 task up
 task jenkins:up
 task catalogs:up
+task catalogs:bootstrap
 task ps
 task logs
 task catalogs:logs
+task catalogs:reset
 ```
 
 ## Seed And Metadata Flow
 
+`task seed:reset` is destructive. It drops the entire database in `SNOWFLAKE_DATABASE`.
+
 ```bash
 cd "$LAB_REPO"
+task seed:reset
 task seed:generate
 task seed:load
 task seed:verify
@@ -40,7 +46,7 @@ task metadata:verify
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ data-product-forge==0.7.10
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ data-product-forge
 fluid version
 fluid doctor
 ```
@@ -53,37 +59,44 @@ source "$FLUID_SECRETS_FILE"
 set +a
 ```
 
-## Greenfield Workspace Flow
+## Ready-Made Workspace Flow
 
 ```bash
 cd "$GREENFIELD_WORKSPACE"
-fluid init telco-silver-product --provider snowflake --yes
-cd telco-silver-product
-fluid forge --provider snowflake --domain telco --target-dir .
-fluid generate schedule contract.fluid.yaml --scheduler airflow -o generated/airflow --overwrite
-fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
+source .venv/bin/activate
+cd variants/external-reference
 fluid validate contract.fluid.yaml
 fluid plan contract.fluid.yaml --out runtime/plan.json --html
-fluid apply contract.fluid.yaml --yes --report runtime/apply_report.html
-fluid generate standard contract.fluid.yaml --format opds -o runtime/exports/product.opds.json
-fluid generate standard contract.fluid.yaml --format odcs -o runtime/exports/product.odcs.yaml
-fluid generate standard contract.fluid.yaml --format odps -o runtime/exports/product.odps.yaml
-fluid dmm publish contract.fluid.yaml --with-contract --validate-generated-contracts
+open runtime/plan.html
+fluid apply contract.fluid.yaml --build --yes --report runtime/apply_report.html
+fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
+git add .
+git commit -m "Refresh external-reference silver variant"
+git push
+fluid publish contract.fluid.yaml --catalog entropy-local
 ```
 
-## Existing dbt Variation
+Review the plan before apply with [Plan Verification Checklist](plan-verification-checklist.md).
+
+## AI Workspace Flow
 
 ```bash
 cd "$EXISTING_DBT_WORKSPACE"
-rsync -a "$LAB_REPO/dbt/" ./dbt/
-mkdir -p config
-rsync -a "$LAB_REPO/config/dbt/" ./config/dbt/
-fluid import --dir ./dbt --provider snowflake --yes
-fluid forge --provider snowflake --domain telco --target-dir . --discovery-path ./dbt
-fluid generate schedule contract.fluid.yaml --scheduler airflow -o generated/airflow --overwrite
-fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
+source .venv/bin/activate
+cd variants/ai-reference-external
+cat ../../prompts/ai-reference-external.md
+fluid init subscriber360-external --provider snowflake --yes
+cd subscriber360-external
+fluid forge --provider snowflake --domain telco --target-dir .
 fluid validate contract.fluid.yaml
 fluid plan contract.fluid.yaml --out runtime/plan.json --html
+open runtime/plan.html
+fluid apply contract.fluid.yaml --build --yes --report runtime/apply_report.html
+fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
+git add .
+git commit -m "Generate AI external-reference silver variant"
+git push
+fluid publish contract.fluid.yaml --catalog entropy-local
 ```
 
 ## Repo Runtime Checks
@@ -101,6 +114,7 @@ task fluid:check:dev
 ```bash
 cd "$LAB_REPO"
 .venv.fluid-demo/bin/fluid validate fluid/contracts/snowflake_smoke/contract.fluid.yaml
+.venv.fluid-demo/bin/fluid validate fluid/contracts/telco_seed_sources/contract.fluid.yaml
 .venv.fluid-demo/bin/fluid validate fluid/contracts/telco_stage_seed/contract.fluid.yaml
 ```
 

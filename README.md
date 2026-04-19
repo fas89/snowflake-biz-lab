@@ -4,12 +4,19 @@ Snowflake-first telco lab for staged TM Forum SID-style seed data, Horizon metad
 
 ## Start Here
 
-- Running the whole demo from your Mac: [Mac Demo Launchpad](docs/mac-launchpad.md)
+- Shared setup and reset: [Launchpad Common](docs/launchpad-common.md)
 - First-time setup and repo orientation: [Getting Started](docs/getting-started.md)
-- Primary end-to-end demo: [Mac Greenfield Demo](fluid/demo/mac-greenfield-demo.md)
-- Secondary existing-dbt variation: [Mac Existing dbt Demo](fluid/demo/mac-existing-dbt-demo.md)
+- Ready-made workspace variants live in `gitlab/telco-silver-product-demo`
+- AI workspace variants live in `gitlab/telco-silver-import-demo`
 - FLUID work to implement later: [FLUID Gap Register](docs/fluid-gap-register.md)
 - Version explanation: [CLI Version vs `fluidVersion`](docs/fluid-versions.md)
+
+After `Launchpad Common`, choose one uninterrupted operator path:
+
+- Mac final demo: [docs/demo-release-launchpad-mac.md](docs/demo-release-launchpad-mac.md)
+- Windows final demo: [docs/demo-release-launchpad-windows.md](docs/demo-release-launchpad-windows.md)
+- Mac editable source: [docs/dev-source-launchpad-mac.md](docs/dev-source-launchpad-mac.md)
+- Windows editable source: [docs/dev-source-launchpad-windows.md](docs/dev-source-launchpad-windows.md)
 
 ## What This Repo Gives You
 
@@ -18,18 +25,21 @@ Snowflake-first telco lab for staged TM Forum SID-style seed data, Horizon metad
 - Dockerized Airflow, dbt-runner, Jenkins, and Entropy Data CE platform setup
 - FLUID prep for two tracks:
   - `dev-source`: install from the sibling `../forge-cli` checkout for fast upstream fixes
-  - `demo-release`: install the pinned TestPyPI release `data-product-forge==0.7.10`
+  - `demo-release`: install the latest `data-product-forge` release from TestPyPI
 - Friendly Markdown docs written for operators, presenters, and newcomers
 
 ## The Main Operator Flow
 
 1. Copy `.env` files and set `FLUID_DEMO_GITLAB_WORKSPACE` to the GitLab working copy you want Airflow to watch.
-2. Start local apps from this repo: Airflow, dbt-runner, Jenkins, and Entropy Data CE.
+2. Start local apps from this repo: Airflow, dbt-runner, Jenkins, and Entropy Data CE, then run `task catalogs:bootstrap` so the local Entropy login and `DMM_API_KEY` are ready.
 3. Seed Snowflake staging and apply Horizon metadata from this repo.
 4. Move into a GitLab-cloned workspace on your Mac and install `data-product-forge`.
-5. Run `fluid init`, `fluid forge`, `fluid generate schedule`, `fluid generate ci`, `fluid validate`, `fluid plan`, `fluid apply`, `fluid generate standard`, and `fluid dmm publish`.
+5. Run the silver demo variants through `fluid validate`, `fluid plan`, explicit plan verification, `fluid apply --build`, `fluid generate ci`, GitLab push, Jenkins SCM pickup, and `fluid publish`.
 
-The quick operator page for that sequence is [Mac Demo Launchpad](docs/mac-launchpad.md).
+The quickest way to run that sequence is:
+
+1. [Launchpad Common](docs/launchpad-common.md)
+2. [Demo Release Launchpad (Mac)](docs/demo-release-launchpad-mac.md) or [Demo Release Launchpad (Windows)](docs/demo-release-launchpad-windows.md)
 
 ## Local URLs
 
@@ -62,7 +72,9 @@ seed/                 Synthetic telco data generation plus Snowflake loading and
 
 ## Need Help?
 
-- Operator-first path: [docs/mac-launchpad.md](docs/mac-launchpad.md)
+- Shared setup and reset: [docs/launchpad-common.md](docs/launchpad-common.md)
+- Final demo paths: [docs/demo-release-launchpad-mac.md](docs/demo-release-launchpad-mac.md) and [docs/demo-release-launchpad-windows.md](docs/demo-release-launchpad-windows.md)
+- Source-backed paths: [docs/dev-source-launchpad-mac.md](docs/dev-source-launchpad-mac.md) and [docs/dev-source-launchpad-windows.md](docs/dev-source-launchpad-windows.md)
 - Exact commands this repo promotes: [docs/command-reference.md](docs/command-reference.md)
 - Credentials and runtime secret handling: [docs/credentials.md](docs/credentials.md)
 - Common setup issues: [docs/troubleshooting.md](docs/troubleshooting.md)

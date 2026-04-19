@@ -11,7 +11,7 @@ They are related, but they are not the same number.
 
 ## What This Repo Pins Today
 
-- Demo-release package: `data-product-forge==0.7.10`
+- Demo-release package: latest `data-product-forge` release from TestPyPI
 - Repo contract schema: `fluidVersion: 0.7.2`
 
 ## Why The Numbers Are Different
@@ -28,7 +28,7 @@ That means:
 ### `demo-release`
 
 - package source: TestPyPI
-- install target: `data-product-forge==0.7.10`
+- install target: latest `data-product-forge` release from TestPyPI
 - purpose: final demo and release-truth validation
 
 ### `dev-source`
@@ -48,7 +48,7 @@ task fluid:check:dev
 
 ## Common Confusion
 
-### “I installed `0.7.10`, so why are the contracts still `0.7.2`?”
+### “I installed the latest TestPyPI release, so why are the contracts still `0.7.2`?”
 
 Because the package version and the contract schema version are separate compatibility layers.
 

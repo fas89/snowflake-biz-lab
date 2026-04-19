@@ -6,7 +6,7 @@ This is the secondary variation for teams that already have dbt assets and want 
 
 ```bash
 export LAB_REPO="/Users/A200004702/Documents/Open-Source Community/snowflake-biz-lab"
-export EXISTING_DBT_WORKSPACE="$HOME/gitlab/telco-silver-import-demo"
+export EXISTING_DBT_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/telco-silver-import-demo"
 export FLUID_SECRETS_FILE="$LAB_REPO/runtime/generated/fluid.local.env"
 ```
 
@@ -27,7 +27,7 @@ cd "$EXISTING_DBT_WORKSPACE"
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ data-product-forge==0.7.10
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ data-product-forge
 fluid version
 fluid doctor
 ```
@@ -85,16 +85,17 @@ fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
 ```bash
 fluid validate contract.fluid.yaml
 fluid plan contract.fluid.yaml --out runtime/plan.json --html
+open runtime/plan.html
 ```
 
 ## Step 8: Continue Into The Full Tail If The Room Has Time
 
 ```bash
-fluid apply contract.fluid.yaml --yes --report runtime/apply_report.html
+fluid apply contract.fluid.yaml --build --yes --report runtime/apply_report.html
 fluid generate standard contract.fluid.yaml --format opds -o runtime/exports/product.opds.json
 fluid generate standard contract.fluid.yaml --format odcs -o runtime/exports/product.odcs.yaml
 fluid generate standard contract.fluid.yaml --format odps -o runtime/exports/product.odps.yaml
-fluid dmm publish contract.fluid.yaml --with-contract --validate-generated-contracts
+fluid publish contract.fluid.yaml --catalog entropy-local
 ```
 
 If the current release diverges from the target story here, capture it in the [FLUID Gap Register](../../docs/fluid-gap-register.md).

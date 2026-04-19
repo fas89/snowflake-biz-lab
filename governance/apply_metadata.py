@@ -8,7 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from config.snowflake_utils import env_bool, execute_many, get_connection  # noqa: E402
+from config.snowflake_utils import execute_many, get_connection  # noqa: E402
 from governance.metadata_utils import (  # noqa: E402
     DEFAULT_MANIFEST_PATH,
     DEFAULT_SQL_PATH,
@@ -16,6 +16,22 @@ from governance.metadata_utils import (  # noqa: E402
     render_sql_sections,
     write_sql_bundle,
 )
+
+
+def _filter_comment_sections(sections: dict[str, list[str]]) -> dict[str, list[str]]:
+    return {
+        "schema_comments": [
+            statement
+            for statement in sections["schema"]
+            if statement.strip().upper().startswith("COMMENT ON SCHEMA")
+        ],
+        "table_comments": [
+            statement
+            for statement in sections["tables"]
+            if statement.strip().upper().startswith("COMMENT ON TABLE")
+            or statement.strip().upper().startswith("COMMENT ON COLUMN")
+        ],
+    }
 
 
 def main() -> None:
@@ -33,20 +49,13 @@ def main() -> None:
     args = parser.parse_args()
 
     manifest = load_manifest(Path(args.manifest_path).resolve())
-    sections = render_sql_sections(manifest)
+    sections = _filter_comment_sections(render_sql_sections(manifest))
     output_path = Path(args.output).resolve()
     write_sql_bundle(output_path, sections)
 
-    enabled_sections = ["core", "schema", "tables"]
-    if env_bool("SNOWFLAKE_ENABLE_CLASSIFICATION", False):
-        enabled_sections.append("classification")
-    if env_bool("SNOWFLAKE_ENABLE_DMF", False):
-        enabled_sections.append("dmf")
-
     with get_connection() as conn:
         with conn.cursor() as cursor:
-            for section_name in enabled_sections:
-                statements = sections[section_name]
+            for section_name, statements in sections.items():
                 if not statements:
                     continue
                 print(f"Applying {section_name} metadata ({len(statements)} statements)")
@@ -57,4 +66,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

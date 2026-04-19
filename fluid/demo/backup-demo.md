@@ -22,7 +22,7 @@ cd fluid-backup-demo
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install "/Users/A200004702/Documents/Open-Source Community/snowflake-biz-lab/runtime/wheels/data_product_forge-0.7.10-py3-none-any.whl"
+pip install runtime/wheels/data_product_forge-*.whl
 fluid version
 fluid doctor --features-only
 ```

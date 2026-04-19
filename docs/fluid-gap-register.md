@@ -4,16 +4,16 @@ This register documents the FLUID work that the repo expects you to implement la
 
 The goal here is simple: keep the demo docs aimed at the target end-state, and keep the current gaps visible and actionable.
 
-The observations below are based on the currently inspected `data-product-forge==0.7.10` release and the checked `forge-cli` sources on April 17, 2026.
+The observations below should be rechecked against the latest `data-product-forge` TestPyPI release and the current `forge-cli` sources before each demo cycle.
 
 ## `apply -> Jenkins handoff`
 
 - Desired demo behavior:
   `fluid apply` deploys the data product and hands off into the generated Jenkins deployment path.
 - Current observed behavior:
-  `fluid generate ci --system jenkins` writes a `Jenkinsfile`, but the current `fluid apply` surface does not expose a Jenkins-specific handoff or trigger step.
+  `fluid generate ci --system jenkins` writes a `Jenkinsfile`, and the current supported demo path is SCM pickup from GitLab. The current `fluid apply` surface still does not expose a Jenkins-specific handoff or trigger step.
 - Why it matters in the demo:
-  The story ends more cleanly if generated CI becomes the deployment handoff, not just a side artifact.
+  The story ends more cleanly if generated CI becomes a first-class deployment handoff instead of relying on a separate SCM job setup step.
 - Likely `forge-cli` area to change later:
   `fluid_build/cli/generate_ci.py`, `fluid_build/cli/scaffold_ci.py`, `fluid_build/cli/apply.py`, and execution/reporting hooks around post-apply actions.
 - Acceptance criteria:
@@ -63,7 +63,7 @@ The observations below are based on the currently inspected `data-product-forge=
 - Desired demo behavior:
   OPDS, ODCS, and ODPS generation flow naturally into publication to the local Entropy / DMM marketplace.
 - Current observed behavior:
-  `fluid generate standard` and `fluid dmm publish` are separate commands with separate concerns. The repo can demonstrate both, but the handoff is not yet one unified end-state workflow.
+  `fluid generate standard` and `fluid publish` are still separate concerns. The repo can demonstrate both, but the handoff is not yet one unified end-state workflow.
 - Why it matters in the demo:
   The closing moment should show standards and marketplace publication as one coherent product story.
 - Likely `forge-cli` area to change later:

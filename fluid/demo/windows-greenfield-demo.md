@@ -1,21 +1,21 @@
-# Mac Greenfield Demo
+# Windows Greenfield Demo
 
-This is the primary target end-state demo.
+This is the Windows parallel to the Mac greenfield runbook.
 
-It starts with local apps on your Mac, seeds Snowflake staging, creates a GitLab-based FLUID workspace, and ends with standards export plus local DMM publish.
+It keeps the same story and checkpoints, but all commands are written for PowerShell so the platform flow stays separate from the Mac version.
 
 ## Standard Shell Variables
 
-```bash
-export LAB_REPO="/Users/A200004702/Documents/Open-Source Community/snowflake-biz-lab"
-export GREENFIELD_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/telco-silver-product-demo"
-export FLUID_SECRETS_FILE="$LAB_REPO/runtime/generated/fluid.local.env"
+```powershell
+$env:LAB_REPO = "C:\Users\<you>\Documents\Open-Source Community\snowflake-biz-lab"
+$env:GREENFIELD_WORKSPACE = "$HOME\gitlab\telco-silver-product-demo"
+$env:FLUID_SECRETS_FILE = "$env:LAB_REPO\runtime\generated\fluid.local.env"
 ```
 
 ## Step 1: Bring Up The Local Platform
 
-```bash
-cd "$LAB_REPO"
+```powershell
+Set-Location $env:LAB_REPO
 task up
 task jenkins:up
 task catalogs:up
@@ -35,8 +35,8 @@ Checkpoint:
 
 This step starts by dropping the full demo database, so only point it at disposable demo Snowflake objects.
 
-```bash
-cd "$LAB_REPO"
+```powershell
+Set-Location $env:LAB_REPO
 task seed:reset
 task seed:generate
 task seed:load
@@ -53,12 +53,12 @@ Checkpoint:
 
 ## Step 3: Install `data-product-forge` In The GitLab Workspace
 
-```bash
-cd "$GREENFIELD_WORKSPACE"
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ data-product-forge
+```powershell
+Set-Location $env:GREENFIELD_WORKSPACE
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ data-product-forge
 fluid version
 fluid doctor
 ```
@@ -70,23 +70,26 @@ Checkpoint:
 
 ## Step 4: Start The FLUID Workspace
 
-```bash
-cd "$GREENFIELD_WORKSPACE"
+```powershell
+Set-Location $env:GREENFIELD_WORKSPACE
 fluid init telco-silver-product --provider snowflake --yes
-cd telco-silver-product
+Set-Location .\telco-silver-product
 ```
 
 Checkpoint:
 
-- you are now working in the GitLab path on your Mac
+- you are now working in the GitLab path on Windows
 - the demo has moved from platform prep into data-product authoring
 
 ## Step 5: Load Runtime Secrets
 
-```bash
-set -a
-source "$FLUID_SECRETS_FILE"
-set +a
+```powershell
+Get-Content $env:FLUID_SECRETS_FILE |
+  Where-Object { $_ -match '^[A-Za-z_][A-Za-z0-9_]*=' } |
+  ForEach-Object {
+    $name, $value = $_ -split '=', 2
+    Set-Item -Path "Env:$name" -Value $value
+  }
 ```
 
 Checkpoint:
@@ -97,7 +100,7 @@ Checkpoint:
 
 Run:
 
-```bash
+```powershell
 fluid forge --provider snowflake --domain telco --target-dir .
 ```
 
@@ -112,7 +115,7 @@ Checkpoint:
 
 ## Step 7: Generate Airflow And Jenkins
 
-```bash
+```powershell
 fluid generate schedule contract.fluid.yaml --scheduler airflow -o generated/airflow --overwrite
 fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
 ```
@@ -124,10 +127,10 @@ Checkpoint:
 
 ## Step 8: Validate And Plan
 
-```bash
+```powershell
 fluid validate contract.fluid.yaml
 fluid plan contract.fluid.yaml --out runtime/plan.json --html
-open runtime/plan.html
+Start-Process .\runtime\plan.html
 ```
 
 Checkpoint:
@@ -139,7 +142,7 @@ Checkpoint:
 
 ## Step 9: Apply
 
-```bash
+```powershell
 fluid apply contract.fluid.yaml --build --yes --report runtime/apply_report.html
 ```
 
@@ -152,7 +155,7 @@ The generated Jenkins handoff now follows [Jenkins SCM Handoff](../../docs/jenki
 
 ## Step 10: Export Standards And Publish To DMM
 
-```bash
+```powershell
 fluid generate standard contract.fluid.yaml --format opds -o runtime/exports/product.opds.json
 fluid generate standard contract.fluid.yaml --format odcs -o runtime/exports/product.odcs.yaml
 fluid generate standard contract.fluid.yaml --format odps -o runtime/exports/product.odps.yaml

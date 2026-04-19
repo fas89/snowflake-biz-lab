@@ -5,6 +5,7 @@ This is the prepared telco FLUID contract for the repo.
 ## What It Assumes
 
 - the telco seed tables are already loaded into `SNOWFLAKE_STAGE_SCHEMA`
+- the source tables already have Horizon-visible comments from `task metadata:apply`
 - you have loaded `runtime/generated/fluid.local.env`
 - you want a real telco contract story without changing dbt in this phase
 
@@ -40,6 +41,7 @@ Make sure the landing data is already present:
 
 ```bash
 task up
+task seed:reset
 task seed:generate
 task seed:load
 task metadata:apply

@@ -16,8 +16,6 @@ jenkins:
   authorizationStrategy:
     loggedInUsersCanDoAnything:
       allowAnonymousRead: false
-  markupFormatter:
-    antisamyMarkupFormatter: {}
   globalNodeProperties:
     - envVars:
         env:
@@ -97,4 +95,3 @@ credentials:
               id: dmm-api-key
               secret: ${DMM_API_KEY:-}
               description: Data Mesh Manager API key placeholder
-
