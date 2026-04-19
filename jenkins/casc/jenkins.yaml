@@ -16,8 +16,14 @@ jenkins:
   authorizationStrategy:
     loggedInUsersCanDoAnything:
       allowAnonymousRead: false
-  markupFormatter:
-    antisamyMarkupFormatter: {}
+  # ``antisamyMarkupFormatter`` ships in the image (antisamy-markup-formatter
+  # plugin in plugins.txt), but Jenkins' Configuration-as-Code extension
+  # applies this block *before* the plugin's classloader is registered in
+  # recent LTS releases — boot fails with
+  # "No hudson.markup.MarkupFormatter implementation found for antisamyMarkupFormatter".
+  # Plain text is the safe default for a local demo lab where user-entered
+  # HTML in descriptions is not a concern.
+  markupFormatter: "plainText"
   globalNodeProperties:
     - envVars:
         env:
