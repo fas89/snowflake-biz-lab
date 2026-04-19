@@ -2,15 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
-from config.snowflake_utils import fetch_all_dicts, fq_name, get_connection, get_env  # noqa: E402
-from telco_seed_data import TABLE_SPECS  # noqa: E402
+from config.snowflake_utils import fetch_all_dicts, fq_name, get_connection, get_env
+from seed.telco_seed_data import TABLE_SPECS
 
 
 def count_csv_rows(path: Path) -> int:

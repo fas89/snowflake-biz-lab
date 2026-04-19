@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snowflake-biz-lab"
+version = "0.1.0"
+description = "Snowflake telco FLUID demo lab — seed, governance, and catalog helpers."
+requires-python = ">=3.10"
+readme = "README.md"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+include = ["config*", "seed*", "governance*"]
+exclude = ["tests*", "scripts*", "dbt*", "fluid*", "airflow*", "jenkins*", "runtime*", "docs*", "deploy*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

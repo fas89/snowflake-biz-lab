@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import sys
 from pathlib import Path
 
 
@@ -64,16 +65,35 @@ def main() -> None:
         "--existing-workspace",
         help="Absolute path to the GitLab workspace used for the existing-dbt demo.",
     )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Required to confirm deletion under the resolved paths.",
+    )
     args = parser.parse_args()
 
     lab_repo = Path(args.lab_repo).expanduser().resolve()
+    greenfield = Path(args.greenfield_workspace).expanduser().resolve() if args.greenfield_workspace else None
+    existing = Path(args.existing_workspace).expanduser().resolve() if args.existing_workspace else None
+
+    print("This will delete demo artifacts under the following resolved paths:")
+    print(f"  lab repo:            {lab_repo}")
+    if greenfield is not None:
+        print(f"  greenfield workspace: {greenfield}")
+    if existing is not None:
+        print(f"  existing workspace:   {existing}")
+
+    if not args.yes:
+        print("Re-run with --yes to confirm.", file=sys.stderr)
+        sys.exit(1)
+
     clean_lab_repo(lab_repo)
 
-    if args.greenfield_workspace:
-        clean_greenfield_workspace(Path(args.greenfield_workspace).expanduser().resolve())
+    if greenfield is not None:
+        clean_greenfield_workspace(greenfield)
 
-    if args.existing_workspace:
-        clean_existing_dbt_workspace(Path(args.existing_workspace).expanduser().resolve())
+    if existing is not None:
+        clean_existing_dbt_workspace(existing)
 
     print("Local demo state reset complete.")
 

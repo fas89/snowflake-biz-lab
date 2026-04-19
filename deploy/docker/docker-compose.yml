@@ -36,12 +36,15 @@ x-airflow-common: &airflow-common
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "false"
     AIRFLOW_CONN_SNOWFLAKE_DEFAULT: snowflake://
     DBT_PROFILES_DIR: /opt/project/config/dbt
+    PYTHONPATH: /opt/project
   volumes:
     - ../../airflow/dags:/opt/airflow/dags
     - ${FLUID_DEMO_GITLAB_WORKSPACE:-../../runtime/demo-workspace}/generated/airflow:/opt/airflow/dags/workspace
     - ../../airflow/plugins:/opt/airflow/plugins
     - ../../airflow/config:/opt/airflow/config
     - ../../dbt:/opt/project/dbt
+    # config/ is a Python package imported by seed/, governance/, fluid/ scripts (e.g. config.snowflake_utils).
+    # Must hold code only — do NOT place credentials, service-account files, or other secrets under config/.
     - ../../config:/opt/project/config
     - ../../seed:/opt/project/seed
     - ../../governance:/opt/project/governance
@@ -114,6 +117,7 @@ services:
     environment:
       <<: *snowflake-env
       DBT_PROFILES_DIR: /opt/project/config/dbt
+      PYTHONPATH: /opt/project
       TELCO_SEED_RANDOM_SEED: ${TELCO_SEED_RANDOM_SEED:-42}
       TELCO_SEED_PARTY_COUNT: ${TELCO_SEED_PARTY_COUNT:-200}
       TELCO_SEED_USAGE_EVENT_COUNT: ${TELCO_SEED_USAGE_EVENT_COUNT:-10000}
@@ -121,6 +125,8 @@ services:
       TELCO_SEED_HISTORY_DAYS: ${TELCO_SEED_HISTORY_DAYS:-60}
     volumes:
       - ../../dbt:/opt/project/dbt
+      # config/ is a Python package imported by seed/, governance/, fluid/ scripts (e.g. config.snowflake_utils).
+      # Must hold code only — do NOT place credentials, service-account files, or other secrets under config/.
       - ../../config:/opt/project/config
       - ../../seed:/opt/project/seed
       - ../../governance:/opt/project/governance

@@ -71,8 +71,8 @@ tasks:
     cmd: "{{.DBT_RUNNER}} python /opt/project/seed/generate_seed_data.py"
 
   seed:reset:
-    desc: Reset local telco seed artifacts and drop the Snowflake demo database
-    cmd: "{{.DBT_RUNNER}} python /opt/project/seed/reset_seed_state.py"
+    desc: Reset local telco seed artifacts and drop the Snowflake demo database (requires `-- --yes` to confirm)
+    cmd: "{{.DBT_RUNNER}} python /opt/project/seed/reset_seed_state.py {{.CLI_ARGS}}"
 
   seed:load:
     desc: Create Snowflake source landing objects and load generated CSV seeds
@@ -89,6 +89,10 @@ tasks:
   metadata:verify:
     desc: Verify comments, contacts, tags, and DMF hooks in Snowflake
     cmd: "{{.DBT_RUNNER}} python /opt/project/governance/verify_metadata.py"
+
+  test:
+    desc: Run the local pytest suite (no Snowflake or container required)
+    cmd: "python3 -m pytest tests/ {{.CLI_ARGS}}"
 
   jenkins:up:
     desc: Start Jenkins only

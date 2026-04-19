@@ -4,11 +4,9 @@ import argparse
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from config.snowflake_utils import execute_many, fq_name, get_connection, get_env
 
-from config.snowflake_utils import execute_many, fq_name, get_connection, get_env  # noqa: E402
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def build_reset_statements() -> list[str]:
@@ -41,7 +39,24 @@ def main() -> None:
         default=str(Path(__file__).resolve().parent / "output"),
         help="Directory that contains generated CSV files and manifest.json.",
     )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Required to confirm the destructive DROP DATABASE against the configured Snowflake target.",
+    )
     args = parser.parse_args()
+
+    database = get_env("SNOWFLAKE_DATABASE", required=True)
+    account = get_env("SNOWFLAKE_ACCOUNT", required=True)
+    role = get_env("SNOWFLAKE_ROLE", required=True)
+
+    if not args.yes:
+        print(
+            f"Refusing to drop database {fq_name(database)} on account {account} as role {role}.\n"
+            "Re-run with --yes to confirm.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     output_dir = Path(args.output_dir).resolve()
     removed_files = clear_generated_files(output_dir)

@@ -16,6 +16,8 @@ jenkins:
   authorizationStrategy:
     loggedInUsersCanDoAnything:
       allowAnonymousRead: false
+  markupFormatter:
+    antisamyMarkupFormatter: {}
   globalNodeProperties:
     - envVars:
         env:
