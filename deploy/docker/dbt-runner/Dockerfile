@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir \
     "dbt-core==1.8.2" \
     "dbt-snowflake==1.8.2" \
     "pyyaml>=6.0" \
-    "snowflake-connector-python>=3.12,<4.0"
+    "snowflake-connector-python==3.10.0"
 
 WORKDIR /opt/project
 CMD ["sleep", "infinity"]

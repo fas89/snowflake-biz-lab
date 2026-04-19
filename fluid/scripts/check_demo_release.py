@@ -46,7 +46,7 @@ def run_cli_version(fluid_bin: Path) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Verify the pinned demo-release FLUID runtime and bundled schema support."
+        description="Verify the demo-release FLUID runtime and bundled schema support."
     )
     parser.add_argument(
         "--fluid",
@@ -55,8 +55,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--expected-package-spec",
-        default="data-product-forge==0.7.10",
-        help="Pinned package spec that the demo-release track should match.",
+        default="data-product-forge",
+        help="Package spec that the demo-release track should match.",
     )
     parser.add_argument(
         "--expected-schema-version",
@@ -82,7 +82,7 @@ def main() -> int:
     print(f"Demo package        : {distribution_name}")
     print(f"Installed version   : {installed_version}")
     print(f"CLI version         : {cli_version}")
-    print(f"Expected pin        : {expected_version or '(unversioned spec)'}")
+    print(f"Requested spec      : {args.expected_package_spec}")
     print(f"Bundled schemas     : {', '.join(schema_versions) if schema_versions else 'none found'}")
     print(f"Expected contract   : {args.expected_schema_version}")
 

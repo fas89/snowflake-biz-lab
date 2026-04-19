@@ -9,23 +9,19 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from config.snowflake_utils import execute_many, fq_name, get_connection, get_env  # noqa: E402
+from config.snowflake_utils import execute_many, fq_name, get_connection, get_env, quote_ident  # noqa: E402
 from telco_seed_data import TABLE_SPECS  # noqa: E402
 
 
 def build_ddl_statements() -> list[str]:
     database = get_env("SNOWFLAKE_DATABASE", required=True)
     stage_schema = get_env("SNOWFLAKE_STAGE_SCHEMA", required=True)
-    dbt_schema = get_env("SNOWFLAKE_DBT_SCHEMA", required=True)
-    governance_schema = get_env("SNOWFLAKE_GOVERNANCE_SCHEMA", required=True)
     internal_stage = get_env("SNOWFLAKE_INTERNAL_STAGE", "TELCO_SEED_STAGE")
     file_format = get_env("SNOWFLAKE_FILE_FORMAT", "TELCO_SEED_CSV")
 
     statements = [
         f"CREATE DATABASE IF NOT EXISTS {fq_name(database)}",
         f"CREATE SCHEMA IF NOT EXISTS {fq_name(database, stage_schema)}",
-        f"CREATE SCHEMA IF NOT EXISTS {fq_name(database, dbt_schema)}",
-        f"CREATE SCHEMA IF NOT EXISTS {fq_name(database, governance_schema)}",
         (
             f"CREATE OR REPLACE FILE FORMAT {fq_name(database, stage_schema, file_format)} "
             "TYPE = CSV FIELD_OPTIONALLY_ENCLOSED_BY = '\"' SKIP_HEADER = 1 "
@@ -37,7 +33,9 @@ def build_ddl_statements() -> list[str]:
         ),
     ]
     for spec in TABLE_SPECS.values():
-        column_sql = ", ".join(f"{column.name} {column.snowflake_type}" for column in spec.columns)
+        column_sql = ", ".join(
+            f"{quote_ident(column.name)} {column.snowflake_type}" for column in spec.columns
+        )
         statements.append(
             f"CREATE TABLE IF NOT EXISTS {fq_name(database, stage_schema, spec.name)} ({column_sql})"
         )

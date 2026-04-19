@@ -66,7 +66,7 @@ supporting_artifacts:
 
 publish_readiness:
   checklist:
-    - Bootstrap the Entropy organization and team structure manually.
-    - Create an organization-scoped API key and place it in DMM_API_KEY.
+    - Run `task catalogs:up` and `task catalogs:bootstrap` to prepare the local Entropy organization and API key.
+    - Confirm `DMM_API_KEY` is present in `runtime/generated/fluid.local.env`.
     - Review the metadata manifest and table descriptions before first publish.
     - Confirm Snowflake object names and tags are present in Horizon.

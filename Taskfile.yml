@@ -33,7 +33,7 @@ tasks:
     cmds:
       - python3 -m venv {{.FLUID_DEMO_VENV}}
       - "{{.FLUID_DEMO_VENV}}/bin/pip install --upgrade pip"
-      - "{{.FLUID_DEMO_VENV}}/bin/pip install --index-url \"${FLUID_TESTPYPI_SIMPLE_URL:-https://test.pypi.org/simple/}\" --extra-index-url \"${FLUID_PYPI_FALLBACK_URL:-https://pypi.org/simple/}\" \"${FLUID_DEMO_PACKAGE_SPEC:-data-product-forge==0.7.10}\""
+      - "{{.FLUID_DEMO_VENV}}/bin/pip install --index-url \"${FLUID_TESTPYPI_SIMPLE_URL:-https://test.pypi.org/simple/}\" --extra-index-url \"${FLUID_PYPI_FALLBACK_URL:-https://pypi.org/simple/}\" \"${FLUID_DEMO_PACKAGE_SPEC:-data-product-forge}\""
 
   fluid:bootstrap:dev:
     desc: Create the dev-source FLUID runtime from the sibling forge-cli checkout
@@ -44,7 +44,7 @@ tasks:
 
   fluid:check:demo:
     desc: Verify the pinned demo-release FLUID runtime and bundled contract schema support
-    cmd: "{{.FLUID_DEMO_VENV}}/bin/python fluid/scripts/check_demo_release.py --fluid {{.FLUID_DEMO_VENV}}/bin/fluid --expected-package-spec \"${FLUID_DEMO_PACKAGE_SPEC:-data-product-forge==0.7.10}\" --expected-schema-version \"${FLUID_DEFAULT_CONTRACT_SCHEMA_VERSION:-0.7.2}\""
+    cmd: "{{.FLUID_DEMO_VENV}}/bin/python fluid/scripts/check_demo_release.py --fluid {{.FLUID_DEMO_VENV}}/bin/fluid --expected-package-spec \"${FLUID_DEMO_PACKAGE_SPEC:-data-product-forge}\" --expected-schema-version \"${FLUID_DEFAULT_CONTRACT_SCHEMA_VERSION:-0.7.2}\""
 
   fluid:check:dev:
     desc: Verify the dev-source checkout is pointed at forge-cli main expectations
@@ -70,8 +70,12 @@ tasks:
     desc: Generate deterministic telco CSV seeds
     cmd: "{{.DBT_RUNNER}} python /opt/project/seed/generate_seed_data.py"
 
+  seed:reset:
+    desc: Reset local telco seed artifacts and drop the Snowflake demo database
+    cmd: "{{.DBT_RUNNER}} python /opt/project/seed/reset_seed_state.py"
+
   seed:load:
-    desc: Create Snowflake landing objects and load generated CSV seeds
+    desc: Create Snowflake source landing objects and load generated CSV seeds
     cmd: "{{.DBT_RUNNER}} python /opt/project/seed/load_to_snowflake.py"
 
   seed:verify:
@@ -79,7 +83,7 @@ tasks:
     cmd: "{{.DBT_RUNNER}} python /opt/project/seed/verify_seed_data.py"
 
   metadata:apply:
-    desc: Render and apply Horizon metadata SQL
+    desc: Render and apply Horizon metadata to the Snowflake source schema
     cmd: "{{.DBT_RUNNER}} python /opt/project/governance/apply_metadata.py"
 
   metadata:verify:
@@ -98,9 +102,19 @@ tasks:
     desc: Start the local Entropy Data CE stack
     cmd: "{{.CATALOGS_COMPOSE}} up -d"
 
+  catalogs:bootstrap:
+    desc: Complete the local Entropy signup flow and refresh DMM_API_KEY
+    cmd: "python3 scripts/bootstrap_entropy_local.py --catalog-env-file .env.catalogs --fluid-secrets-file runtime/generated/fluid.local.env"
+
   catalogs:down:
-    desc: Stop the local Entropy Data CE stack
+    desc: Stop the local Entropy Data CE stack without deleting local catalog data
     cmd: "{{.CATALOGS_COMPOSE}} down"
+
+  catalogs:reset:
+    desc: Remove the local Entropy catalog data and clear the generated DMM API key
+    cmds:
+      - "python3 scripts/reset_entropy_local.py --fluid-secrets-file runtime/generated/fluid.local.env"
+      - "{{.CATALOGS_COMPOSE}} down -v"
 
   catalogs:logs:
     desc: Tail logs for the local Entropy Data CE stack

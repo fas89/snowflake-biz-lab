@@ -42,7 +42,7 @@ x-airflow-common: &airflow-common
     - ../../airflow/plugins:/opt/airflow/plugins
     - ../../airflow/config:/opt/airflow/config
     - ../../dbt:/opt/project/dbt
-    - ../../config/dbt:/opt/project/config/dbt
+    - ../../config:/opt/project/config
     - ../../seed:/opt/project/seed
     - ../../governance:/opt/project/governance
     - ../../runtime:/opt/project/runtime
@@ -77,13 +77,7 @@ services:
     command: >
       -c "
         airflow db migrate &&
-        airflow users create
-          --username ${AIRFLOW_ADMIN_USER:-admin}
-          --password ${AIRFLOW_ADMIN_PASSWORD:-change_me}
-          --firstname Admin
-          --lastname User
-          --role Admin
-          --email admin@snowflake-telco-lab.local
+        airflow users create --username ${AIRFLOW_ADMIN_USER:-admin} --password ${AIRFLOW_ADMIN_PASSWORD:-change_me} --firstname Admin --lastname User --role Admin --email admin@snowflake-telco-lab.local
       "
     restart: "no"
 
@@ -127,7 +121,7 @@ services:
       TELCO_SEED_HISTORY_DAYS: ${TELCO_SEED_HISTORY_DAYS:-60}
     volumes:
       - ../../dbt:/opt/project/dbt
-      - ../../config/dbt:/opt/project/config/dbt
+      - ../../config:/opt/project/config
       - ../../seed:/opt/project/seed
       - ../../governance:/opt/project/governance
       - ../../docs:/opt/project/docs

@@ -24,11 +24,11 @@ Key files:
 - `metadata_utils.py`: manifest loading, validation, auto-completion, and SQL rendering helpers
 - `render_metadata_sql.py`: writes `governance/sql/rendered_metadata.sql`
 - `apply_metadata.py`: renders and applies metadata to Snowflake
-- `verify_metadata.py`: validates comments, tags, contacts, and DMF associations
+- `verify_metadata.py`: validates schema, table, and column comments on the source tables
 - `datamesh_manager_mapping.yml`: draft catalog mapping for later DMM publication work
 
 Notes:
 
-- Classification and DMF features are gated by `SNOWFLAKE_ENABLE_CLASSIFICATION` and `SNOWFLAKE_ENABLE_DMF`.
+- The standard source-load path now focuses on Horizon-visible comments for the source tables and columns.
 - Comments and tag values are intentionally metadata-safe and do not contain regulated content.
 - No catalog publish automation is configured in this phase.

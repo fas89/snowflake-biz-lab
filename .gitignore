@@ -22,6 +22,8 @@ runtime/*
 !runtime/generated/
 runtime/generated/*
 !runtime/generated/README.md
+!runtime/generated/launchpad.local.sh.example
+!runtime/generated/launchpad.local.ps1.example
 !runtime/wheels/
 runtime/wheels/*
 !runtime/wheels/README.md

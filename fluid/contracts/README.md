@@ -1,6 +1,6 @@
 # FLUID Contracts
 
-This repo currently carries two prepared Snowflake-facing contracts.
+This repo currently carries three prepared Snowflake-facing contracts.
 
 ## `snowflake_smoke`
 
@@ -11,6 +11,16 @@ Use this first when you want the smallest possible Snowflake success.
 - best for credential and permission proof
 
 See [snowflake_smoke/README.md](snowflake_smoke/README.md).
+
+## `telco_seed_sources`
+
+Use this as the canonical bronze source contract for the seeded telco landing tables.
+
+- points at the existing source tables in `SNOWFLAKE_STAGE_SCHEMA`
+- acts as the upstream lineage anchor for the silver demo variants
+- best for validate, plan, and marketplace lineage registration around the seeded sources
+
+See [telco_seed_sources/README.md](telco_seed_sources/README.md).
 
 ## `telco_stage_seed`
 

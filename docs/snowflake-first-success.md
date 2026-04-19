@@ -15,12 +15,16 @@ This is the quickest technical proof before the full GitLab-based demo.
 task up
 task jenkins:up
 task catalogs:up
+task catalogs:bootstrap
 task ps
 ```
 
 ## Step 2: Load Staging Data And Metadata
 
+This path now starts from a full database wipe through `task seed:reset`, so use it only against the disposable demo database.
+
 ```bash
+task seed:reset
 task seed:generate
 task seed:load
 task seed:verify
@@ -29,6 +33,12 @@ task metadata:verify
 ```
 
 This gives you a real Snowflake landing zone before FLUID starts building silver-layer contracts on top of it.
+
+In this repo, that landing zone is source-only:
+
+- `task seed:load` creates and fills the raw source tables in `SNOWFLAKE_STAGE_SCHEMA`
+- `task metadata:apply` adds the schema, table, and column descriptions that show up in Horizon
+- the seed path does not need `SNOWFLAKE_DBT_SCHEMA` or `SNOWFLAKE_GOVERNANCE_SCHEMA`
 
 ## Step 3: Load Runtime Secrets Only When Needed
 
@@ -59,4 +69,4 @@ What this gives you:
 
 ## Step 5: Move To The Full Demo
 
-When you want the real local-Mac story with GitLab workspaces, Airflow generation, Jenkins generation, and standards export, jump to [Mac Demo Launchpad](mac-launchpad.md).
+When you want the full local operator story with GitLab workspaces, Airflow generation, Jenkins generation, and standards export, jump to [Launchpad Common](launchpad-common.md), then continue to [Demo Release Launchpad (Mac)](demo-release-launchpad-mac.md) or [Demo Release Launchpad (Windows)](demo-release-launchpad-windows.md).
