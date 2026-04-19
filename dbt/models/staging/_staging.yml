@@ -16,7 +16,11 @@ models:
     meta: {owner: telco_data_platform}
     columns:
       - {name: individual_id, tests: [unique, not_null], description: Stable individual identifier.}
-      - {name: party_id, tests: [not_null], description: Owning party identifier.}
+      - name: party_id
+        description: Owning party identifier.
+        tests:
+          - not_null
+          - relationships: {to: ref('stg_telco__party'), field: party_id}
       - {name: email, tests: [unique], description: Synthetic email address.}
 
   - name: stg_telco__account
@@ -24,7 +28,11 @@ models:
     meta: {owner: telco_data_platform}
     columns:
       - {name: account_id, tests: [unique, not_null], description: Stable account identifier.}
-      - {name: party_id, tests: [not_null], description: Owning party identifier.}
+      - name: party_id
+        description: Owning party identifier.
+        tests:
+          - not_null
+          - relationships: {to: ref('stg_telco__party'), field: party_id}
       - {name: account_number, tests: [unique, not_null], description: Human-readable account number.}
       - {name: account_type, description: Commercial account type.}
       - {name: status, description: Account lifecycle status.}
@@ -43,7 +51,11 @@ models:
     meta: {owner: telco_data_platform}
     columns:
       - {name: service_id, tests: [unique, not_null], description: Stable service identifier.}
-      - {name: account_id, tests: [not_null], description: Owning account identifier.}
+      - name: account_id
+        description: Owning account identifier.
+        tests:
+          - not_null
+          - relationships: {to: ref('stg_telco__account'), field: account_id}
       - {name: service_type, description: Service category.}
       - {name: status, description: Service lifecycle status.}
 
@@ -52,8 +64,16 @@ models:
     meta: {owner: telco_data_platform}
     columns:
       - {name: subscription_id, tests: [unique, not_null], description: Stable subscription identifier.}
-      - {name: service_id, tests: [not_null], description: Service identifier.}
-      - {name: product_offering_id, tests: [not_null], description: Product offering identifier.}
+      - name: service_id
+        description: Service identifier.
+        tests:
+          - not_null
+          - relationships: {to: ref('stg_telco__service'), field: service_id}
+      - name: product_offering_id
+        description: Product offering identifier.
+        tests:
+          - not_null
+          - relationships: {to: ref('stg_telco__product_offering'), field: product_offering_id}
       - {name: start_date, tests: [not_null], description: Subscription start date.}
 
   - name: stg_telco__device
@@ -76,7 +96,11 @@ models:
     meta: {owner: telco_data_platform}
     columns:
       - {name: usage_id, tests: [unique, not_null], description: Stable usage-event identifier.}
-      - {name: account_id, tests: [not_null], description: Account identifier.}
+      - name: account_id
+        description: Account identifier.
+        tests:
+          - not_null
+          - relationships: {to: ref('stg_telco__account'), field: account_id}
       - {name: usage_type, description: Usage category.}
       - {name: quantity, tests: [not_null], description: Measured quantity for the event.}
       - {name: event_timestamp, tests: [not_null], description: Event timestamp.}
@@ -86,7 +110,11 @@ models:
     meta: {owner: telco_data_platform}
     columns:
       - {name: app_event_id, tests: [unique, not_null], description: Stable app-event identifier.}
-      - {name: account_id, tests: [not_null], description: Account identifier.}
+      - name: account_id
+        description: Account identifier.
+        tests:
+          - not_null
+          - relationships: {to: ref('stg_telco__account'), field: account_id}
       - {name: event_type, tests: [not_null], description: App event type.}
       - {name: event_timestamp, tests: [not_null], description: Event timestamp.}
 
@@ -95,7 +123,11 @@ models:
     meta: {owner: telco_data_platform}
     columns:
       - {name: invoice_id, tests: [unique, not_null], description: Stable invoice identifier.}
-      - {name: account_id, tests: [not_null], description: Account identifier.}
+      - name: account_id
+        description: Account identifier.
+        tests:
+          - not_null
+          - relationships: {to: ref('stg_telco__account'), field: account_id}
       - {name: invoice_number, tests: [unique, not_null], description: Human-readable invoice number.}
       - {name: total_amount_chf, tests: [not_null], description: Total invoice amount in Swiss francs.}
 
@@ -104,7 +136,11 @@ models:
     meta: {owner: telco_data_platform}
     columns:
       - {name: payment_id, tests: [unique, not_null], description: Stable payment identifier.}
-      - {name: invoice_id, tests: [not_null], description: Invoice identifier.}
+      - name: invoice_id
+        description: Invoice identifier.
+        tests:
+          - not_null
+          - relationships: {to: ref('stg_telco__invoice'), field: invoice_id}
       - {name: amount_chf, tests: [not_null], description: Paid amount in Swiss francs.}
 
   - name: stg_telco__agreement
@@ -112,12 +148,20 @@ models:
     meta: {owner: telco_data_platform}
     columns:
       - {name: agreement_id, tests: [unique, not_null], description: Stable agreement identifier.}
-      - {name: account_id, tests: [not_null], description: Account identifier.}
+      - name: account_id
+        description: Account identifier.
+        tests:
+          - not_null
+          - relationships: {to: ref('stg_telco__account'), field: account_id}
 
   - name: stg_telco__service_order
     description: Cleaned service order records.
     meta: {owner: telco_data_platform}
     columns:
       - {name: order_id, tests: [unique, not_null], description: Stable service-order identifier.}
-      - {name: account_id, tests: [not_null], description: Account identifier.}
+      - name: account_id
+        description: Account identifier.
+        tests:
+          - not_null
+          - relationships: {to: ref('stg_telco__account'), field: account_id}
 
