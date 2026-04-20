@@ -9,7 +9,7 @@ Check `.env` first.
 Example:
 
 ```text
-FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/telco-silver-product-demo
+FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/path-a-telco-silver-product-demo
 ```
 
 Then recycle the core stack:

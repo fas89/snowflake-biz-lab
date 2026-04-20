@@ -8,7 +8,7 @@ It keeps the same story and checkpoints, but all commands are written for PowerS
 
 ```powershell
 $env:LAB_REPO = "C:\Users\<you>\Documents\Open-Source Community\snowflake-biz-lab"
-$env:GREENFIELD_WORKSPACE = "$HOME\gitlab\telco-silver-product-demo"
+$env:GREENFIELD_WORKSPACE = "$HOME\gitlab\path-a-telco-silver-product-demo"
 $env:FLUID_SECRETS_FILE = "$env:LAB_REPO\runtime\generated\fluid.local.env"
 ```
 

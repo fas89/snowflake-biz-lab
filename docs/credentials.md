@@ -16,7 +16,7 @@ Use `.env` for non-secret local settings, especially:
 For the local Airflow bridge, `FLUID_DEMO_GITLAB_WORKSPACE` should be an absolute path to the active GitLab working copy. Example:
 
 ```text
-FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/telco-silver-product-demo
+FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/path-a-telco-silver-product-demo
 ```
 
 ### `runtime/generated/fluid.local.env`

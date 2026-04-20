@@ -95,7 +95,7 @@ Use [Scenario Validation Matrix](scenario-validation-matrix.md) for the exact co
 ### A1 External Reference
 
 ```powershell
-Set-Location "$env:GREENFIELD_WORKSPACE\\variants\\external-reference"
+Set-Location "$env:GREENFIELD_WORKSPACE\\variants\\A1-external-reference"
 . "$env:GREENFIELD_WORKSPACE\\.venv\\Scripts\\Activate.ps1"
 Get-Content $env:FLUID_SECRETS_FILE | ForEach-Object { if ($_ -match '^(?!#)([^=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2]) } }
 fluid validate contract.fluid.yaml
@@ -113,12 +113,13 @@ Validation:
 
 - open Airflow at [http://localhost:8085](http://localhost:8085) and confirm DAG `telco_subscriber360_reference`
 - run `Set-Location $env:LAB_REPO; task dbt:docs:refresh SCENARIO=A1` then open [http://localhost:8086](http://localhost:8086) and confirm `mart_subscriber360_core` plus `mart_subscriber_health_scorecard`
-- open Jenkins at [http://localhost:8081](http://localhost:8081) and confirm SCM pickup for `variants/external-reference/Jenkinsfile`
+- open Jenkins at [http://localhost:8081](http://localhost:8081), open the `A1-external-reference` pipeline, click **Build Now**, and confirm the run reads `variants/A1-external-reference/Jenkinsfile` and completes the generated stages
+- open the DMM marketplace at [http://localhost:8095](http://localhost:8095) and confirm the A1 silver data product with its `subscriber360_core` and `subscriber_health_scorecard` exposes appears under the telco domain
 
 ### A2 Internal Reference
 
 ```powershell
-Set-Location "$env:GREENFIELD_WORKSPACE\\variants\\internal-reference"
+Set-Location "$env:GREENFIELD_WORKSPACE\\variants\\A2-internal-reference"
 . "$env:GREENFIELD_WORKSPACE\\.venv\\Scripts\\Activate.ps1"
 Get-Content $env:FLUID_SECRETS_FILE | ForEach-Object { if ($_ -match '^(?!#)([^=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2]) } }
 fluid validate contract.fluid.yaml
@@ -136,40 +137,44 @@ Validation:
 
 - open Airflow at [http://localhost:8085](http://localhost:8085) and confirm DAG `telco_subscriber360_internal`
 - run `Set-Location $env:LAB_REPO; task dbt:docs:refresh SCENARIO=A2` then open [http://localhost:8086](http://localhost:8086) and confirm `mart_subscriber360_core` plus `mart_subscriber_health_scorecard`
-- open Jenkins at [http://localhost:8081](http://localhost:8081) and confirm SCM pickup for `variants/internal-reference/Jenkinsfile`
+- open Jenkins at [http://localhost:8081](http://localhost:8081), open the `A2-internal-reference` pipeline, click **Build Now**, and confirm the run reads `variants/A2-internal-reference/Jenkinsfile` and completes the generated stages
+- open the DMM marketplace at [http://localhost:8095](http://localhost:8095) and confirm the A2 silver data product with its `subscriber360_core` and `subscriber_health_scorecard` exposes appears under the telco domain
 
 ## Workspace B: AI Variants
 
 The AI-created workspaces are expected to land here:
 
 ```text
-%EXISTING_DBT_WORKSPACE%\\variants\\ai-reference-external\\subscriber360-external
-%EXISTING_DBT_WORKSPACE%\\variants\\ai-generate-in-workspace\\subscriber360-generated
+%EXISTING_DBT_WORKSPACE%\\variants\\B1-ai-reference-external\\subscriber360-external
+%EXISTING_DBT_WORKSPACE%\\variants\\B2-ai-generate-in-workspace\\subscriber360-generated
 ```
 
 ### B1 AI Forge + External References
 
+There are two ways to run B1 — pick one based on who is watching.
+
+**Demo mode (recommended for presentations):** copy the golden contract that `fluid forge` produced during an off-stage capture, so the on-stage flow is deterministic. See [`fluid/fixtures/forge-golden/README.md`](../fluid/fixtures/forge-golden/README.md) for how the golden is captured and refreshed.
+
+**Live mode (for forge-cli contributors):** call the real LLM so you can iterate on prompts, providers, or templates.
+
 ```powershell
-Set-Location "$env:EXISTING_DBT_WORKSPACE\\variants\\ai-reference-external"
+Set-Location "$env:EXISTING_DBT_WORKSPACE\\variants\\B1-ai-reference-external"
 . "$env:EXISTING_DBT_WORKSPACE\\.venv\\Scripts\\Activate.ps1"
 Get-Content $env:FLUID_SECRETS_FILE | ForEach-Object { if ($_ -match '^(?!#)([^=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2]) } }
 Get-Content ..\..\prompts\ai-reference-external.md
 fluid init subscriber360-external --provider snowflake --yes
 Set-Location .\subscriber360-external
-fluid forge --provider snowflake --domain telco --target-dir .
+
+# --- Demo mode: replay the captured golden contract (deterministic) ---
+Copy-Item "$env:LAB_REPO\fluid\fixtures\forge-golden\B1-ai-reference-external\contract.fluid.yaml" .\contract.fluid.yaml -Force
+
+# --- Live mode (alternative): uncomment to call the real LLM instead ---
+# fluid forge --provider snowflake --domain telco --target-dir .
+
 fluid validate contract.fluid.yaml
 fluid plan contract.fluid.yaml --out runtime/plan.json --html
 Start-Process .\runtime\plan.html
-$inBuilds = $false
-$buildId = $null
-foreach ($line in Get-Content contract.fluid.yaml) {
-  $trimmed = $line.Trim()
-  if ($trimmed -eq 'builds:') { $inBuilds = $true; continue }
-  if ($inBuilds -and ($trimmed.StartsWith('- id:') -or $trimmed.StartsWith('id:'))) {
-    $buildId = $trimmed.Split(':', 2)[1].Trim()
-    break
-  }
-}
+$buildId = (py -3 "$env:LAB_REPO\scripts\get_first_build_id.py" contract.fluid.yaml).Trim()
 fluid apply contract.fluid.yaml --build $buildId --yes --report runtime/apply_report.html
 fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
 git add .
@@ -182,33 +187,37 @@ Validation:
 
 - open Airflow at [http://localhost:8085](http://localhost:8085) and confirm DAG `telco_subscriber360_reference`
 - run `Set-Location $env:LAB_REPO; task dbt:docs:refresh SCENARIO=B1` then open [http://localhost:8086](http://localhost:8086) and confirm `mart_subscriber360_core` plus `mart_subscriber_health_scorecard`
-- open Jenkins at [http://localhost:8081](http://localhost:8081) and confirm SCM pickup for `variants/ai-reference-external/subscriber360-external/Jenkinsfile`
+- open Jenkins at [http://localhost:8081](http://localhost:8081), open the `B1-subscriber360-external` pipeline, click **Build Now**, and confirm the run reads `variants/B1-ai-reference-external/subscriber360-external/Jenkinsfile` and completes the generated stages
+- open the DMM marketplace at [http://localhost:8095](http://localhost:8095) and confirm the `subscriber360_core` and `subscriber_health_scorecard` exposes appear under the silver data product
 
 ### B2 AI Forge + Generated Assets
 
+There are two ways to run B2 — pick one based on who is watching.
+
+**Demo mode (recommended for presentations):** copy the golden contract that `fluid forge` produced during an off-stage capture, so the on-stage flow is deterministic. If the golden folder also contains pre-generated `generated/dbt/` and `generated/airflow/` assets, the copy covers them too and the `generate transformation`/`generate schedule` lines become no-ops you can keep or remove. See [`fluid/fixtures/forge-golden/README.md`](../fluid/fixtures/forge-golden/README.md) for how the golden is captured and refreshed.
+
+**Live mode (for forge-cli contributors):** call the real LLM so you can iterate on prompts, providers, or templates.
+
 ```powershell
-Set-Location "$env:EXISTING_DBT_WORKSPACE\\variants\\ai-generate-in-workspace"
+Set-Location "$env:EXISTING_DBT_WORKSPACE\\variants\\B2-ai-generate-in-workspace"
 . "$env:EXISTING_DBT_WORKSPACE\\.venv\\Scripts\\Activate.ps1"
 Get-Content $env:FLUID_SECRETS_FILE | ForEach-Object { if ($_ -match '^(?!#)([^=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2]) } }
 Get-Content ..\..\prompts\ai-generate-in-workspace.md
 fluid init subscriber360-generated --provider snowflake --yes
 Set-Location .\subscriber360-generated
-fluid forge --provider snowflake --domain telco --target-dir .
+
+# --- Demo mode: replay the captured golden contract (deterministic) ---
+Copy-Item "$env:LAB_REPO\fluid\fixtures\forge-golden\B2-ai-generate-in-workspace\contract.fluid.yaml" .\contract.fluid.yaml -Force
+
+# --- Live mode (alternative): uncomment to call the real LLM instead ---
+# fluid forge --provider snowflake --domain telco --target-dir .
+
 fluid validate contract.fluid.yaml
 fluid plan contract.fluid.yaml --out runtime/plan.json --html
 Start-Process .\runtime\plan.html
 fluid generate transformation contract.fluid.yaml --engine dbt -o generated/dbt --overwrite
 fluid generate schedule contract.fluid.yaml --scheduler airflow -o generated/airflow --overwrite
-$inBuilds = $false
-$buildId = $null
-foreach ($line in Get-Content contract.fluid.yaml) {
-  $trimmed = $line.Trim()
-  if ($trimmed -eq 'builds:') { $inBuilds = $true; continue }
-  if ($inBuilds -and ($trimmed.StartsWith('- id:') -or $trimmed.StartsWith('id:'))) {
-    $buildId = $trimmed.Split(':', 2)[1].Trim()
-    break
-  }
-}
+$buildId = (py -3 "$env:LAB_REPO\scripts\get_first_build_id.py" contract.fluid.yaml).Trim()
 fluid apply contract.fluid.yaml --build $buildId --yes --report runtime/apply_report.html
 fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
 git add .
@@ -221,15 +230,17 @@ Validation:
 
 - open Airflow at [http://localhost:8085](http://localhost:8085) and confirm the generated DAG from `generated/airflow` appears with an ID derived from the generated contract ID
 - run `Set-Location $env:LAB_REPO; task dbt:docs:refresh SCENARIO=B2` then open [http://localhost:8086](http://localhost:8086) and confirm `mart_subscriber360_core` plus `mart_subscriber_health_scorecard`
-- open Jenkins at [http://localhost:8081](http://localhost:8081) and confirm SCM pickup for `variants/ai-generate-in-workspace/subscriber360-generated/Jenkinsfile`
+- open Jenkins at [http://localhost:8081](http://localhost:8081); B2 is not auto-provisioned (the Jenkinsfile only exists after `fluid generate ci`) — if you want the pipeline in the UI, add a JobDSL entry to `jenkins/casc/jenkins.yaml` pointing at `variants/B2-ai-generate-in-workspace/subscriber360-generated/Jenkinsfile` and rerun `task jenkins:up`
+- open the DMM marketplace at [http://localhost:8095](http://localhost:8095) and confirm the B2 silver data product with its `subscriber360_core` and `subscriber_health_scorecard` exposes appears under the telco domain
 
 ## Jenkins SCM Handoff
 
 After each `fluid generate ci` step:
 
-1. commit the generated `Jenkinsfile`
-2. push the workspace repo to GitLab
-3. let Jenkins pick up the pipeline from SCM
+1. commit the generated `Jenkinsfile` in the workspace repo on disk
+2. open the matching pipeline in Jenkins (`A1-external-reference`, `A2-internal-reference`, `B1-subscriber360-external`) and click **Build Now**
+
+The pipelines are auto-provisioned by `task jenkins:up` via CasC JobDSL. Their SCM source is the local workspace repo mounted read-only at `/workspace/gitlab/` — `git push` is not required.
 
 Use [Jenkins SCM Handoff](jenkins-scm-handoff.md) for the expected script paths and job model.
 
@@ -240,5 +251,5 @@ Use [Jenkins SCM Handoff](jenkins-scm-handoff.md) for the expected script paths 
 - [Scenario Validation Matrix](scenario-validation-matrix.md)
 - [Jenkins SCM Handoff](jenkins-scm-handoff.md)
 - [Demo Release Launchpad (Mac)](demo-release-launchpad-mac.md)
-- Workspace A root: `gitlab/telco-silver-product-demo`
-- Workspace B root: `gitlab/telco-silver-import-demo`
+- Workspace A root: `gitlab/path-a-telco-silver-product-demo`
+- Workspace B root: `gitlab/path-b-ai-telco-silver-import-demo`

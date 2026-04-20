@@ -64,8 +64,8 @@ Then set `FLUID_DEMO_GITLAB_WORKSPACE` and `FLUID_AI_GITLAB_WORKSPACE` in `.env`
 Use an absolute path. For example:
 
 ```text
-FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/telco-silver-product-demo
-FLUID_AI_GITLAB_WORKSPACE=/absolute/path/to/telco-silver-import-demo
+FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/path-a-telco-silver-product-demo
+FLUID_AI_GITLAB_WORKSPACE=/absolute/path/to/path-b-ai-telco-silver-import-demo
 ```
 
 ## The Recommended Reading Order

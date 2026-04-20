@@ -6,8 +6,8 @@ Use this before demo day so you know which steps are off-stage prep, which ones 
 | --- | --- | --- |
 | Copy `.env`, `.env.catalogs`, and `.env.jenkins` | Off-stage prep | Set `FLUID_DEMO_GITLAB_WORKSPACE` before starting Airflow |
 | Create `runtime/generated/fluid.local.env` | Off-stage prep | Keep only Snowflake and DMM secrets here |
-| Clone `$LOCAL_REPOS_DIR/gitlab/telco-silver-product-demo` | Off-stage prep | Greenfield workspace |
-| Clone `$LOCAL_REPOS_DIR/gitlab/telco-silver-import-demo` | Off-stage prep | Existing dbt workspace |
+| Clone `$LOCAL_REPOS_DIR/gitlab/path-a-telco-silver-product-demo` | Off-stage prep | Greenfield workspace |
+| Clone `$LOCAL_REPOS_DIR/gitlab/path-b-ai-telco-silver-import-demo` | Off-stage prep | Existing dbt workspace |
 | `task up` | Live on-stage step | You can show Airflow coming up |
 | `task jenkins:up` | Live on-stage step | Jenkins URL should be ready |
 | `task catalogs:up` | Live on-stage step | Entropy / DMM and MailHog should be reachable |
