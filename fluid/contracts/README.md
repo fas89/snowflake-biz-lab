@@ -1,6 +1,6 @@
 # FLUID Contracts
 
-This repo currently carries three prepared Snowflake-facing contracts.
+This repo currently carries five prepared Snowflake-facing contracts: one smoke test, three bronze source contracts split by subject area, and one staged-seed contract.
 
 ## `snowflake_smoke`
 
@@ -12,15 +12,15 @@ Use this first when you want the smallest possible Snowflake success.
 
 See [snowflake_smoke/README.md](snowflake_smoke/README.md).
 
-## `telco_seed_sources`
+## Bronze source contracts (`telco_seed_billing`, `telco_seed_party`, `telco_seed_usage`)
 
-Use this as the canonical bronze source contract for the seeded telco landing tables.
+These three contracts are the canonical bronze source anchors for the seeded telco landing tables. They split the former single `telco_seed_sources` contract into one contract per subject area, which lines up with the TM Forum SID domains and makes each bronze product independently ownable in the marketplace.
 
-- points at the existing source tables in `SNOWFLAKE_STAGE_SCHEMA`
-- acts as the upstream lineage anchor for the silver demo variants
-- best for validate, plan, and marketplace lineage registration around the seeded sources
+- `telco_seed_billing` — invoice and invoice-charge sources → published as `bronze.telco.billing_v1`
+- `telco_seed_party` — party, account, service, subscription, and product-offering sources → published as `bronze.telco.party_v1`
+- `telco_seed_usage` — usage event, customer interaction, and trouble ticket sources → published as `bronze.telco.usage_v1`
 
-See [telco_seed_sources/README.md](telco_seed_sources/README.md).
+Each contract points at the existing source tables in `SNOWFLAKE_STAGE_SCHEMA` and acts as an upstream lineage anchor for the silver demo variants. Publish all three together during the Bronze Anchor scenario — see the bronze section in [Dev Source Launchpad (Mac)](../../docs/dev-source-launchpad-mac.md) or [Dev Source Launchpad (Windows)](../../docs/dev-source-launchpad-windows.md).
 
 ## `telco_stage_seed`
 
