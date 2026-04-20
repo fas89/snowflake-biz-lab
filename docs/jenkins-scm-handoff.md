@@ -3,9 +3,8 @@
 The current lab story for Jenkins is:
 
 1. Generate a `Jenkinsfile` from the contract with `fluid generate ci --system jenkins`.
-2. Commit that generated `Jenkinsfile` into the GitLab workspace repo.
-3. Push the workspace repo to GitLab.
-4. Let Jenkins discover and run the generated pipeline from SCM.
+2. Commit that generated `Jenkinsfile` into the GitLab workspace repo on disk.
+3. Let Jenkins discover and run the generated pipeline from that local repo.
 
 This is the supported demo path today.
 
@@ -17,24 +16,31 @@ It is intentionally different from a future FLUID enhancement where `fluid apply
 - It matches the GitLab-first workspace story in this lab.
 - It makes the demo reproducible because Jenkins reads the same repo state that the audience can inspect.
 
-## Recommended Jenkins Job Types
+## How Jobs Get Into Jenkins
 
-- **Pipeline from SCM**
-  - best for one known variant path
-- **Multibranch Pipeline**
-  - best when the GitLab repo will carry branches or multiple evolving variants
+`task jenkins:up` auto-provisions three pipelines via Jenkins Configuration-as-Code and the `job-dsl` plugin:
+
+| Jenkins job                 | Workspace repo                                           | Script path                                                            |
+| --------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `A1-external-reference`     | `gitlab/path-a-telco-silver-product-demo`                       | `variants/A1-external-reference/Jenkinsfile`                              |
+| `A2-internal-reference`     | `gitlab/path-a-telco-silver-product-demo`                       | `variants/A2-internal-reference/Jenkinsfile`                              |
+| `B1-subscriber360-external` | `gitlab/path-b-ai-telco-silver-import-demo`                        | `variants/B1-ai-reference-external/subscriber360-external/Jenkinsfile`    |
+
+The gitlab workspaces are mounted read-only at `/workspace/gitlab/` inside the Jenkins container. The host path is configurable via `DEMO_WORKSPACES_DIR` (defaults to the sibling `gitlab/` directory).
+
+The JobDSL scripts live in `jenkins/casc/jenkins.yaml`. Adding a job is a one-file YAML edit + `task jenkins:up` restart.
 
 ## Recommended Script Paths
 
 For the ready-made workspace:
 
-- `variants/external-reference/Jenkinsfile`
-- `variants/internal-reference/Jenkinsfile`
+- `variants/A1-external-reference/Jenkinsfile`
+- `variants/A2-internal-reference/Jenkinsfile`
 
 For the AI workspace:
 
-- `variants/ai-reference-external/subscriber360-external/Jenkinsfile`
-- `variants/ai-generate-in-workspace/subscriber360-generated/Jenkinsfile`
+- `variants/B1-ai-reference-external/subscriber360-external/Jenkinsfile`
+- `variants/B2-ai-generate-in-workspace/subscriber360-generated/Jenkinsfile`
 
 ## Operator Flow
 
@@ -43,18 +49,19 @@ After `fluid generate ci`:
 ```bash
 git add .
 git commit -m "Update generated Jenkins pipeline"
-git push
 ```
 
-Then in Jenkins:
+Then in Jenkins at [http://localhost:8081](http://localhost:8081):
 
-- trigger a scan or build on the GitLab-backed job
-- confirm Jenkins picks up the generated `Jenkinsfile`
-- confirm the job runs from the expected script path
+- open the matching job (`A1-external-reference`, `A2-internal-reference`, or `B1-subscriber360-external`)
+- click **Build Now**
+- confirm Jenkins reads the generated `Jenkinsfile` from the expected script path
+
+A `git push` is not required — the SCM URL points at the local `file:///workspace/gitlab/<repo>/.git`, so Jenkins sees the committed state directly.
 
 ## What Is Not Wired Yet
 
 - `fluid apply` does not directly trigger Jenkins in this lab.
-- Jenkins does not auto-read sibling local workspaces as the primary demo path.
+- Multibranch Pipeline auto-discovery is not configured; the three jobs are single-branch Pipeline-from-SCM.
 
 That direct apply-to-Jenkins handoff remains a future FLUID enhancement and stays tracked in the FLUID gap register.

@@ -9,4 +9,5 @@ pipeline-utility-steps
 ws-cleanup
 mailer
 antisamy-markup-formatter
+job-dsl
 
