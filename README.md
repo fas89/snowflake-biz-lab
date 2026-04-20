@@ -7,8 +7,8 @@ Snowflake-first telco lab for staged TM Forum SID-style seed data, Horizon metad
 - Contributor and AI-agent guide: [AGENTS.md](AGENTS.md)
 - Shared setup and reset: [Launchpad Common](docs/launchpad-common.md)
 - First-time setup and repo orientation: [Getting Started](docs/getting-started.md)
-- Ready-made workspace variants live in `gitlab/telco-silver-product-demo`
-- AI workspace variants live in `gitlab/telco-silver-import-demo`
+- Path A workspace (reference-mapped silver) lives in `gitlab/path-a-telco-silver-product-demo`
+- Path B workspace (AI-forged silver) lives in `gitlab/path-b-ai-telco-silver-import-demo`
 - FLUID work to implement later: [FLUID Gap Register](docs/fluid-gap-register.md)
 - Version explanation: [CLI Version vs `fluidVersion`](docs/fluid-versions.md)
 

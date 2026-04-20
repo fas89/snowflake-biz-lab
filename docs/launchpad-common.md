@@ -164,8 +164,8 @@ if ($env:EXISTING_DBT_GITLAB_URL) { git clone $env:EXISTING_DBT_GITLAB_URL $env:
 In `.env`, set:
 
 ```text
-FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/telco-silver-product-demo
-FLUID_AI_GITLAB_WORKSPACE=/absolute/path/to/telco-silver-import-demo
+FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/path-a-telco-silver-product-demo
+FLUID_AI_GITLAB_WORKSPACE=/absolute/path/to/path-b-ai-telco-silver-import-demo
 ```
 
 Create or update:
@@ -202,7 +202,7 @@ This block:
 
 - starts the core platform services
 - starts the local dbt docs UI
-- starts Jenkins
+- starts Jenkins (auto-provisions the `A1-external-reference`, `A2-internal-reference`, `B1-subscriber360-external` pipelines via CasC, each pointing at the matching Jenkinsfile in the sibling `gitlab/` workspaces)
 - starts the catalog stack
 - completes the local Entropy bootstrap flow in the background
 - shows the resulting container state
@@ -233,7 +233,7 @@ task ps
 
 - Airflow: [http://localhost:8085](http://localhost:8085)
 - dbt docs: [http://localhost:8086](http://localhost:8086)
-- Jenkins: [http://localhost:8081](http://localhost:8081)
+- Jenkins: [http://localhost:8081](http://localhost:8081) — three pipelines are already listed on the dashboard; no manual job creation is needed
 - Entropy / DMM: [http://localhost:8095](http://localhost:8095)
 - MailHog: [http://localhost:8026](http://localhost:8026)
 
@@ -317,8 +317,8 @@ After you finish the shared steps on this page, continue to exactly one of these
 
 Then use the matching workspace:
 
-- ready-made variants: `gitlab/telco-silver-product-demo/README.md`
-- AI variants: `gitlab/telco-silver-import-demo/README.md`
+- ready-made variants: `gitlab/path-a-telco-silver-product-demo/README.md`
+- AI variants: `gitlab/path-b-ai-telco-silver-import-demo/README.md`
 
 ## Related Docs
 

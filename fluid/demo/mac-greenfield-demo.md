@@ -8,7 +8,7 @@ It starts with local apps on your Mac, seeds Snowflake staging, creates a GitLab
 
 ```bash
 export LAB_REPO="/Users/A200004702/Documents/Open-Source Community/snowflake-biz-lab"
-export GREENFIELD_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/telco-silver-product-demo"
+export GREENFIELD_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/path-a-telco-silver-product-demo"
 export FLUID_SECRETS_FILE="$LAB_REPO/runtime/generated/fluid.local.env"
 ```
 
@@ -142,19 +142,7 @@ Checkpoint:
 ## Step 9: Apply
 
 ```bash
-BUILD_ID="$(python3 - <<'PY'
-from pathlib import Path
-in_builds = False
-for raw in Path('contract.fluid.yaml').read_text().splitlines():
-    stripped = raw.strip()
-    if stripped == 'builds:':
-        in_builds = True
-        continue
-    if in_builds and (stripped.startswith('- id:') or stripped.startswith('id:')):
-        print(stripped.split(':', 1)[1].strip())
-        break
-PY
-)"
+BUILD_ID="$(python3 "$LAB_REPO/scripts/get_first_build_id.py" contract.fluid.yaml)"
 fluid apply contract.fluid.yaml --build "$BUILD_ID" --yes --report runtime/apply_report.html
 ```
 

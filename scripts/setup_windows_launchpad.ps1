@@ -23,8 +23,8 @@ else {
 # Derive the default path layout from the chosen parent repo folder instead of
 # inheriting possibly stale environment variables from a previous demo run.
 $demoWorkspacesDir = Join-Path $LocalReposDir 'gitlab'
-$greenfieldWorkspace = Join-Path $demoWorkspacesDir 'telco-silver-product-demo'
-$existingDbtWorkspace = Join-Path $demoWorkspacesDir 'telco-silver-import-demo'
+$greenfieldWorkspace = Join-Path $demoWorkspacesDir 'path-a-telco-silver-product-demo'
+$existingDbtWorkspace = Join-Path $demoWorkspacesDir 'path-b-ai-telco-silver-import-demo'
 $greenfieldGitlabUrl = ''
 $existingDbtGitlabUrl = ''
 $fluidSecretsFile = Join-Path $labRepo 'runtime\generated\fluid.local.env'

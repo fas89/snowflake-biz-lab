@@ -6,7 +6,7 @@ This is the secondary variation for teams that already have dbt assets and want 
 
 ```bash
 export LAB_REPO="/Users/A200004702/Documents/Open-Source Community/snowflake-biz-lab"
-export EXISTING_DBT_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/telco-silver-import-demo"
+export EXISTING_DBT_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/path-b-ai-telco-silver-import-demo"
 export FLUID_SECRETS_FILE="$LAB_REPO/runtime/generated/fluid.local.env"
 ```
 
@@ -93,19 +93,7 @@ open runtime/plan.html
 ## Step 8: Continue Into The Full Tail If The Room Has Time
 
 ```bash
-BUILD_ID="$(python3 - <<'PY'
-from pathlib import Path
-in_builds = False
-for raw in Path('contract.fluid.yaml').read_text().splitlines():
-    stripped = raw.strip()
-    if stripped == 'builds:':
-        in_builds = True
-        continue
-    if in_builds and (stripped.startswith('- id:') or stripped.startswith('id:')):
-        print(stripped.split(':', 1)[1].strip())
-        break
-PY
-)"
+BUILD_ID="$(python3 "$LAB_REPO/scripts/get_first_build_id.py" contract.fluid.yaml)"
 fluid apply contract.fluid.yaml --build "$BUILD_ID" --yes --report runtime/apply_report.html
 fluid generate standard contract.fluid.yaml --format opds -o runtime/exports/product.opds.json
 fluid generate standard contract.fluid.yaml --format odcs -o runtime/exports/product.odcs.yaml

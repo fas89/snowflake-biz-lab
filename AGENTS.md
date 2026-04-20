@@ -42,8 +42,8 @@ Focus on these areas first:
 
 The demo also depends on two Git-tracked workspace repos that live alongside this repo in the active local setup:
 
-- `gitlab/telco-silver-product-demo`
-- `gitlab/telco-silver-import-demo`
+- `gitlab/path-a-telco-silver-product-demo` (path A — reference-mapped silver)
+- `gitlab/path-b-ai-telco-silver-import-demo` (path B — AI-forged silver)
 
 Treat those as part of the lab's working surface when you are validating scenarios, but do not describe them as folders inside this repo unless they actually are in the current setup.
 

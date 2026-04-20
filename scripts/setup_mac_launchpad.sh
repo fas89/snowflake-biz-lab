@@ -32,8 +32,8 @@ fi
 # Derive the default path layout from the chosen parent repo folder instead of
 # inheriting possibly stale shell variables from a previous demo run.
 demo_workspaces_dir="$local_repos_dir/gitlab"
-greenfield_workspace="$demo_workspaces_dir/telco-silver-product-demo"
-existing_dbt_workspace="$demo_workspaces_dir/telco-silver-import-demo"
+greenfield_workspace="$demo_workspaces_dir/path-a-telco-silver-product-demo"
+existing_dbt_workspace="$demo_workspaces_dir/path-b-ai-telco-silver-import-demo"
 greenfield_gitlab_url=""
 existing_dbt_gitlab_url=""
 fluid_secrets_file="$lab_repo/runtime/generated/fluid.local.env"

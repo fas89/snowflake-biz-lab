@@ -74,8 +74,8 @@ def resolve_scenario(scenario: str, env: dict[str, str]) -> ScenarioProject:
         ),
         "a2": ScenarioProject(
             key="A2",
-            host_project_dir=f"{greenfield}/variants/internal-reference/dbt_dv2_subscriber360",
-            container_project_dir="/workspace/greenfield/variants/internal-reference/dbt_dv2_subscriber360",
+            host_project_dir=f"{greenfield}/variants/A2-internal-reference/dbt_dv2_subscriber360",
+            container_project_dir="/workspace/greenfield/variants/A2-internal-reference/dbt_dv2_subscriber360",
             summary="Internal-reference silver contract uses the in-product DV2 project in Workspace A.",
             expected_models=("mart_subscriber360_core", "mart_subscriber_health_scorecard"),
         ),
@@ -88,8 +88,8 @@ def resolve_scenario(scenario: str, env: dict[str, str]) -> ScenarioProject:
         ),
         "b2": ScenarioProject(
             key="B2",
-            host_project_dir=f"{existing}/variants/ai-generate-in-workspace/subscriber360-generated/generated/dbt",
-            container_project_dir="/workspace/import/variants/ai-generate-in-workspace/subscriber360-generated/generated/dbt",
+            host_project_dir=f"{existing}/variants/B2-ai-generate-in-workspace/subscriber360-generated/generated/dbt",
+            container_project_dir="/workspace/import/variants/B2-ai-generate-in-workspace/subscriber360-generated/generated/dbt",
             summary="AI generated-assets flow uses the generated DV2 project in Workspace B.",
             expected_models=("mart_subscriber360_core", "mart_subscriber_health_scorecard"),
         ),
