@@ -33,4 +33,6 @@ fluid/generated/*
 fluid/reports/*
 !fluid/reports/README.md
 
+.fluid/
+
 jenkins_home/

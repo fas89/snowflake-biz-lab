@@ -7,8 +7,8 @@ These are the commands this repo promotes for the full local demo.
 ```bash
 export LOCAL_REPOS_DIR="/absolute/path/to/your/local/repos"
 export LAB_REPO="$LOCAL_REPOS_DIR/snowflake-biz-lab"
-export GREENFIELD_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/telco-silver-product-demo"
-export EXISTING_DBT_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/telco-silver-import-demo"
+export GREENFIELD_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/path-a-telco-silver-product-demo"
+export EXISTING_DBT_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/path-b-ai-telco-silver-import-demo"
 export FLUID_SECRETS_FILE="$LAB_REPO/runtime/generated/fluid.local.env"
 ```
 
@@ -65,7 +65,7 @@ set +a
 ```bash
 cd "$GREENFIELD_WORKSPACE"
 source .venv/bin/activate
-cd variants/external-reference
+cd variants/A1-external-reference
 fluid validate contract.fluid.yaml
 fluid plan contract.fluid.yaml --out runtime/plan.json --html
 open runtime/plan.html
@@ -84,7 +84,7 @@ Review the plan before apply with [Plan Verification Checklist](plan-verificatio
 ```bash
 cd "$EXISTING_DBT_WORKSPACE"
 source .venv/bin/activate
-cd variants/ai-reference-external
+cd variants/B1-ai-reference-external
 cat ../../prompts/ai-reference-external.md
 fluid init subscriber360-external --provider snowflake --yes
 cd subscriber360-external
@@ -92,19 +92,7 @@ fluid forge --provider snowflake --domain telco --target-dir .
 fluid validate contract.fluid.yaml
 fluid plan contract.fluid.yaml --out runtime/plan.json --html
 open runtime/plan.html
-BUILD_ID="$(python3 - <<'PY'
-from pathlib import Path
-in_builds = False
-for raw in Path('contract.fluid.yaml').read_text().splitlines():
-    stripped = raw.strip()
-    if stripped == 'builds:':
-        in_builds = True
-        continue
-    if in_builds and (stripped.startswith('- id:') or stripped.startswith('id:')):
-        print(stripped.split(':', 1)[1].strip())
-        break
-PY
-)"
+BUILD_ID="$(python3 "$LAB_REPO/scripts/get_first_build_id.py" contract.fluid.yaml)"
 fluid apply contract.fluid.yaml --build "$BUILD_ID" --yes --report runtime/apply_report.html
 fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
 git add .
@@ -128,7 +116,9 @@ task fluid:check:dev
 ```bash
 cd "$LAB_REPO"
 .venv.fluid-demo/bin/fluid validate fluid/contracts/snowflake_smoke/contract.fluid.yaml
-.venv.fluid-demo/bin/fluid validate fluid/contracts/telco_seed_sources/contract.fluid.yaml
+.venv.fluid-demo/bin/fluid validate fluid/contracts/telco_seed_billing/contract.fluid.yaml
+.venv.fluid-demo/bin/fluid validate fluid/contracts/telco_seed_party/contract.fluid.yaml
+.venv.fluid-demo/bin/fluid validate fluid/contracts/telco_seed_usage/contract.fluid.yaml
 .venv.fluid-demo/bin/fluid validate fluid/contracts/telco_stage_seed/contract.fluid.yaml
 ```
 
