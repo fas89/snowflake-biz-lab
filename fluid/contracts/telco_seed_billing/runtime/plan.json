@@ -1,0 +1,452 @@
+{
+  "actions": [
+    {
+      "action_id": "provision_invoice_source",
+      "action_type": "provisionDataset",
+      "depends_on": [],
+      "description": "Provision dataset for invoice_source",
+      "params": {
+        "binding": {
+          "format": "snowflake_table",
+          "location": {
+            "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+            "database": "{{ env.SNOWFLAKE_DATABASE }}",
+            "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+            "table": "INVOICE"
+          },
+          "platform": "snowflake"
+        },
+        "contract": {
+          "description": "Bronze sources covering telco invoicing \u2014 invoice headers and their per-line charges.",
+          "domain": "telco",
+          "exposes": [
+            {
+              "binding": {
+                "format": "snowflake_table",
+                "location": {
+                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
+                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+                  "table": "INVOICE"
+                },
+                "platform": "snowflake"
+              },
+              "contract": {
+                "dq": {
+                  "rules": [
+                    {
+                      "id": "invoice_id_not_null",
+                      "operator": ">=",
+                      "selector": "INVOICE_ID",
+                      "severity": "error",
+                      "threshold": 1.0,
+                      "type": "completeness"
+                    }
+                  ]
+                },
+                "schema": [
+                  {
+                    "name": "INVOICE_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "ACCOUNT_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "INVOICE_NUMBER",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "INVOICE_DATE",
+                    "required": true,
+                    "type": "DATE"
+                  },
+                  {
+                    "name": "DUE_DATE",
+                    "required": true,
+                    "type": "DATE"
+                  },
+                  {
+                    "name": "TOTAL_AMOUNT_CHF",
+                    "required": true,
+                    "type": "NUMBER"
+                  },
+                  {
+                    "name": "STATUS",
+                    "required": true,
+                    "type": "STRING"
+                  }
+                ]
+              },
+              "description": "Source-shaped invoice records loaded into the telco landing schema.",
+              "exposeId": "invoice_source",
+              "kind": "table",
+              "title": "Invoice Source"
+            },
+            {
+              "binding": {
+                "format": "snowflake_table",
+                "location": {
+                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
+                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+                  "table": "INVOICE_CHARGE"
+                },
+                "platform": "snowflake"
+              },
+              "contract": {
+                "dq": {
+                  "rules": [
+                    {
+                      "id": "charge_id_not_null",
+                      "operator": ">=",
+                      "selector": "CHARGE_ID",
+                      "severity": "error",
+                      "threshold": 1.0,
+                      "type": "completeness"
+                    }
+                  ]
+                },
+                "schema": [
+                  {
+                    "name": "CHARGE_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "INVOICE_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "CHARGE_TYPE",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "CHARGE_DESCRIPTION",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "QUANTITY",
+                    "required": true,
+                    "type": "NUMBER"
+                  },
+                  {
+                    "name": "AMOUNT_CHF",
+                    "required": true,
+                    "type": "NUMBER"
+                  },
+                  {
+                    "name": "CHARGE_DATE",
+                    "required": true,
+                    "type": "DATE"
+                  }
+                ]
+              },
+              "description": "Source-shaped invoice charge records loaded into the telco landing schema.",
+              "exposeId": "invoice_charge_source",
+              "kind": "table",
+              "title": "Invoice Charge Source"
+            }
+          ],
+          "fluidVersion": "0.7.2",
+          "id": "bronze.telco.billing_v1",
+          "kind": "DataProduct",
+          "metadata": {
+            "layer": "Bronze",
+            "owner": {
+              "email": "data-platform@example.com",
+              "team": "telco-data-platform"
+            }
+          },
+          "name": "Telco Billing Bronze"
+        },
+        "exposeId": "invoice_source",
+        "kind": "table",
+        "labels": {
+          "fluid_contract_id": "bronze_telco_billing_v1",
+          "fluid_contract_name": "telco_billing_bronze",
+          "fluid_layer": "bronze",
+          "fluid_team": "telco-data-platform"
+        },
+        "schema": [
+          {
+            "name": "INVOICE_ID",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "ACCOUNT_ID",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "INVOICE_NUMBER",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "INVOICE_DATE",
+            "required": true,
+            "type": "DATE"
+          },
+          {
+            "name": "DUE_DATE",
+            "required": true,
+            "type": "DATE"
+          },
+          {
+            "name": "TOTAL_AMOUNT_CHF",
+            "required": true,
+            "type": "NUMBER"
+          },
+          {
+            "name": "STATUS",
+            "required": true,
+            "type": "STRING"
+          }
+        ]
+      },
+      "provider": "snowflake",
+      "step": 1
+    },
+    {
+      "action_id": "provision_invoice_charge_source",
+      "action_type": "provisionDataset",
+      "depends_on": [],
+      "description": "Provision dataset for invoice_charge_source",
+      "params": {
+        "binding": {
+          "format": "snowflake_table",
+          "location": {
+            "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+            "database": "{{ env.SNOWFLAKE_DATABASE }}",
+            "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+            "table": "INVOICE_CHARGE"
+          },
+          "platform": "snowflake"
+        },
+        "contract": {
+          "description": "Bronze sources covering telco invoicing \u2014 invoice headers and their per-line charges.",
+          "domain": "telco",
+          "exposes": [
+            {
+              "binding": {
+                "format": "snowflake_table",
+                "location": {
+                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
+                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+                  "table": "INVOICE"
+                },
+                "platform": "snowflake"
+              },
+              "contract": {
+                "dq": {
+                  "rules": [
+                    {
+                      "id": "invoice_id_not_null",
+                      "operator": ">=",
+                      "selector": "INVOICE_ID",
+                      "severity": "error",
+                      "threshold": 1.0,
+                      "type": "completeness"
+                    }
+                  ]
+                },
+                "schema": [
+                  {
+                    "name": "INVOICE_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "ACCOUNT_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "INVOICE_NUMBER",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "INVOICE_DATE",
+                    "required": true,
+                    "type": "DATE"
+                  },
+                  {
+                    "name": "DUE_DATE",
+                    "required": true,
+                    "type": "DATE"
+                  },
+                  {
+                    "name": "TOTAL_AMOUNT_CHF",
+                    "required": true,
+                    "type": "NUMBER"
+                  },
+                  {
+                    "name": "STATUS",
+                    "required": true,
+                    "type": "STRING"
+                  }
+                ]
+              },
+              "description": "Source-shaped invoice records loaded into the telco landing schema.",
+              "exposeId": "invoice_source",
+              "kind": "table",
+              "title": "Invoice Source"
+            },
+            {
+              "binding": {
+                "format": "snowflake_table",
+                "location": {
+                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
+                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+                  "table": "INVOICE_CHARGE"
+                },
+                "platform": "snowflake"
+              },
+              "contract": {
+                "dq": {
+                  "rules": [
+                    {
+                      "id": "charge_id_not_null",
+                      "operator": ">=",
+                      "selector": "CHARGE_ID",
+                      "severity": "error",
+                      "threshold": 1.0,
+                      "type": "completeness"
+                    }
+                  ]
+                },
+                "schema": [
+                  {
+                    "name": "CHARGE_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "INVOICE_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "CHARGE_TYPE",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "CHARGE_DESCRIPTION",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "QUANTITY",
+                    "required": true,
+                    "type": "NUMBER"
+                  },
+                  {
+                    "name": "AMOUNT_CHF",
+                    "required": true,
+                    "type": "NUMBER"
+                  },
+                  {
+                    "name": "CHARGE_DATE",
+                    "required": true,
+                    "type": "DATE"
+                  }
+                ]
+              },
+              "description": "Source-shaped invoice charge records loaded into the telco landing schema.",
+              "exposeId": "invoice_charge_source",
+              "kind": "table",
+              "title": "Invoice Charge Source"
+            }
+          ],
+          "fluidVersion": "0.7.2",
+          "id": "bronze.telco.billing_v1",
+          "kind": "DataProduct",
+          "metadata": {
+            "layer": "Bronze",
+            "owner": {
+              "email": "data-platform@example.com",
+              "team": "telco-data-platform"
+            }
+          },
+          "name": "Telco Billing Bronze"
+        },
+        "exposeId": "invoice_charge_source",
+        "kind": "table",
+        "labels": {
+          "fluid_contract_id": "bronze_telco_billing_v1",
+          "fluid_contract_name": "telco_billing_bronze",
+          "fluid_layer": "bronze",
+          "fluid_team": "telco-data-platform"
+        },
+        "schema": [
+          {
+            "name": "CHARGE_ID",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "INVOICE_ID",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "CHARGE_TYPE",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "CHARGE_DESCRIPTION",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "QUANTITY",
+            "required": true,
+            "type": "NUMBER"
+          },
+          {
+            "name": "AMOUNT_CHF",
+            "required": true,
+            "type": "NUMBER"
+          },
+          {
+            "name": "CHARGE_DATE",
+            "required": true,
+            "type": "DATE"
+          }
+        ]
+      },
+      "provider": "snowflake",
+      "step": 2
+    }
+  ],
+  "contract": {
+    "id": "bronze.telco.billing_v1",
+    "name": "Telco Billing Bronze",
+    "version": "0.7.2"
+  },
+  "dependency_graph": {
+    "edges": [],
+    "nodes": [
+      "provision_invoice_source",
+      "provision_invoice_charge_source"
+    ]
+  },
+  "format_version": "0.7.2",
+  "generated_at": 1776640608.303597,
+  "has_dependencies": false,
+  "total_actions": 2
+}

@@ -1,0 +1,213 @@
+fluidVersion: "0.7.2"
+kind: DataProduct
+id: bronze.telco.party_v1
+name: Telco Party Bronze
+description: Bronze sources covering party identity and the subscriptions, services, and product offerings provisioned to them.
+domain: telco
+
+metadata:
+  layer: Bronze
+  owner:
+    team: telco-data-platform
+    email: data-platform@example.com
+
+exposes:
+  - exposeId: party_source
+    title: Party Source
+    description: Source-shaped party records loaded into the telco landing schema.
+    kind: table
+    binding:
+      platform: snowflake
+      format: snowflake_table
+      location:
+        account: "{{ env.SNOWFLAKE_ACCOUNT }}"
+        database: "{{ env.SNOWFLAKE_DATABASE }}"
+        schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
+        table: PARTY
+    contract:
+      schema:
+        - name: PARTY_ID
+          type: STRING
+          required: true
+        - name: PARTY_TYPE
+          type: STRING
+          required: true
+        - name: STATUS
+          type: STRING
+          required: true
+        - name: CREATED_AT
+          type: TIMESTAMP
+          required: true
+        - name: UPDATED_AT
+          type: TIMESTAMP
+          required: true
+      dq:
+        rules:
+          - id: party_id_not_null
+            type: completeness
+            selector: PARTY_ID
+            threshold: 1.0
+            operator: ">="
+            severity: error
+
+  - exposeId: account_source
+    title: Account Source
+    description: Source-shaped account records loaded into the telco landing schema.
+    kind: table
+    binding:
+      platform: snowflake
+      format: snowflake_table
+      location:
+        account: "{{ env.SNOWFLAKE_ACCOUNT }}"
+        database: "{{ env.SNOWFLAKE_DATABASE }}"
+        schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
+        table: ACCOUNT
+    contract:
+      schema:
+        - name: ACCOUNT_ID
+          type: STRING
+          required: true
+        - name: PARTY_ID
+          type: STRING
+          required: true
+        - name: ACCOUNT_NUMBER
+          type: STRING
+          required: true
+        - name: ACCOUNT_TYPE
+          type: STRING
+          required: true
+        - name: STATUS
+          type: STRING
+          required: true
+        - name: CREATED_AT
+          type: TIMESTAMP
+          required: true
+        - name: CLOSED_AT
+          type: TIMESTAMP
+      dq:
+        rules:
+          - id: account_id_not_null
+            type: completeness
+            selector: ACCOUNT_ID
+            threshold: 1.0
+            operator: ">="
+            severity: error
+
+  - exposeId: service_source
+    title: Service Source
+    description: Source-shaped service records loaded into the telco landing schema.
+    kind: table
+    binding:
+      platform: snowflake
+      format: snowflake_table
+      location:
+        account: "{{ env.SNOWFLAKE_ACCOUNT }}"
+        database: "{{ env.SNOWFLAKE_DATABASE }}"
+        schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
+        table: SERVICE
+    contract:
+      schema:
+        - name: SERVICE_ID
+          type: STRING
+          required: true
+        - name: ACCOUNT_ID
+          type: STRING
+          required: true
+        - name: SERVICE_TYPE
+          type: STRING
+          required: true
+        - name: STATUS
+          type: STRING
+          required: true
+        - name: ACTIVATED_AT
+          type: TIMESTAMP
+        - name: TERMINATED_AT
+          type: TIMESTAMP
+      dq:
+        rules:
+          - id: service_id_not_null
+            type: completeness
+            selector: SERVICE_ID
+            threshold: 1.0
+            operator: ">="
+            severity: error
+
+  - exposeId: subscription_source
+    title: Subscription Source
+    description: Source-shaped subscription records loaded into the telco landing schema.
+    kind: table
+    binding:
+      platform: snowflake
+      format: snowflake_table
+      location:
+        account: "{{ env.SNOWFLAKE_ACCOUNT }}"
+        database: "{{ env.SNOWFLAKE_DATABASE }}"
+        schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
+        table: SUBSCRIPTION
+    contract:
+      schema:
+        - name: SUBSCRIPTION_ID
+          type: STRING
+          required: true
+        - name: SERVICE_ID
+          type: STRING
+          required: true
+        - name: PRODUCT_OFFERING_ID
+          type: STRING
+          required: true
+        - name: STATUS
+          type: STRING
+          required: true
+        - name: START_DATE
+          type: DATE
+        - name: END_DATE
+          type: DATE
+        - name: RENEWAL_DATE
+          type: DATE
+      dq:
+        rules:
+          - id: subscription_id_not_null
+            type: completeness
+            selector: SUBSCRIPTION_ID
+            threshold: 1.0
+            operator: ">="
+            severity: error
+
+  - exposeId: product_offering_source
+    title: Product Offering Source
+    description: Source-shaped product offering records loaded into the telco landing schema.
+    kind: table
+    binding:
+      platform: snowflake
+      format: snowflake_table
+      location:
+        account: "{{ env.SNOWFLAKE_ACCOUNT }}"
+        database: "{{ env.SNOWFLAKE_DATABASE }}"
+        schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
+        table: PRODUCT_OFFERING
+    contract:
+      schema:
+        - name: PRODUCT_OFFERING_ID
+          type: STRING
+          required: true
+        - name: NAME
+          type: STRING
+          required: true
+        - name: CATEGORY
+          type: STRING
+          required: true
+        - name: DATA_LIMIT_GB
+          type: NUMBER
+        - name: VOICE_LIMIT_MIN
+          type: NUMBER
+        - name: PRICE_CHF
+          type: NUMBER
+          required: true
+      dq:
+        rules:
+          - id: product_offering_id_not_null
+            type: completeness
+            selector: PRODUCT_OFFERING_ID
+            threshold: 1.0
+            operator: ">="
+            severity: error

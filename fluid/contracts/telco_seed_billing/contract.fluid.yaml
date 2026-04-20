@@ -1,0 +1,101 @@
+fluidVersion: "0.7.2"
+kind: DataProduct
+id: bronze.telco.billing_v1
+name: Telco Billing Bronze
+description: Bronze sources covering telco invoicing — invoice headers and their per-line charges.
+domain: telco
+
+metadata:
+  layer: Bronze
+  owner:
+    team: telco-data-platform
+    email: data-platform@example.com
+
+exposes:
+  - exposeId: invoice_source
+    title: Invoice Source
+    description: Source-shaped invoice records loaded into the telco landing schema.
+    kind: table
+    binding:
+      platform: snowflake
+      format: snowflake_table
+      location:
+        account: "{{ env.SNOWFLAKE_ACCOUNT }}"
+        database: "{{ env.SNOWFLAKE_DATABASE }}"
+        schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
+        table: INVOICE
+    contract:
+      schema:
+        - name: INVOICE_ID
+          type: STRING
+          required: true
+        - name: ACCOUNT_ID
+          type: STRING
+          required: true
+        - name: INVOICE_NUMBER
+          type: STRING
+          required: true
+        - name: INVOICE_DATE
+          type: DATE
+          required: true
+        - name: DUE_DATE
+          type: DATE
+          required: true
+        - name: TOTAL_AMOUNT_CHF
+          type: NUMBER
+          required: true
+        - name: STATUS
+          type: STRING
+          required: true
+      dq:
+        rules:
+          - id: invoice_id_not_null
+            type: completeness
+            selector: INVOICE_ID
+            threshold: 1.0
+            operator: ">="
+            severity: error
+
+  - exposeId: invoice_charge_source
+    title: Invoice Charge Source
+    description: Source-shaped invoice charge records loaded into the telco landing schema.
+    kind: table
+    binding:
+      platform: snowflake
+      format: snowflake_table
+      location:
+        account: "{{ env.SNOWFLAKE_ACCOUNT }}"
+        database: "{{ env.SNOWFLAKE_DATABASE }}"
+        schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
+        table: INVOICE_CHARGE
+    contract:
+      schema:
+        - name: CHARGE_ID
+          type: STRING
+          required: true
+        - name: INVOICE_ID
+          type: STRING
+          required: true
+        - name: CHARGE_TYPE
+          type: STRING
+          required: true
+        - name: CHARGE_DESCRIPTION
+          type: STRING
+          required: true
+        - name: QUANTITY
+          type: NUMBER
+          required: true
+        - name: AMOUNT_CHF
+          type: NUMBER
+          required: true
+        - name: CHARGE_DATE
+          type: DATE
+          required: true
+      dq:
+        rules:
+          - id: charge_id_not_null
+            type: completeness
+            selector: CHARGE_ID
+            threshold: 1.0
+            operator: ">="
+            severity: error
