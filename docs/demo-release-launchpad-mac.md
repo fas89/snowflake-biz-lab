@@ -82,12 +82,51 @@ Do not run `fluid apply --build` until the checklist is complete and the plan is
 
 Use the same scenario names as the dev-source track:
 
+- **Bronze** upstream lineage anchor — three contracts: `telco_seed_billing`, `telco_seed_party`, `telco_seed_usage`
 - **A1** external-reference silver contract
 - **A2** internal-reference silver contract
 - **B1** AI forge with external references
 - **B2** AI forge with generated assets
 
 Use [Scenario Validation Matrix](scenario-validation-matrix.md) for the exact contract paths, dbt roots, DAG paths, DAG IDs, Jenkinsfile paths, and expose names.
+
+## Bronze Anchor Scenario
+
+Bronze is published as **three contracts**, one per subject area: billing, party, and usage. They are the upstream lineage anchors for the silver variants.
+
+Load Snowflake secrets once, then validate, plan, and publish each contract:
+
+```bash
+cd "$LAB_REPO"
+source "$GREENFIELD_WORKSPACE/.venv/bin/activate"
+set -a
+source "$FLUID_SECRETS_FILE"
+set +a
+
+for domain in billing party usage; do
+  contract="fluid/contracts/telco_seed_${domain}/contract.fluid.yaml"
+  fluid validate "$contract"
+  fluid plan "$contract" --out "fluid/contracts/telco_seed_${domain}/runtime/plan.json" --html
+  fluid publish "$contract" --catalog datamesh-manager
+done
+```
+
+Open the three plan reports to review them:
+
+```bash
+open fluid/contracts/telco_seed_billing/runtime/plan.html
+open fluid/contracts/telco_seed_party/runtime/plan.html
+open fluid/contracts/telco_seed_usage/runtime/plan.html
+```
+
+Validation:
+
+- review each of the three bronze plans against [Plan Verification Checklist](plan-verification-checklist.md)
+- open the DMM marketplace at [http://localhost:8095](http://localhost:8095) and confirm all three data products appear under the **telco** domain:
+  - `bronze.telco.billing_v1`
+  - `bronze.telco.party_v1`
+  - `bronze.telco.usage_v1`
+- no Airflow, dbt, or Jenkins assets are expected for this scenario
 
 ## Workspace A: Ready-Made Variants
 
