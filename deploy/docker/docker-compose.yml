@@ -168,7 +168,11 @@ services:
       DBT_TARGET: ${DBT_TARGET:-snowflake}
       DMM_API_URL: ${DMM_API_URL:-http://localhost:8095}
       DMM_API_KEY: ${DMM_API_KEY:-}
-      JAVA_OPTS: -Djenkins.install.runSetupWizard=false
+      # ``hudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT`` allows the CasC-provisioned
+      # pipelines to check out from the local workspace repos mounted at
+      # /workspace/gitlab/. Safe here because this is a local lab container with no
+      # external ingress; do not copy this flag into a shared Jenkins controller.
+      JAVA_OPTS: -Djenkins.install.runSetupWizard=false -Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true
     ports:
       - "${JENKINS_WEB_PORT:-8081}:8080"
       - "${JENKINS_AGENT_PORT:-50000}:50000"
@@ -177,6 +181,11 @@ services:
       - ../../:/workspace
       - ../../jenkins/casc:/var/jenkins_home/casc_configs:ro
       - ../../runtime:/workspace/runtime
+      # Mount the gitlab demo workspaces read-only so the CasC-provisioned
+      # Pipeline jobs can fetch each variant's Jenkinsfile from the local
+      # git repos. The path on the host is supplied via ``DEMO_WORKSPACES_DIR``
+      # in the launchpad (defaults to the sibling ``gitlab/`` directory).
+      - ${DEMO_WORKSPACES_DIR:-../../../gitlab}:/workspace/gitlab:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login >/dev/null || exit 1"]
       interval: 20s

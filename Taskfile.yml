@@ -41,7 +41,7 @@ tasks:
     cmds:
       - python3 -m venv {{.FLUID_DEV_VENV}}
       - "{{.FLUID_DEV_VENV}}/bin/pip install --upgrade pip"
-      - "{{.FLUID_DEV_VENV}}/bin/pip install -e \"${FLUID_DEV_SOURCE_REPO:-../forge-cli}\""
+      - "{{.FLUID_DEV_VENV}}/bin/pip install -e \"${FLUID_DEV_SOURCE_REPO:-../forge-cli}[snowflake]\""
 
   fluid:check:demo:
     desc: Verify the pinned demo-release FLUID runtime and bundled contract schema support
