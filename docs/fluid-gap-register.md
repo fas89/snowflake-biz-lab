@@ -70,6 +70,8 @@ The observations below should be rechecked against the latest `data-product-forg
   `fluid_build/cli/forge_modes.py`, Snowflake provider templates, transformation generation logic, and prompt scaffolding for domain-specific silver outputs.
 - Acceptance criteria:
   A greenfield `fluid forge --provider snowflake --domain telco` flow can reliably scaffold a silver aggregated contract and the right dbt-oriented build references for this lab.
+- Interim demo workaround (2026-04-20):
+  `fluid forge` output varies across runs because the underlying LLM call is nondeterministic, which is unsafe for a live stage demo. Until `forge-cli` exposes a seed or deterministic-replay flag, the launchpads copy a captured golden contract from `fluid/fixtures/forge-golden/B1-ai-reference-external/` (and `B2-ai-generate-in-workspace/` for scenario B2) into the workspace instead of calling the live LLM. The live-mode commands remain in the launchpad as commented-out alternatives, and `fluid/fixtures/forge-golden/README.md` documents how to refresh the golden off-stage. Remove the workaround once forge-cli supports replay natively.
 
 ## Existing dbt reference flow
 
