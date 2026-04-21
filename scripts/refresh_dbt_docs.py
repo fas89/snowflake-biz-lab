@@ -56,13 +56,12 @@ def normalize_scenario(value: str) -> str:
 
 
 def resolve_scenario(scenario: str, env: dict[str, str]) -> ScenarioProject:
-    greenfield = env.get("FLUID_DEMO_GITLAB_WORKSPACE", "").strip()
-    existing = env.get("FLUID_AI_GITLAB_WORKSPACE", "").strip()
-
-    if scenario in {"a1", "a2", "b1"} and not greenfield:
-        raise RuntimeError("FLUID_DEMO_GITLAB_WORKSPACE is missing in .env or the current shell.")
-    if scenario == "b2" and not existing:
-        raise RuntimeError("FLUID_AI_GITLAB_WORKSPACE is missing in .env or the current shell.")
+    # Defaults mirror the docker-compose defaults: ./gitlab/ inside the lab repo,
+    # bootstrapped from fluid/fixtures/workspaces/ via `task workspaces:bootstrap`.
+    default_greenfield = str(REPO_ROOT / "gitlab" / "path-a-telco-silver-product-demo")
+    default_existing = str(REPO_ROOT / "gitlab" / "path-b-ai-telco-silver-import-demo")
+    greenfield = env.get("FLUID_DEMO_GITLAB_WORKSPACE", "").strip() or default_greenfield
+    existing = env.get("FLUID_AI_GITLAB_WORKSPACE", "").strip() or default_existing
 
     projects = {
         "a1": ScenarioProject(

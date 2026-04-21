@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: mart_subscriber360_core
+    description: Subscriber 360 silver mart over the telco DV2 foundations.
+    columns:
+      - name: account_id
+        tests: [not_null]
+      - name: service_id
+        tests: [not_null]
+      - name: support_risk_band
+        tests:
+          - accepted_values:
+              values: ['healthy', 'watch', 'high', 'critical']
+      - name: support_health_score
+        tests: [not_null]
+
+  - name: mart_subscriber_health_scorecard
+    description: Account and service support scorecard mart for support posture and care operations.
+    columns:
+      - name: account_id
+        tests: [not_null]
+      - name: service_id
+        tests: [not_null]
+      - name: support_risk_band
+        tests:
+          - accepted_values:
+              values: ['healthy', 'watch', 'high', 'critical']
+      - name: open_ticket_count_30d
+        tests: [not_null]

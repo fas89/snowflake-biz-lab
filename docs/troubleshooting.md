@@ -2,14 +2,16 @@
 
 ## Airflow Does Not Show The Generated DAGs
 
-Check `.env` first.
+Confirm the demo workspaces were bootstrapped:
 
-`FLUID_DEMO_GITLAB_WORKSPACE` must point to the active GitLab working copy as an absolute path.
+```bash
+ls gitlab/path-a-telco-silver-product-demo gitlab/path-b-ai-telco-silver-import-demo
+```
 
-Example:
+If either directory is missing, run:
 
-```text
-FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/path-a-telco-silver-product-demo
+```bash
+task workspaces:bootstrap
 ```
 
 Then recycle the core stack:
@@ -19,7 +21,7 @@ task down
 task up
 ```
 
-If you switch from the greenfield demo to the existing-dbt demo, update the path and restart the Airflow stack again.
+docker-compose mounts `./gitlab/path-a-telco-silver-product-demo` (for the greenfield/import DAGs) and `./gitlab/path-b-ai-telco-silver-import-demo` (for the AI DAGs) into Airflow by default. If you have pointed `FLUID_DEMO_GITLAB_WORKSPACE` or `FLUID_AI_GITLAB_WORKSPACE` at a non-default path in `.env`, make sure that path actually exists and contains the expected variant structure.
 
 ## `fluid: command not found`
 

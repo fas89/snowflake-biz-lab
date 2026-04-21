@@ -36,16 +36,18 @@ Focus on these areas first:
 - `deploy/docker/`
   Local platform stack for Airflow, dbt docs, Jenkins, catalogs, and supporting services.
 - `fluid/`
-  Contracts, prompts, runbooks, and generated/reporting support for the FLUID demo.
+  Contracts, prompts, runbooks, fixtures, and generated/reporting support for the FLUID demo.
+- `fluid/fixtures/workspaces/`
+  Tracked templates for the demo GitLab workspaces. `task workspaces:bootstrap` copies them into `./gitlab/`.
 - `runtime/`
   Ignored local runtime files such as env files, generated secrets, and local helper state.
 
-The demo also depends on two Git-tracked workspace repos that live alongside this repo in the active local setup:
+The demo workspaces live INSIDE the lab repo at `./gitlab/` (gitignored). They are materialized by `task workspaces:bootstrap` from the tracked templates:
 
 - `gitlab/path-a-telco-silver-product-demo` (path A — reference-mapped silver)
 - `gitlab/path-b-ai-telco-silver-import-demo` (path B — AI-forged silver)
 
-Treat those as part of the lab's working surface when you are validating scenarios, but do not describe them as folders inside this repo unless they actually are in the current setup.
+Changes that should persist across fresh clones must be made in `fluid/fixtures/workspaces/`, not in `./gitlab/`. The bootstrap script initializes a local git repo inside each copied workspace so Jenkins' file-SCM can clone it. `task workspaces:reset` wipes and re-bootstraps. `scripts/reset_demo_state.py` triggers the same re-bootstrap by default.
 
 ---
 
@@ -89,6 +91,15 @@ Then use one platform-specific launchpad:
 - `docs/demo-release-launchpad-windows.md`
 - `docs/dev-source-launchpad-mac.md`
 - `docs/dev-source-launchpad-windows.md`
+
+Each track launchpad is a thin launcher that bootstraps its FLUID runtime and then hands off to the shared variant playbook:
+
+- `docs/variant-playbook-mac.md` — shared Bronze / A1 / A2 / B1 / B2 commands for both tracks on Mac
+- `docs/variant-playbook-windows.md` — same for Windows
+
+Shared recovery runbook:
+
+- `docs/launchpad-recovery.md` — DMM publish, Jenkins re-provision, `fluid apply` retry, full reset
 
 Keep the repo's shared scenario vocabulary consistent across docs, code, and conversation:
 
@@ -172,7 +183,7 @@ When behavior changes, update the docs that define that behavior in the same cha
 
 At minimum:
 
-- launchpad changes should be reflected in `docs/launchpad-common.md` and the relevant platform launchpads
+- shared setup/reset changes belong in `docs/launchpad-common.md`; variant command changes belong in `docs/variant-playbook-mac.md` and `docs/variant-playbook-windows.md`; recovery runbook changes belong in `docs/launchpad-recovery.md`; the four track launchpads should stay thin launchers that only bootstrap their FLUID runtime and hand off
 - scenario-flow changes should stay aligned with the scenario validation matrix
 - command-shape changes should be reflected in `docs/command-reference.md`
 - new FLUID limitations should go through the FLUID limitation rule above

@@ -36,3 +36,7 @@ fluid/reports/*
 .fluid/
 
 jenkins_home/
+
+# Demo GitLab workspaces — bootstrapped from fluid/fixtures/workspaces/
+# via `task workspaces:bootstrap`. Never committed; recreated on demand.
+gitlab/

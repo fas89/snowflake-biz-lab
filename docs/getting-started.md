@@ -20,14 +20,15 @@ If you are using an AI coding agent or copilot in this repo, read [../AGENTS.md]
 - `task` if you want to use the repo helper commands exactly as written
 - Docker Desktop for local Airflow, dbt-runner, dbt docs UI, Jenkins, and Entropy Data CE
 - A Snowflake environment when you are ready to load staging data and run live FLUID commands
-- A hosted GitLab project or clone path for the two demo workspaces
+
+The demo GitLab workspaces are bootstrapped from tracked templates under `fluid/fixtures/workspaces/` into `./gitlab/` (gitignored) via `task workspaces:bootstrap`. No external GitLab project is required for the local flow.
 
 You do not need Snowflake credentials just to read the docs or inspect the repo layout.
 
 ## Two Local Config Files, Two Jobs
 
 1. `.env`
-   Put non-secret local settings here, including `FLUID_DEMO_GITLAB_WORKSPACE` and `FLUID_AI_GITLAB_WORKSPACE`.
+   Put non-secret local settings here. `FLUID_DEMO_GITLAB_WORKSPACE` / `FLUID_AI_GITLAB_WORKSPACE` can stay blank unless you have moved the demo workspaces away from the default `./gitlab/` location inside the lab repo.
 2. `runtime/generated/fluid.local.env`
    Put Snowflake and DMM secrets here, then load it only before live `fluid apply` or `fluid publish`.
 
@@ -59,14 +60,13 @@ cp .env.catalogs.example .env.catalogs
 cp .env.jenkins.example .env.jenkins
 ```
 
-Then set `FLUID_DEMO_GITLAB_WORKSPACE` and `FLUID_AI_GITLAB_WORKSPACE` in `.env` to the GitLab working copies you want local Airflow and dbt docs to watch.
+Then bootstrap the demo GitLab workspaces from the tracked templates:
 
-Use an absolute path. For example:
-
-```text
-FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/path-a-telco-silver-product-demo
-FLUID_AI_GITLAB_WORKSPACE=/absolute/path/to/path-b-ai-telco-silver-import-demo
+```bash
+task workspaces:bootstrap
 ```
+
+That creates `./gitlab/path-a-telco-silver-product-demo` and `./gitlab/path-b-ai-telco-silver-import-demo` inside the lab repo (gitignored). docker-compose picks them up by default — leave `FLUID_DEMO_GITLAB_WORKSPACE` / `FLUID_AI_GITLAB_WORKSPACE` blank in `.env` unless you want to point elsewhere.
 
 ## The Recommended Reading Order
 

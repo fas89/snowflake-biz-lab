@@ -26,45 +26,11 @@ copy_if_missing() {
   fi
 }
 
-clone_if_configured() {
-  repo_url="$1"
-  target_dir="$2"
-  label="$3"
-
-  mkdir -p "$(dirname "$target_dir")"
-
-  if [ -z "$repo_url" ]; then
-    mkdir -p "$target_dir"
-    echo "Skipping $label clone because its GitLab URL is empty."
-    echo "Created or kept local folder: $target_dir"
-    echo "Set the URL in runtime/generated/launchpad.local.sh if you want this script to clone it."
-    return 0
-  fi
-
-  if [ -d "$target_dir/.git" ]; then
-    echo "Keeping existing $label workspace at $target_dir"
-    return 0
-  fi
-
-  if [ -d "$target_dir" ] && [ -n "$(ls -A "$target_dir" 2>/dev/null)" ]; then
-    echo "Skipping $label clone because $target_dir already exists and is not empty."
-    echo "Either remove that folder or clone the repo there yourself."
-    return 0
-  fi
-
-  if [ -d "$target_dir" ] && [ -z "$(ls -A "$target_dir" 2>/dev/null)" ]; then
-    rmdir "$target_dir"
-  fi
-
-  git clone "$repo_url" "$target_dir"
-}
-
 copy_if_missing "$lab_repo/.env.example" "$lab_repo/.env"
 copy_if_missing "$lab_repo/.env.catalogs.example" "$lab_repo/.env.catalogs"
 copy_if_missing "$lab_repo/.env.jenkins.example" "$lab_repo/.env.jenkins"
 
-clone_if_configured "${GREENFIELD_GITLAB_URL:-}" "${GREENFIELD_WORKSPACE:-}" "greenfield"
-clone_if_configured "${EXISTING_DBT_GITLAB_URL:-}" "${EXISTING_DBT_WORKSPACE:-}" "existing-dbt"
+python3 "$lab_repo/scripts/bootstrap_workspaces.py" --dest "$lab_repo/gitlab"
 
 echo
 echo "Local demo setup complete."

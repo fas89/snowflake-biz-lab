@@ -106,9 +106,9 @@ credentials:
 
 # Pipeline jobs are auto-provisioned via JobDSL (job-dsl plugin). Each script
 # points at a Jenkinsfile inside the gitlab/ demo workspaces mounted read-only
-# at /workspace/gitlab. The host directory is configurable via
-# ``DEMO_WORKSPACES_DIR`` in the launchpad env (defaults to the sibling
-# ``gitlab/`` directory next to snowflake-biz-lab/).
+# at /workspace/gitlab. The host directory is ``./gitlab/`` inside the lab repo
+# (gitignored; bootstrapped from ``fluid/fixtures/workspaces/`` templates via
+# ``task workspaces:bootstrap``).
 jobs:
   - script: >
       pipelineJob('A1-external-reference') {

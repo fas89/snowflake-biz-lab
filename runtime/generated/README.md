@@ -8,27 +8,23 @@ Put local, ignored runtime files here.
 
 Use these local files to set your repo and workspace paths once, then source them before running the launchpads.
 
-By default, the demo workspaces live under:
+By default, the demo workspaces live INSIDE the lab repo at:
 
 ```text
-LOCAL_REPOS_DIR/gitlab
+LAB_REPO/gitlab
 ```
+
+That directory is gitignored and bootstrapped from the tracked templates under `fluid/fixtures/workspaces/` via `task workspaces:bootstrap`.
 
 For Mac, the quickest path is:
 
 ```bash
 ./scripts/setup_mac_launchpad.sh
 source runtime/generated/launchpad.local.sh
+task workspaces:bootstrap
 ```
 
-If you plan to run the clone step from the launchpads, also set these in your local launchpad file:
-
-```bash
-GREENFIELD_GITLAB_URL
-EXISTING_DBT_GITLAB_URL
-```
-
-If you leave those values empty, skip the `git clone` step in the docs and create the workspaces some other way.
+`GREENFIELD_GITLAB_URL` / `EXISTING_DBT_GITLAB_URL` are optional overrides if you want to clone demo workspaces from a hosted GitLab instead of bootstrapping from templates. Leave them empty for the default local flow.
 
 Tracked examples:
 

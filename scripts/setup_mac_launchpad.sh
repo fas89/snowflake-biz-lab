@@ -29,9 +29,11 @@ if [ -z "$local_repos_dir" ]; then
   local_repos_dir=$(CDPATH= cd -- "$lab_repo/.." && pwd)
 fi
 
-# Derive the default path layout from the chosen parent repo folder instead of
-# inheriting possibly stale shell variables from a previous demo run.
-demo_workspaces_dir="$local_repos_dir/gitlab"
+# GitLab demo workspaces live INSIDE the lab repo at ./gitlab/ (gitignored).
+# They are bootstrapped from fluid/fixtures/workspaces/ templates via
+# `task workspaces:bootstrap`. The launchpad exports the expected subpaths
+# so downstream helpers (reset_demo_state.py, docs snippets) resolve correctly.
+demo_workspaces_dir="$lab_repo/gitlab"
 greenfield_workspace="$demo_workspaces_dir/path-a-telco-silver-product-demo"
 existing_dbt_workspace="$demo_workspaces_dir/path-b-ai-telco-silver-import-demo"
 greenfield_gitlab_url=""
@@ -44,7 +46,7 @@ quote_for_shell() {
   printf "'%s'" "$escaped"
 }
 
-mkdir -p "$lab_repo/runtime/generated" "$demo_workspaces_dir"
+mkdir -p "$lab_repo/runtime/generated"
 
 if [ -e "$launchpad_file" ] && [ "$force" -ne 1 ]; then
   echo "Keeping existing launchpad file: $launchpad_file"
@@ -78,8 +80,8 @@ echo "  DEMO_WORKSPACES_DIR=$demo_workspaces_dir"
 echo
 echo "Next steps:"
 echo "  1. Review the generated file if you want to override any paths."
-echo "  2. Set GREENFIELD_GITLAB_URL and EXISTING_DBT_GITLAB_URL in runtime/generated/launchpad.local.sh before running any git clone commands."
-echo "     If you already cloned those workspaces manually, you can leave the URL values empty and skip the git clone step."
-echo "  3. Load it into your shell to refresh the current path variables:"
+echo "  2. Load it into your shell to refresh the current path variables:"
 echo "     source runtime/generated/launchpad.local.sh"
+echo "  3. Bootstrap the gitlab/ demo workspaces from tracked templates:"
+echo "     task workspaces:bootstrap"
 echo "  4. Continue with docs/launchpad-common.md"

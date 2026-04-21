@@ -17,9 +17,13 @@ RUN apt-get update && \
 # pre-installed at image-build time so the per-build ``pip install`` is a
 # fast no-op (and the demo still runs even if PyPI is unreachable).
 ENV PATH="/opt/fluid-venv/bin:${PATH}"
+# Install with [snowflake] extras so `fluid test` can run DQ rules against
+# live Snowflake (snowflake-connector-python, snowpark, dbt-snowflake).
+# Without this, `fluid test` trips on "snowflake-connector-python not
+# installed" even for a Snowflake-bound contract.
 RUN python3 -m venv /opt/fluid-venv && \
     /opt/fluid-venv/bin/pip install --no-cache-dir --quiet --upgrade pip && \
-    /opt/fluid-venv/bin/pip install --no-cache-dir --quiet data-product-forge && \
+    /opt/fluid-venv/bin/pip install --no-cache-dir --quiet 'data-product-forge[snowflake]' && \
     chown -R jenkins:jenkins /opt/fluid-venv
 
 COPY jenkins/plugins.txt /usr/share/jenkins/ref/plugins.txt

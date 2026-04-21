@@ -8,16 +8,11 @@ This repo keeps secrets out of tracked contracts and out of checked-in configura
 
 Use `.env` for non-secret local settings, especially:
 
-- `FLUID_DEMO_GITLAB_WORKSPACE`
 - local port overrides
 - local Docker defaults
 - GitLab project URL placeholders
 
-For the local Airflow bridge, `FLUID_DEMO_GITLAB_WORKSPACE` should be an absolute path to the active GitLab working copy. Example:
-
-```text
-FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/path-a-telco-silver-product-demo
-```
+`FLUID_DEMO_GITLAB_WORKSPACE` / `FLUID_AI_GITLAB_WORKSPACE` can stay blank. docker-compose defaults them to `./gitlab/path-a-telco-silver-product-demo` and `./gitlab/path-b-ai-telco-silver-import-demo` inside the lab repo (bootstrapped from `fluid/fixtures/workspaces/` via `task workspaces:bootstrap`). Set them explicitly only if you have deliberately moved the workspaces elsewhere.
 
 ### `runtime/generated/fluid.local.env`
 

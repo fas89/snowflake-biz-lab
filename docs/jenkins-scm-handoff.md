@@ -26,7 +26,7 @@ It is intentionally different from a future FLUID enhancement where `fluid apply
 | `A2-internal-reference`     | `gitlab/path-a-telco-silver-product-demo`                       | `variants/A2-internal-reference/Jenkinsfile`                              |
 | `B1-subscriber360-external` | `gitlab/path-b-ai-telco-silver-import-demo`                        | `variants/B1-ai-reference-external/subscriber360-external/Jenkinsfile`    |
 
-The gitlab workspaces are mounted read-only at `/workspace/gitlab/` inside the Jenkins container. The host path is configurable via `DEMO_WORKSPACES_DIR` (defaults to the sibling `gitlab/` directory).
+The gitlab workspaces are mounted read-only at `/workspace/gitlab/` inside the Jenkins container. The host path is configurable via `DEMO_WORKSPACES_DIR` and defaults to `./gitlab/` inside the lab repo (gitignored; bootstrapped from `fluid/fixtures/workspaces/` templates via `task workspaces:bootstrap`).
 
 The JobDSL scripts live in `jenkins/casc/jenkins.yaml`. Adding a job is a one-file YAML edit + `task jenkins:up` restart.
 

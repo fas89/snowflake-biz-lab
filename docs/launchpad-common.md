@@ -26,7 +26,7 @@ This is the fastest safe sequence:
 ./scripts/setup_mac_launchpad.sh --force
 source runtime/generated/launchpad.local.sh
 cd "$LAB_REPO"
-python3 scripts/reset_demo_state.py --lab-repo "$LAB_REPO" --greenfield-workspace "$GREENFIELD_WORKSPACE" --existing-workspace "$EXISTING_DBT_WORKSPACE" --yes
+python3 scripts/reset_demo_state.py --lab-repo "$LAB_REPO" --yes
 task down
 task jenkins:down
 task catalogs:reset
@@ -39,7 +39,7 @@ Copy-Item runtime/generated/launchpad.local.ps1.example runtime/generated/launch
 notepad .\runtime\generated\launchpad.local.ps1
 . .\runtime\generated\launchpad.local.ps1
 Set-Location $env:LAB_REPO
-py -3 scripts/reset_demo_state.py --lab-repo $env:LAB_REPO --greenfield-workspace $env:GREENFIELD_WORKSPACE --existing-workspace $env:EXISTING_DBT_WORKSPACE
+py -3 scripts/reset_demo_state.py --lab-repo $env:LAB_REPO --yes
 task down
 task jenkins:down
 task catalogs:reset
@@ -47,7 +47,7 @@ task catalogs:reset
 
 If you run the clean-start block above, skip section 1 and continue with section 2 below.
 
-The reset script cleans files and folders. The `source runtime/generated/launchpad.local.sh` step is what refreshes the current shell variables.
+The reset script cleans lab repo artifacts and, by default, wipes `./gitlab/` and re-bootstraps the demo workspaces from `fluid/fixtures/workspaces/`. The `source runtime/generated/launchpad.local.sh` step is what refreshes the current shell variables.
 
 ## Run This Page In Order
 
@@ -57,7 +57,7 @@ The reset script cleans files and folders. The `source runtime/generated/launchp
 4. Start the local Docker applications.
 5. Open the browser tabs.
 6. Find the app credentials and login values.
-7. Run the off-stage Snowflake seed and metadata prep.
+7. Reset demo state and run the Snowflake seed and metadata prep.
 8. Continue to exactly one track-specific launchpad, then switch into the matching workspace README for the variant you want to run.
 
 If you are starting fresh, run the clean-start block above, then continue with steps 2 through 8.
@@ -89,7 +89,6 @@ This block:
 ```bash
 ./scripts/setup_mac_launchpad.sh
 source runtime/generated/launchpad.local.sh
-mkdir -p "$DEMO_WORKSPACES_DIR"
 printf '%s\n' "$LOCAL_REPOS_DIR"
 printf '%s\n' "$LAB_REPO"
 ```
@@ -117,7 +116,6 @@ This block:
 Copy-Item runtime/generated/launchpad.local.ps1.example runtime/generated/launchpad.local.ps1
 notepad .\runtime\generated\launchpad.local.ps1
 . .\runtime\generated\launchpad.local.ps1
-New-Item -ItemType Directory -Force $env:DEMO_WORKSPACES_DIR | Out-Null
 $env:LOCAL_REPOS_DIR
 Write-Host $env:LAB_REPO
 ```
@@ -126,26 +124,19 @@ These local files are gitignored, so each operator can keep personal paths witho
 
 ## 2. Run The One-Time Local Setup
 
-The safest path is to use the helper script below.
-
-Do not run raw `git clone "$GREENFIELD_GITLAB_URL" ...` or `git clone "$EXISTING_DBT_GITLAB_URL" ...` commands unless you have already set both GitLab URL variables in your local launchpad file.
-
-Before cloning from the repo, set `GREENFIELD_GITLAB_URL` and `EXISTING_DBT_GITLAB_URL` in your local launchpad file.
-
-If either GitLab URL is still empty, the helper will skip that clone instead of failing.
-
 This step prepares your local working area:
 
 - creates local `.env` files only if they do not already exist
-- clones the GitLab workspaces only when the URLs are set
-- otherwise creates or keeps the local workspace folders so the rest of the demo can continue
-- keeps the checked-in workspace scaffolds if they are already present on disk
+- bootstraps the demo GitLab workspaces into `./gitlab/` from the tracked templates under `fluid/fixtures/workspaces/`
+
+The `./gitlab/` directory is gitignored. Re-running `task workspaces:bootstrap` is always safe; it skips directories that already exist. Use `task workspaces:reset` to wipe and recreate them from templates.
 
 ### Mac
 
 ```bash
 cd "$LAB_REPO"
 ./scripts/setup_local_demo.sh
+task workspaces:bootstrap
 ```
 
 ### Windows
@@ -155,18 +146,10 @@ Set-Location $env:LAB_REPO
 Copy-Item .env.example .env
 Copy-Item .env.catalogs.example .env.catalogs
 Copy-Item .env.jenkins.example .env.jenkins
-if ($env:GREENFIELD_GITLAB_URL) { git clone $env:GREENFIELD_GITLAB_URL $env:GREENFIELD_WORKSPACE } else { New-Item -ItemType Directory -Force $env:GREENFIELD_WORKSPACE | Out-Null; Write-Host "Set GREENFIELD_GITLAB_URL in runtime/generated/launchpad.local.ps1 before cloning the greenfield workspace." }
-if ($env:EXISTING_DBT_GITLAB_URL) { git clone $env:EXISTING_DBT_GITLAB_URL $env:EXISTING_DBT_WORKSPACE } else { New-Item -ItemType Directory -Force $env:EXISTING_DBT_WORKSPACE | Out-Null; Write-Host "Set EXISTING_DBT_GITLAB_URL in runtime/generated/launchpad.local.ps1 before cloning the existing-dbt workspace." }
+task workspaces:bootstrap
 ```
 
 ## 3. Fill In Your Local Config Files
-
-In `.env`, set:
-
-```text
-FLUID_DEMO_GITLAB_WORKSPACE=/absolute/path/to/path-a-telco-silver-product-demo
-FLUID_AI_GITLAB_WORKSPACE=/absolute/path/to/path-b-ai-telco-silver-import-demo
-```
 
 Create or update:
 
@@ -183,16 +166,15 @@ The most important local files are:
 
 Before you continue, make sure:
 
-- `.env` points `FLUID_DEMO_GITLAB_WORKSPACE` at your greenfield workspace
-- `.env` points `FLUID_AI_GITLAB_WORKSPACE` at your AI/import workspace
 - `.env` contains working `SNOWFLAKE_*` values for the Docker-based `task seed:*` and `task metadata:*` commands
 - `runtime/generated/fluid.local.env` contains the Snowflake secrets you want the live demo to use
 - `task catalogs:bootstrap` will fill or refresh `DMM_API_KEY` for you after the catalog stack starts
+- `FLUID_DEMO_GITLAB_WORKSPACE` / `FLUID_AI_GITLAB_WORKSPACE` can stay blank in `.env` — docker-compose falls back to `./gitlab/path-a-telco-silver-product-demo` / `./gitlab/path-b-ai-telco-silver-import-demo` automatically
 
 Important:
 
 - Step 7 will not work until valid Snowflake credentials are present in `.env`
-- the off-stage seed and metadata tasks run inside Docker, so they read Snowflake auth from `.env`, not from `runtime/generated/fluid.local.env`
+- the Step 7 seed and metadata tasks run inside Docker, so they read Snowflake auth from `.env`, not from `runtime/generated/fluid.local.env`
 
 ## 4. Start The Local Applications
 
@@ -202,7 +184,7 @@ This block:
 
 - starts the core platform services
 - starts the local dbt docs UI
-- starts Jenkins (auto-provisions the `A1-external-reference`, `A2-internal-reference`, `B1-subscriber360-external` pipelines via CasC, each pointing at the matching Jenkinsfile in the sibling `gitlab/` workspaces)
+- starts Jenkins (auto-provisions the `A1-external-reference`, `A2-internal-reference`, `B1-subscriber360-external` pipelines via CasC, each pointing at the matching Jenkinsfile in the `./gitlab/` workspaces inside the lab repo)
 - starts the catalog stack
 - completes the local Entropy bootstrap flow in the background
 - shows the resulting container state
@@ -258,13 +240,13 @@ For the local apps, the important values are:
 
 These files are gitignored, so the operator should look in the local copies, not the example templates.
 
-## 7. Run The Off-Stage Data Prep
+## 7. Reset Demo State And Seed Snowflake
 
 Before you run this step, make sure `.env` already contains working Snowflake credentials and connection settings.
 
 This block:
 
-- resets the local seed artifacts and Snowflake landing objects for a clean rerun
+- wipes `./gitlab/` and re-bootstraps the demo workspaces from tracked templates, so A1/A2/B1/B2 start from a clean state (no stale `Jenkinsfile`, forged contract, or generated dbt/airflow assets)
 - drops the entire `SNOWFLAKE_DATABASE` so the rerun starts with no source tables or leftover demo schemas
 - regenerates the local telco seed files
 - loads the source-shaped telco data into `SNOWFLAKE_STAGE_SCHEMA`
@@ -275,6 +257,7 @@ This block:
 
 ```bash
 cd "$LAB_REPO"
+task workspaces:reset
 task seed:reset:confirm
 task seed:generate
 task seed:load
@@ -287,6 +270,7 @@ task metadata:verify
 
 ```powershell
 Set-Location $env:LAB_REPO
+task workspaces:reset
 task seed:reset:confirm
 task seed:generate
 task seed:load
@@ -295,12 +279,13 @@ task metadata:apply
 task metadata:verify
 ```
 
-## Snowflake Reproducibility Rule
+## Reproducibility Rule
 
-Step 7 now begins with an explicit destructive wipe of the full Snowflake demo database.
+Step 7 begins with a destructive wipe of both the demo GitLab workspaces and the full Snowflake demo database.
 
 The demo is reproducible because:
 
+- `task workspaces:reset` re-bootstraps `./gitlab/` from `fluid/fixtures/workspaces/` so no stale `Jenkinsfile`, forged contract, or generated dbt/airflow assets linger between rehearsals
 - `task seed:reset:confirm` removes the generated seed artifacts and drops `SNOWFLAKE_DATABASE` before a rerun
 - `task seed:load` truncates and reloads the landing tables each time
 - `task metadata:apply` reapplies the Horizon metadata and column descriptions on the source tables each time
@@ -326,6 +311,9 @@ Then use the matching workspace:
 - [Demo Release Launchpad (Windows)](demo-release-launchpad-windows.md)
 - [Dev Source Launchpad (Mac)](dev-source-launchpad-mac.md)
 - [Dev Source Launchpad (Windows)](dev-source-launchpad-windows.md)
+- [Variant Playbook (Mac)](variant-playbook-mac.md)
+- [Variant Playbook (Windows)](variant-playbook-windows.md)
+- [Launchpad Recovery](launchpad-recovery.md)
 - [Getting Started](getting-started.md)
 - [Credentials](credentials.md)
 - [Command Reference](command-reference.md)

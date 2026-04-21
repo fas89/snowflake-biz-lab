@@ -111,3 +111,57 @@ The observations below should be rechecked against the latest `data-product-forg
   `fluid_build/cli/generate_standard.py`, `fluid_build/cli/datamesh_manager.py`, and any post-apply or publish orchestration hooks.
 - Acceptance criteria:
   The contract can generate the standards artifacts you want to show, and the DMM publish path can use them or reference them in one clear workflow with minimal duplication.
+
+## `fluid init --yes` still blocks on interactive mode selection (0.8.0a1)
+
+- Desired demo behavior:
+  `fluid init <name> --yes --provider snowflake` runs non-interactively and scaffolds the project with default settings.
+- Current observed behavior:
+  Observed in TestPyPI `data-product-forge==0.8.0a1`: the command still prompts `Choose [1/2/3/4] (2):` for the init mode (Quickstart / Let AI design / Template / Empty). With non-TTY stdin, the read fails immediately and the command crashes with `init_failed: EOF when reading a line`. `--yes` is documented as "Skip confirmation prompts" but does not skip this mode selector.
+- Why it matters in the demo:
+  The B1/B2 launchpad step `fluid init subscriber360-external --provider snowflake --yes` is unrunnable as-scripted. The lab's variant playbook treats `fluid init` as a one-liner; an interactive blocker breaks rehearsal automation, CI validation, and any scripted replay.
+- Likely `forge-cli` area to change later:
+  `fluid_build/cli/init.py` — `--yes` (and/or `--non-interactive`) should short-circuit the top-level mode prompt, defaulting to mode 2 (AI-designed) when a name is supplied, or require `--quickstart` / `--blank` / `--template` to disambiguate with a clear error rather than hanging on stdin.
+- Acceptance criteria:
+  `fluid init NAME --provider snowflake --yes </dev/null` completes without stdin reads and scaffolds the same output the interactive default-mode path would have. Covered by a CLI integration test that runs without a TTY.
+- Interim demo workaround (2026-04-21):
+  Use `fluid init NAME --blank --provider snowflake --yes` to bypass the mode selector, then follow with `fluid forge` when the AI-authoring step is wanted.
+
+## `fluid forge --context` resolves relative paths from wrong cwd + error handler crashes (0.8.0a1)
+
+- Desired demo behavior:
+  `fluid forge --provider snowflake --domain telco --target-dir . --context ../../prompts/ai-reference-external.md` loads the prompt file (resolved relative to the current working directory) and uses it as AI context for the forge run. If the path is wrong, a clear error message is shown.
+- Current observed behavior:
+  Observed in `data-product-forge==0.8.0a1` running from `$EXISTING_DBT_WORKSPACE/variants/B1-ai-reference-external/subscriber360-external`: forge reports `Context file not found: ../../prompts/ai-reference-external.md` even though the file exists relative to the invocation cwd (the relative-path resolution appears to use a different base directory). The error-handling path in `fluid_build/cli/forge_context.py:304` and `forge_context.py:353` then crashes with `TypeError: CLIError.__init__() missing 1 required positional argument: 'event'` because the `CLIError` constructor signature has changed but these two call sites still pass a single positional message. The operator sees the TypeError, not the original "file not found" message.
+- Why it matters in the demo:
+  `--context` is the natural way to drive `fluid forge` with a curated prompt markdown file (the variant playbook's `cat ../../prompts/*.md` step exists precisely because forge should consume this content). The path bug plus the broken error path together mean the operator cannot pass a prompt file and cannot understand why when it fails.
+- Likely `forge-cli` area to change later:
+  `fluid_build/cli/forge_context.py` — resolve relative `--context` paths against `os.getcwd()` (or document the true base explicitly), and update both `raise context_error_cls(...)` sites to match the current `CLIError.__init__` signature (supply the `event` argument or use a builder helper).
+- Acceptance criteria:
+  Passing a relative `--context` path from any cwd loads the file when it exists on disk, and a missing path raises a user-visible "Context file not found: X" error without a secondary `TypeError`. Covered by a CLI integration test that invokes `fluid forge --context path/that/does/not/exist` and asserts clean error output.
+
+## Installed `fluid_build` package missing `llm_models.json` (0.8.0a1)
+
+- Desired demo behavior:
+  Every `fluid ...` command runs without spurious warnings when the package is installed from TestPyPI.
+- Current observed behavior:
+  Observed in `data-product-forge==0.8.0a1`: every invocation prints `Could not load model catalog .../fluid_build/cli/llm_models.json: [Errno 2] No such file or directory`. The file is referenced at runtime but not included in the wheel's `package_data`. Commands still work in demo mode; the warning clutters the terminal and can confuse presenters.
+- Why it matters in the demo:
+  A warning on every command makes the release look broken mid-demo. The Jenkins console log is especially noisy because each pipeline stage shells out to `fluid`.
+- Likely `forge-cli` area to change later:
+  `fluid_build/cli/llm_models.json` — include the JSON in `pyproject.toml`'s `[tool.setuptools.package-data]` (or equivalent `MANIFEST.in`). Also consider a code-level fallback in `fluid_build/cli/forge.py` that falls back to an embedded default catalog when the file is missing.
+- Acceptance criteria:
+  Installing `data-product-forge` from TestPyPI into a fresh venv and running `fluid version` prints no "Could not load model catalog" warning.
+
+## Fragment-first forge output breaks build-ID extraction helpers
+
+- Desired demo behavior:
+  After `fluid forge`, downstream steps (plan, apply, helper scripts) can resolve the primary build ID without the operator having to open fragment files by hand.
+- Current observed behavior:
+  Observed in `data-product-forge==0.8.0a1`: `fluid forge` emits a "fragment-first (modular)" contract whose top-level `builds:` is `[{ $ref: ./fragments/builds/customer_party_mart.yaml }]`. The lab helper `scripts/get_first_build_id.py` reads only the top-level `builds[*].id` key and prints `No builds[] entry found in contract.fluid.yaml`. `fluid apply --build` then has no obvious source for the build ID unless the operator reads the fragment manually.
+- Why it matters in the demo:
+  The B1/B2 launchpad line `BUILD_ID="$(python3 "$LAB_REPO/scripts/get_first_build_id.py" contract.fluid.yaml)"` fails for every fragment-first forge output, even though `fluid validate`/`fluid plan` succeed. The operator has to cat the fragment file to pick up `customer_party_mart` and then retype it into `fluid apply --build`. That kills the one-command apply story.
+- Likely `forge-cli` area to change later:
+  Either (a) expose a first-class CLI that prints the primary/selected build ID given a contract — for example `fluid inspect build-id contract.fluid.yaml` — which would traverse fragments internally, or (b) have `fluid apply` pick the single-build case implicitly (already tracked under "apply --build requires a raw build ID"), or (c) extend `scripts/get_first_build_id.py` in this repo to follow `$ref` fragments. Option (a) is the cleanest because it also fixes CI pipelines, tests, and any third-party automation.
+- Acceptance criteria:
+  With a forge-produced fragment-first contract, a supported command prints the primary build ID reliably (and the `apply --build` step can consume it), without the operator opening fragment YAML by hand.

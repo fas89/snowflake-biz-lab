@@ -1,9 +1,13 @@
 export LOCAL_REPOS_DIR="/absolute/path/to/your/local/repos" # parent folder that holds snowflake-biz-lab and forge-cli
 export LAB_REPO="$LOCAL_REPOS_DIR/snowflake-biz-lab" # local clone of this repo
 export FORGE_CLI_REPO="$LOCAL_REPOS_DIR/forge-cli" # editable forge-cli checkout or worktree
-export DEMO_WORKSPACES_DIR="$LOCAL_REPOS_DIR/gitlab" # parent folder for the GitLab demo workspaces
-export GREENFIELD_WORKSPACE="$DEMO_WORKSPACES_DIR/path-a-telco-silver-product-demo" # GitLab working copy for path A (reference-mapped silver)
-export EXISTING_DBT_WORKSPACE="$DEMO_WORKSPACES_DIR/path-b-ai-telco-silver-import-demo" # GitLab working copy for path B (AI-forged silver)
+# GitLab demo workspaces live INSIDE the lab repo at ./gitlab/ (gitignored).
+# They are bootstrapped from fluid/fixtures/workspaces/ templates via
+# `task workspaces:bootstrap`. Leave these pointed at $LAB_REPO/gitlab/* unless
+# you have deliberately moved them.
+export DEMO_WORKSPACES_DIR="$LAB_REPO/gitlab"
+export GREENFIELD_WORKSPACE="$DEMO_WORKSPACES_DIR/path-a-telco-silver-product-demo" # working copy for path A (reference-mapped silver)
+export EXISTING_DBT_WORKSPACE="$DEMO_WORKSPACES_DIR/path-b-ai-telco-silver-import-demo" # working copy for path B (AI-forged silver)
 export GREENFIELD_GITLAB_URL="" # Git clone URL for the main demo workspace
 export EXISTING_DBT_GITLAB_URL="" # Git clone URL for the existing-dbt demo workspace
 export FLUID_SECRETS_FILE="$LAB_REPO/runtime/generated/fluid.local.env" # ignored file that holds Snowflake and DMM secrets

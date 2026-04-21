@@ -286,290 +286,6 @@
       "step": 1
     },
     {
-      "action_id": "provision_customer_interaction_source",
-      "action_type": "provisionDataset",
-      "depends_on": [],
-      "description": "Provision dataset for customer_interaction_source",
-      "params": {
-        "binding": {
-          "format": "snowflake_table",
-          "location": {
-            "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
-            "database": "{{ env.SNOWFLAKE_DATABASE }}",
-            "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
-            "table": "CUSTOMER_INTERACTION"
-          },
-          "platform": "snowflake"
-        },
-        "contract": {
-          "description": "Bronze sources covering subscriber usage events and customer-experience signals (interactions, trouble tickets).",
-          "domain": "telco",
-          "exposes": [
-            {
-              "binding": {
-                "format": "snowflake_table",
-                "location": {
-                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
-                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
-                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
-                  "table": "USAGE_EVENT"
-                },
-                "platform": "snowflake"
-              },
-              "contract": {
-                "dq": {
-                  "rules": [
-                    {
-                      "id": "usage_id_not_null",
-                      "operator": ">=",
-                      "selector": "USAGE_ID",
-                      "severity": "error",
-                      "threshold": 1.0,
-                      "type": "completeness"
-                    }
-                  ]
-                },
-                "schema": [
-                  {
-                    "name": "USAGE_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "ACCOUNT_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "SERVICE_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "USAGE_TYPE",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "QUANTITY",
-                    "required": true,
-                    "type": "NUMBER"
-                  },
-                  {
-                    "name": "EVENT_TIMESTAMP",
-                    "required": true,
-                    "type": "TIMESTAMP"
-                  },
-                  {
-                    "name": "RATING_STATUS",
-                    "required": true,
-                    "type": "STRING"
-                  }
-                ]
-              },
-              "description": "Source-shaped usage event records loaded into the telco landing schema.",
-              "exposeId": "usage_event_source",
-              "kind": "table",
-              "title": "Usage Event Source"
-            },
-            {
-              "binding": {
-                "format": "snowflake_table",
-                "location": {
-                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
-                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
-                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
-                  "table": "CUSTOMER_INTERACTION"
-                },
-                "platform": "snowflake"
-              },
-              "contract": {
-                "dq": {
-                  "rules": [
-                    {
-                      "id": "interaction_id_not_null",
-                      "operator": ">=",
-                      "selector": "INTERACTION_ID",
-                      "severity": "error",
-                      "threshold": 1.0,
-                      "type": "completeness"
-                    }
-                  ]
-                },
-                "schema": [
-                  {
-                    "name": "INTERACTION_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "ACCOUNT_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "SERVICE_ID",
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "CHANNEL",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "INTERACTION_TYPE",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "OUTCOME",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "INTERACTION_TIMESTAMP",
-                    "required": true,
-                    "type": "TIMESTAMP"
-                  }
-                ]
-              },
-              "description": "Source-shaped customer interaction records loaded into the telco landing schema.",
-              "exposeId": "customer_interaction_source",
-              "kind": "table",
-              "title": "Customer Interaction Source"
-            },
-            {
-              "binding": {
-                "format": "snowflake_table",
-                "location": {
-                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
-                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
-                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
-                  "table": "TROUBLE_TICKET"
-                },
-                "platform": "snowflake"
-              },
-              "contract": {
-                "dq": {
-                  "rules": [
-                    {
-                      "id": "ticket_id_not_null",
-                      "operator": ">=",
-                      "selector": "TICKET_ID",
-                      "severity": "error",
-                      "threshold": 1.0,
-                      "type": "completeness"
-                    }
-                  ]
-                },
-                "schema": [
-                  {
-                    "name": "TICKET_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "ACCOUNT_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "SERVICE_ID",
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "TICKET_CATEGORY",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "SEVERITY",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "STATUS",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "OPENED_AT",
-                    "required": true,
-                    "type": "TIMESTAMP"
-                  },
-                  {
-                    "name": "RESOLVED_AT",
-                    "type": "TIMESTAMP"
-                  }
-                ]
-              },
-              "description": "Source-shaped trouble ticket records loaded into the telco landing schema.",
-              "exposeId": "trouble_ticket_source",
-              "kind": "table",
-              "title": "Trouble Ticket Source"
-            }
-          ],
-          "fluidVersion": "0.7.2",
-          "id": "bronze.telco.usage_v1",
-          "kind": "DataProduct",
-          "metadata": {
-            "layer": "Bronze",
-            "owner": {
-              "email": "data-platform@example.com",
-              "team": "telco-data-platform"
-            }
-          },
-          "name": "Telco Usage Bronze"
-        },
-        "exposeId": "customer_interaction_source",
-        "kind": "table",
-        "labels": {
-          "fluid_contract_id": "bronze_telco_usage_v1",
-          "fluid_contract_name": "telco_usage_bronze",
-          "fluid_layer": "bronze",
-          "fluid_team": "telco-data-platform"
-        },
-        "schema": [
-          {
-            "name": "INTERACTION_ID",
-            "required": true,
-            "type": "STRING"
-          },
-          {
-            "name": "ACCOUNT_ID",
-            "required": true,
-            "type": "STRING"
-          },
-          {
-            "name": "SERVICE_ID",
-            "type": "STRING"
-          },
-          {
-            "name": "CHANNEL",
-            "required": true,
-            "type": "STRING"
-          },
-          {
-            "name": "INTERACTION_TYPE",
-            "required": true,
-            "type": "STRING"
-          },
-          {
-            "name": "OUTCOME",
-            "required": true,
-            "type": "STRING"
-          },
-          {
-            "name": "INTERACTION_TIMESTAMP",
-            "required": true,
-            "type": "TIMESTAMP"
-          }
-        ]
-      },
-      "provider": "snowflake",
-      "step": 2
-    },
-    {
       "action_id": "provision_trouble_ticket_source",
       "action_type": "provisionDataset",
       "depends_on": [],
@@ -855,6 +571,290 @@
         ]
       },
       "provider": "snowflake",
+      "step": 2
+    },
+    {
+      "action_id": "provision_customer_interaction_source",
+      "action_type": "provisionDataset",
+      "depends_on": [],
+      "description": "Provision dataset for customer_interaction_source",
+      "params": {
+        "binding": {
+          "format": "snowflake_table",
+          "location": {
+            "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+            "database": "{{ env.SNOWFLAKE_DATABASE }}",
+            "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+            "table": "CUSTOMER_INTERACTION"
+          },
+          "platform": "snowflake"
+        },
+        "contract": {
+          "description": "Bronze sources covering subscriber usage events and customer-experience signals (interactions, trouble tickets).",
+          "domain": "telco",
+          "exposes": [
+            {
+              "binding": {
+                "format": "snowflake_table",
+                "location": {
+                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
+                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+                  "table": "USAGE_EVENT"
+                },
+                "platform": "snowflake"
+              },
+              "contract": {
+                "dq": {
+                  "rules": [
+                    {
+                      "id": "usage_id_not_null",
+                      "operator": ">=",
+                      "selector": "USAGE_ID",
+                      "severity": "error",
+                      "threshold": 1.0,
+                      "type": "completeness"
+                    }
+                  ]
+                },
+                "schema": [
+                  {
+                    "name": "USAGE_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "ACCOUNT_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "SERVICE_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "USAGE_TYPE",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "QUANTITY",
+                    "required": true,
+                    "type": "NUMBER"
+                  },
+                  {
+                    "name": "EVENT_TIMESTAMP",
+                    "required": true,
+                    "type": "TIMESTAMP"
+                  },
+                  {
+                    "name": "RATING_STATUS",
+                    "required": true,
+                    "type": "STRING"
+                  }
+                ]
+              },
+              "description": "Source-shaped usage event records loaded into the telco landing schema.",
+              "exposeId": "usage_event_source",
+              "kind": "table",
+              "title": "Usage Event Source"
+            },
+            {
+              "binding": {
+                "format": "snowflake_table",
+                "location": {
+                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
+                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+                  "table": "CUSTOMER_INTERACTION"
+                },
+                "platform": "snowflake"
+              },
+              "contract": {
+                "dq": {
+                  "rules": [
+                    {
+                      "id": "interaction_id_not_null",
+                      "operator": ">=",
+                      "selector": "INTERACTION_ID",
+                      "severity": "error",
+                      "threshold": 1.0,
+                      "type": "completeness"
+                    }
+                  ]
+                },
+                "schema": [
+                  {
+                    "name": "INTERACTION_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "ACCOUNT_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "SERVICE_ID",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "CHANNEL",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "INTERACTION_TYPE",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "OUTCOME",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "INTERACTION_TIMESTAMP",
+                    "required": true,
+                    "type": "TIMESTAMP"
+                  }
+                ]
+              },
+              "description": "Source-shaped customer interaction records loaded into the telco landing schema.",
+              "exposeId": "customer_interaction_source",
+              "kind": "table",
+              "title": "Customer Interaction Source"
+            },
+            {
+              "binding": {
+                "format": "snowflake_table",
+                "location": {
+                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
+                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+                  "table": "TROUBLE_TICKET"
+                },
+                "platform": "snowflake"
+              },
+              "contract": {
+                "dq": {
+                  "rules": [
+                    {
+                      "id": "ticket_id_not_null",
+                      "operator": ">=",
+                      "selector": "TICKET_ID",
+                      "severity": "error",
+                      "threshold": 1.0,
+                      "type": "completeness"
+                    }
+                  ]
+                },
+                "schema": [
+                  {
+                    "name": "TICKET_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "ACCOUNT_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "SERVICE_ID",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "TICKET_CATEGORY",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "SEVERITY",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "STATUS",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "OPENED_AT",
+                    "required": true,
+                    "type": "TIMESTAMP"
+                  },
+                  {
+                    "name": "RESOLVED_AT",
+                    "type": "TIMESTAMP"
+                  }
+                ]
+              },
+              "description": "Source-shaped trouble ticket records loaded into the telco landing schema.",
+              "exposeId": "trouble_ticket_source",
+              "kind": "table",
+              "title": "Trouble Ticket Source"
+            }
+          ],
+          "fluidVersion": "0.7.2",
+          "id": "bronze.telco.usage_v1",
+          "kind": "DataProduct",
+          "metadata": {
+            "layer": "Bronze",
+            "owner": {
+              "email": "data-platform@example.com",
+              "team": "telco-data-platform"
+            }
+          },
+          "name": "Telco Usage Bronze"
+        },
+        "exposeId": "customer_interaction_source",
+        "kind": "table",
+        "labels": {
+          "fluid_contract_id": "bronze_telco_usage_v1",
+          "fluid_contract_name": "telco_usage_bronze",
+          "fluid_layer": "bronze",
+          "fluid_team": "telco-data-platform"
+        },
+        "schema": [
+          {
+            "name": "INTERACTION_ID",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "ACCOUNT_ID",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "SERVICE_ID",
+            "type": "STRING"
+          },
+          {
+            "name": "CHANNEL",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "INTERACTION_TYPE",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "OUTCOME",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "INTERACTION_TIMESTAMP",
+            "required": true,
+            "type": "TIMESTAMP"
+          }
+        ]
+      },
+      "provider": "snowflake",
       "step": 3
     }
   ],
@@ -867,12 +867,12 @@
     "edges": [],
     "nodes": [
       "provision_usage_event_source",
-      "provision_customer_interaction_source",
-      "provision_trouble_ticket_source"
+      "provision_trouble_ticket_source",
+      "provision_customer_interaction_source"
     ]
   },
   "format_version": "0.7.2",
-  "generated_at": 1776662272.835098,
+  "generated_at": 1776707695.936043,
   "has_dependencies": false,
   "total_actions": 3
 }
