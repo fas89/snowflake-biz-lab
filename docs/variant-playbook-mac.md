@@ -156,7 +156,10 @@ set -a
 source "$FLUID_SECRETS_FILE"
 set +a
 cat ../../prompts/ai-reference-external.md
-"$FLUID_CLI" init subscriber360-external --provider snowflake --yes
+# `fluid init NAME --yes` still blocks on an interactive mode prompt in
+# data-product-forge 0.8.0a1 — see FLUID Gap Register. `--blank` is the
+# documented workaround; the contract will be overwritten by the golden below.
+"$FLUID_CLI" init subscriber360-external --blank --provider snowflake --yes
 cd subscriber360-external
 
 # --- Demo mode: replay the captured golden contract (deterministic) ---
@@ -193,11 +196,16 @@ set -a
 source "$FLUID_SECRETS_FILE"
 set +a
 cat ../../prompts/ai-generate-in-workspace.md
-"$FLUID_CLI" init subscriber360-generated --provider snowflake --yes
+# Same `--blank` workaround as B1 — see FLUID Gap Register entry for
+# `fluid init --yes` blocking on interactive mode selection in 0.8.0a1.
+"$FLUID_CLI" init subscriber360-generated --blank --provider snowflake --yes
 cd subscriber360-generated
 
-# --- Demo mode: replay the captured golden contract (deterministic) ---
-cp "$LAB_REPO/fluid/fixtures/forge-golden/B2-ai-generate-in-workspace/contract.fluid.yaml" contract.fluid.yaml
+# --- Demo mode: replay the captured golden bundle (deterministic).
+#     The bundle ships contract.fluid.yaml plus pre-generated generated/dbt/
+#     and generated/airflow/, so the `generate transformation` / `generate
+#     schedule` lines below are no-ops against a fresh copy. ---
+cp -R "$LAB_REPO/fluid/fixtures/forge-golden/B2-ai-generate-in-workspace/." ./
 
 # --- Live mode (alternative): uncomment to call the real LLM instead ---
 # "$FLUID_CLI" forge --provider snowflake --domain telco --target-dir .
@@ -205,6 +213,8 @@ cp "$LAB_REPO/fluid/fixtures/forge-golden/B2-ai-generate-in-workspace/contract.f
 "$FLUID_CLI" validate contract.fluid.yaml
 "$FLUID_CLI" plan contract.fluid.yaml --out runtime/plan.json --html
 open runtime/plan.html
+# Generated assets already exist under generated/dbt and generated/airflow when
+# demo mode ran; these commands are the live-mode equivalents for that step.
 "$FLUID_CLI" generate transformation contract.fluid.yaml --engine dbt -o generated/dbt --overwrite
 "$FLUID_CLI" generate schedule contract.fluid.yaml --scheduler airflow -o generated/airflow --overwrite
 BUILD_ID="$(python3 "$LAB_REPO/scripts/get_first_build_id.py" contract.fluid.yaml)"

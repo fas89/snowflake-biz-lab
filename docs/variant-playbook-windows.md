@@ -148,7 +148,10 @@ Two ways to run B1 — pick one based on who is watching.
 Set-Location "$env:EXISTING_DBT_WORKSPACE\variants\B1-ai-reference-external"
 Get-Content $env:FLUID_SECRETS_FILE | ForEach-Object { if ($_ -match '^(?!#)([^=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2]) } }
 Get-Content ..\..\prompts\ai-reference-external.md
-& $env:FLUID_CLI init subscriber360-external --provider snowflake --yes
+# `fluid init NAME --yes` still blocks on an interactive mode prompt in
+# data-product-forge 0.8.0a1 — see FLUID Gap Register. `--blank` is the
+# documented workaround; the contract will be overwritten by the golden below.
+& $env:FLUID_CLI init subscriber360-external --blank --provider snowflake --yes
 Set-Location .\subscriber360-external
 
 # --- Demo mode: replay the captured golden contract (deterministic) ---
@@ -183,11 +186,16 @@ Same two-mode pattern as B1. Demo mode copies the golden B2 contract; live mode 
 Set-Location "$env:EXISTING_DBT_WORKSPACE\variants\B2-ai-generate-in-workspace"
 Get-Content $env:FLUID_SECRETS_FILE | ForEach-Object { if ($_ -match '^(?!#)([^=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2]) } }
 Get-Content ..\..\prompts\ai-generate-in-workspace.md
-& $env:FLUID_CLI init subscriber360-generated --provider snowflake --yes
+# Same `--blank` workaround as B1 — see FLUID Gap Register entry for
+# `fluid init --yes` blocking on interactive mode selection in 0.8.0a1.
+& $env:FLUID_CLI init subscriber360-generated --blank --provider snowflake --yes
 Set-Location .\subscriber360-generated
 
-# --- Demo mode: replay the captured golden contract (deterministic) ---
-Copy-Item "$env:LAB_REPO\fluid\fixtures\forge-golden\B2-ai-generate-in-workspace\contract.fluid.yaml" .\contract.fluid.yaml -Force
+# --- Demo mode: replay the captured golden bundle (deterministic).
+#     The bundle ships contract.fluid.yaml plus pre-generated generated\dbt\
+#     and generated\airflow\, so the `generate transformation` / `generate
+#     schedule` lines below are no-ops against a fresh copy. ---
+Copy-Item "$env:LAB_REPO\fluid\fixtures\forge-golden\B2-ai-generate-in-workspace\*" . -Recurse -Force
 
 # --- Live mode (alternative): uncomment to call the real LLM instead ---
 # & $env:FLUID_CLI forge --provider snowflake --domain telco --target-dir .
@@ -195,6 +203,8 @@ Copy-Item "$env:LAB_REPO\fluid\fixtures\forge-golden\B2-ai-generate-in-workspace
 & $env:FLUID_CLI validate contract.fluid.yaml
 & $env:FLUID_CLI plan contract.fluid.yaml --out runtime/plan.json --html
 Start-Process .\runtime\plan.html
+# Generated assets already exist under generated\dbt and generated\airflow when
+# demo mode ran; these commands are the live-mode equivalents for that step.
 & $env:FLUID_CLI generate transformation contract.fluid.yaml --engine dbt -o generated/dbt --overwrite
 & $env:FLUID_CLI generate schedule contract.fluid.yaml --scheduler airflow -o generated/airflow --overwrite
 $buildId = (py -3 "$env:LAB_REPO\scripts\get_first_build_id.py" contract.fluid.yaml).Trim()
