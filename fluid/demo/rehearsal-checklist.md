@@ -4,14 +4,14 @@ Use this before demo day so you know which steps are off-stage prep, which ones 
 
 | Step | Type | Notes |
 | --- | --- | --- |
-| Copy `.env`, `.env.catalogs`, and `.env.jenkins` | Off-stage prep | Set `FLUID_DEMO_GITLAB_WORKSPACE` before starting Airflow |
+| Copy `.env`, `.env.catalogs`, and `.env.jenkins` | Off-stage prep | `FLUID_DEMO_GITLAB_WORKSPACE` / `FLUID_AI_GITLAB_WORKSPACE` can stay blank; docker-compose defaults to `./gitlab/*` inside the lab repo |
 | Create `runtime/generated/fluid.local.env` | Off-stage prep | Keep only Snowflake and DMM secrets here |
-| Clone `$LOCAL_REPOS_DIR/gitlab/path-a-telco-silver-product-demo` | Off-stage prep | Greenfield workspace |
-| Clone `$LOCAL_REPOS_DIR/gitlab/path-b-ai-telco-silver-import-demo` | Off-stage prep | Existing dbt workspace |
+| Run `task workspaces:bootstrap` | Off-stage prep | Materializes `./gitlab/path-a-telco-silver-product-demo` + `./gitlab/path-b-ai-telco-silver-import-demo` from tracked templates on the very first run |
 | `task up` | Live on-stage step | You can show Airflow coming up |
 | `task jenkins:up` | Live on-stage step | Jenkins URL should be ready |
 | `task catalogs:up` | Live on-stage step | Entropy / DMM and MailHog should be reachable |
 | `task catalogs:bootstrap` | Live on-stage step | Local Entropy login and `DMM_API_KEY` should be ready before the publish step |
+| `task workspaces:reset` | Live on-stage step | Wipes generated artifacts from prior rehearsals and restores A1/A2 ready-made assets plus an empty path-b so the forge/generate steps run against a clean workspace |
 | `task seed:reset:confirm` | Live on-stage step | Drops the full demo database so the Snowflake landing path visibly starts from a clean state |
 | `task seed:generate` | Live on-stage step | Makes the data story concrete |
 | `task seed:load` | Live on-stage step | Loads Snowflake staging |

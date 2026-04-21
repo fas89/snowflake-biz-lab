@@ -20,9 +20,11 @@ else {
     $LocalReposDir = (Resolve-Path $LocalReposDir).ProviderPath
 }
 
-# Derive the default path layout from the chosen parent repo folder instead of
-# inheriting possibly stale environment variables from a previous demo run.
-$demoWorkspacesDir = Join-Path $LocalReposDir 'gitlab'
+# GitLab demo workspaces live INSIDE the lab repo at .\gitlab\ (gitignored).
+# They are bootstrapped from fluid\fixtures\workspaces\ templates via
+# `task workspaces:bootstrap`. The launchpad exports the expected subpaths
+# so downstream helpers (reset_demo_state.py, docs snippets) resolve correctly.
+$demoWorkspacesDir = Join-Path $labRepo 'gitlab'
 $greenfieldWorkspace = Join-Path $demoWorkspacesDir 'path-a-telco-silver-product-demo'
 $existingDbtWorkspace = Join-Path $demoWorkspacesDir 'path-b-ai-telco-silver-import-demo'
 $greenfieldGitlabUrl = ''
@@ -37,7 +39,6 @@ function Quote-ForPowerShell {
 }
 
 New-Item -ItemType Directory -Force -Path (Join-Path $labRepo 'runtime\generated') | Out-Null
-New-Item -ItemType Directory -Force -Path $demoWorkspacesDir | Out-Null
 
 if ((Test-Path $launchpadFile) -and -not $Force) {
     Write-Host "Keeping existing launchpad file: $launchpadFile"
@@ -73,8 +74,8 @@ Write-Host "  DEMO_WORKSPACES_DIR=$demoWorkspacesDir"
 Write-Host ''
 Write-Host 'Next steps:'
 Write-Host '  1. Review the generated file if you want to override any paths.'
-Write-Host '  2. Set GREENFIELD_GITLAB_URL and EXISTING_DBT_GITLAB_URL in runtime\generated\launchpad.local.ps1 before running any git clone commands.'
-Write-Host '     If you already cloned those workspaces manually, you can leave the URL values empty and skip the git clone step.'
-Write-Host '  3. Load it into your shell to refresh the current path variables:'
+Write-Host '  2. Load it into your shell to refresh the current path variables:'
 Write-Host '     . .\runtime\generated\launchpad.local.ps1'
+Write-Host '  3. Bootstrap the gitlab/ demo workspaces from tracked templates:'
+Write-Host '     task workspaces:bootstrap'
 Write-Host '  4. Continue with docs/launchpad-common.md'

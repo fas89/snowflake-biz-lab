@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: telco_stage
+    database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+    schema: "{{ env_var('SNOWFLAKE_STAGE_SCHEMA') }}"
+    tables:
+      - name: account
+      - name: service
+      - name: subscription
+      - name: product_offering
+      - name: usage_event
+      - name: invoice
+      - name: customer_interaction
+      - name: trouble_ticket
+      - name: invoice_charge

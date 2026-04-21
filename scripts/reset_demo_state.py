@@ -1,7 +1,19 @@
+"""Reset local demo artifacts so the Snowflake telco demo can be rerun cleanly.
+
+Cleans lab-repo ephemeral outputs (venvs, dbt target/logs, seed output, generated
+fluid reports, dbt-docs site) and, by default, wipes ``./gitlab/`` and re-bootstraps
+the demo workspaces from ``fluid/fixtures/workspaces/`` via ``bootstrap_workspaces.py``.
+
+The gitlab/ workspaces live inside the lab repo (gitignored) and are regenerated
+from tracked templates, so a full wipe-and-rebootstrap is the correct reset flow --
+there is no user-committed state to preserve.
+"""
+
 from __future__ import annotations
 
 import argparse
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -38,33 +50,25 @@ def clean_lab_repo(lab_repo: Path) -> None:
     remove_path(lab_repo / "runtime" / "seed_load_report.json")
 
 
-def clean_greenfield_workspace(workspace: Path) -> None:
-    remove_path(workspace / ".venv")
-    remove_path(workspace / "telco-silver-product")
-
-
-def clean_existing_dbt_workspace(workspace: Path) -> None:
-    remove_path(workspace / ".venv")
-    remove_path(workspace / "dbt")
-    remove_path(workspace / "config")
-    remove_path(workspace / "generated")
-    remove_path(workspace / "runtime")
-    remove_path(workspace / "Jenkinsfile")
-    remove_path(workspace / "contract.fluid.yaml")
+def rebootstrap_workspaces(lab_repo: Path) -> None:
+    gitlab_dir = lab_repo / "gitlab"
+    if gitlab_dir.exists():
+        shutil.rmtree(gitlab_dir)
+        print(f"Removed {gitlab_dir}")
+    bootstrap = lab_repo / "scripts" / "bootstrap_workspaces.py"
+    subprocess.run(
+        [sys.executable, str(bootstrap), "--dest", str(gitlab_dir)],
+        check=True,
+    )
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Remove local demo artifacts so the Snowflake telco demo can be rerun from a clean start."
-    )
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--lab-repo", required=True, help="Absolute path to the snowflake-biz-lab repo.")
     parser.add_argument(
-        "--greenfield-workspace",
-        help="Absolute path to the GitLab workspace used for the greenfield demo.",
-    )
-    parser.add_argument(
-        "--existing-workspace",
-        help="Absolute path to the GitLab workspace used for the existing-dbt demo.",
+        "--no-bootstrap-workspaces",
+        action="store_true",
+        help="Skip wiping/re-bootstrapping ./gitlab/ (leaves whatever is currently there).",
     )
     parser.add_argument(
         "--yes",
@@ -74,15 +78,11 @@ def main() -> None:
     args = parser.parse_args()
 
     lab_repo = Path(args.lab_repo).expanduser().resolve()
-    greenfield = Path(args.greenfield_workspace).expanduser().resolve() if args.greenfield_workspace else None
-    existing = Path(args.existing_workspace).expanduser().resolve() if args.existing_workspace else None
 
     print("This will delete demo artifacts under the following resolved paths:")
-    print(f"  lab repo:            {lab_repo}")
-    if greenfield is not None:
-        print(f"  greenfield workspace: {greenfield}")
-    if existing is not None:
-        print(f"  existing workspace:   {existing}")
+    print(f"  lab repo: {lab_repo}")
+    if not args.no_bootstrap_workspaces:
+        print(f"  gitlab/:  {lab_repo / 'gitlab'} (wiped + rebootstrapped from templates)")
 
     if not args.yes:
         print("Re-run with --yes to confirm.", file=sys.stderr)
@@ -90,11 +90,8 @@ def main() -> None:
 
     clean_lab_repo(lab_repo)
 
-    if greenfield is not None:
-        clean_greenfield_workspace(greenfield)
-
-    if existing is not None:
-        clean_existing_dbt_workspace(existing)
+    if not args.no_bootstrap_workspaces:
+        rebootstrap_workspaces(lab_repo)
 
     print("Local demo state reset complete.")
 

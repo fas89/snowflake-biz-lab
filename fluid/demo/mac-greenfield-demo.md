@@ -8,9 +8,11 @@ It starts with local apps on your Mac, seeds Snowflake staging, creates a GitLab
 
 ```bash
 export LAB_REPO="/Users/A200004702/Documents/Open-Source Community/snowflake-biz-lab"
-export GREENFIELD_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/path-a-telco-silver-product-demo"
+export GREENFIELD_WORKSPACE="$LAB_REPO/gitlab/path-a-telco-silver-product-demo"
 export FLUID_SECRETS_FILE="$LAB_REPO/runtime/generated/fluid.local.env"
 ```
+
+The `./gitlab/` directory inside the lab repo is gitignored and bootstrapped from `fluid/fixtures/workspaces/` via `task workspaces:bootstrap`.
 
 ## Step 1: Bring Up The Local Platform
 
@@ -32,12 +34,13 @@ Checkpoint:
 - the Entropy admin account is already usable
 - `DMM_API_KEY` has been refreshed in `runtime/generated/fluid.local.env`
 
-## Step 2: Seed Snowflake Staging
+## Step 2: Reset Demo State And Seed Snowflake Staging
 
-This step starts by dropping the full demo database, so only point it at disposable demo Snowflake objects.
+This step starts by wiping the demo database and re-bootstrapping the GitLab workspaces from tracked templates, so only point it at disposable demo Snowflake objects.
 
 ```bash
 cd "$LAB_REPO"
+task workspaces:reset
 task seed:reset:confirm
 task seed:generate
 task seed:load
@@ -48,6 +51,8 @@ task metadata:verify
 
 Checkpoint:
 
+- `./gitlab/path-a-telco-silver-product-demo/` shows the A1 contract and the A2 internal assets, with no `Jenkinsfile` yet
+- `./gitlab/path-b-ai-telco-silver-import-demo/` is empty (B1/B2 forge the contract live)
 - the telco landing tables exist in `SNOWFLAKE_STAGE_SCHEMA`
 - Horizon metadata is applied on those source tables before FLUID starts building the silver story
 - table and column descriptions are visible in Horizon without needing dbt-built schemas first
@@ -59,7 +64,11 @@ cd "$GREENFIELD_WORKSPACE"
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ data-product-forge
+# Pulls the LATEST data-product-forge from TestPyPI by design (release candidates
+# ship there before stable PyPI). PyPI is only a fallback for transitive deps.
+# To pin: `pip install data-product-forge==X.Y.Z` with the same flags.
+# To use stable PyPI instead: drop `--index-url`.
+pip install --pre --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ data-product-forge
 fluid version
 fluid doctor
 ```

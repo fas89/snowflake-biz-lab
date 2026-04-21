@@ -7,8 +7,8 @@ Snowflake-first telco lab for staged TM Forum SID-style seed data, Horizon metad
 - Contributor and AI-agent guide: [AGENTS.md](AGENTS.md)
 - Shared setup and reset: [Launchpad Common](docs/launchpad-common.md)
 - First-time setup and repo orientation: [Getting Started](docs/getting-started.md)
-- Path A workspace (reference-mapped silver) lives in `gitlab/path-a-telco-silver-product-demo`
-- Path B workspace (AI-forged silver) lives in `gitlab/path-b-ai-telco-silver-import-demo`
+- Path A workspace (reference-mapped silver) lives in `./gitlab/path-a-telco-silver-product-demo` (gitignored; bootstrapped from `fluid/fixtures/workspaces/` via `task workspaces:bootstrap`)
+- Path B workspace (AI-forged silver) lives in `./gitlab/path-b-ai-telco-silver-import-demo` (same model)
 - FLUID work to implement later: [FLUID Gap Register](docs/fluid-gap-register.md)
 - Version explanation: [CLI Version vs `fluidVersion`](docs/fluid-versions.md)
 
@@ -31,11 +31,11 @@ After `Launchpad Common`, choose one uninterrupted operator path:
 
 ## The Main Operator Flow
 
-1. Copy `.env` files and set `FLUID_DEMO_GITLAB_WORKSPACE` plus `FLUID_AI_GITLAB_WORKSPACE` to the GitLab working copies you want Airflow and the dbt docs refresh flow to watch.
+1. Copy `.env` files and run `task workspaces:bootstrap` to materialize the demo GitLab workspaces under `./gitlab/` from the tracked templates.
 2. Start local apps from this repo: Airflow, dbt-runner, Jenkins, and Entropy Data CE, then run `task catalogs:bootstrap` so the local Entropy login and `DMM_API_KEY` are ready.
 3. Seed Snowflake staging and apply Horizon metadata from this repo.
-4. Move into a GitLab-cloned workspace on your Mac and install `data-product-forge`.
-5. Run the silver demo variants through `fluid validate`, `fluid plan`, explicit plan verification, `fluid apply --build`, `fluid generate ci`, GitLab push, Jenkins SCM pickup, and `fluid publish`.
+4. Move into a demo workspace under `./gitlab/` and install `data-product-forge`.
+5. Run the silver demo variants through `fluid validate`, `fluid plan`, explicit plan verification, `fluid apply --build`, `fluid generate ci`, local commit, Jenkins SCM pickup from the mounted workspace, and `fluid publish`.
 
 The quickest way to run that sequence is:
 
@@ -58,7 +58,9 @@ config/dbt/           Existing dbt profile configuration for Snowflake
 dbt/                  Existing staging-only dbt project, unchanged in this phase
 deploy/docker/        Docker Compose stacks for Airflow, dbt-runner, Jenkins, and catalogs
 docs/                 Operator docs, setup guides, launchpad, and troubleshooting
-fluid/                FLUID contracts, demo runbooks, prompts, runtime helpers, and reports
+fluid/                FLUID contracts, demo runbooks, prompts, fixtures, runtime helpers, and reports
+fluid/fixtures/workspaces/  Tracked templates that `task workspaces:bootstrap` copies into ./gitlab/
+gitlab/               Bootstrapped demo workspaces (gitignored; created from the templates above)
 governance/           Horizon metadata manifest, SQL rendering, verification, and DMM mapping
 runtime/              Ignored local runtime assets like env files and demo wheels
 seed/                 Synthetic telco data generation plus Snowflake loading and verification

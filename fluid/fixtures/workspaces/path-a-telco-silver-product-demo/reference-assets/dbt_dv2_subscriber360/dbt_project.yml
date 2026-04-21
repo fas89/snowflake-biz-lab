@@ -1,0 +1,24 @@
+name: telco_subscriber360_dv2
+version: "1.0.0"
+config-version: 2
+profile: telco
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+target-path: target
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  telco_subscriber360_dv2:
+    +materialized: view
+    staging:
+      +schema: "{{ env_var('SNOWFLAKE_FLUID_SCHEMA', 'TELCO_FLUID') }}"
+    raw_vault:
+      +schema: "{{ env_var('SNOWFLAKE_FLUID_SCHEMA', 'TELCO_FLUID') }}"
+      +materialized: table
+    business_vault:
+      +schema: "{{ env_var('SNOWFLAKE_FLUID_SCHEMA', 'TELCO_FLUID') }}"
+      +materialized: table
+    marts:
+      +schema: "{{ env_var('SNOWFLAKE_FLUID_SCHEMA', 'TELCO_FLUID') }}"
+      +materialized: table

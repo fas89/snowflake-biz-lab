@@ -1,0 +1,13 @@
+# Keep dbt build artifacts out of the demo repo
+variants/**/dbt_project/target/
+variants/**/dbt_project/logs/
+variants/**/dbt_project/dbt_packages/
+variants/**/dbt_project/compiled/
+variants/**/dbt_project/run/
+variants/**/runtime/
+
+# dbt profiles can carry secrets when env_var() defaults are overridden
+variants/**/dbt_project/profiles.yml.local
+
+# macOS noise
+.DS_Store

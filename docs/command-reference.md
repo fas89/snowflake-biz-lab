@@ -7,8 +7,11 @@ These are the commands this repo promotes for the full local demo.
 ```bash
 export LOCAL_REPOS_DIR="/absolute/path/to/your/local/repos"
 export LAB_REPO="$LOCAL_REPOS_DIR/snowflake-biz-lab"
-export GREENFIELD_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/path-a-telco-silver-product-demo"
-export EXISTING_DBT_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/path-b-ai-telco-silver-import-demo"
+# GitLab demo workspaces live INSIDE the lab repo at ./gitlab/ (gitignored).
+# They are bootstrapped from fluid/fixtures/workspaces/ templates via
+# `task workspaces:bootstrap`.
+export GREENFIELD_WORKSPACE="$LAB_REPO/gitlab/path-a-telco-silver-product-demo"
+export EXISTING_DBT_WORKSPACE="$LAB_REPO/gitlab/path-b-ai-telco-silver-import-demo"
 export FLUID_SECRETS_FILE="$LAB_REPO/runtime/generated/fluid.local.env"
 ```
 
@@ -73,7 +76,6 @@ fluid apply contract.fluid.yaml --build dv2_subscriber360_reference_build --yes 
 fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
 git add .
 git commit -m "Refresh external-reference silver variant"
-git push
 fluid publish contract.fluid.yaml --catalog datamesh-manager
 ```
 
@@ -97,7 +99,6 @@ fluid apply contract.fluid.yaml --build "$BUILD_ID" --yes --report runtime/apply
 fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
 git add .
 git commit -m "Generate AI external-reference silver variant"
-git push
 fluid publish contract.fluid.yaml --catalog datamesh-manager
 ```
 

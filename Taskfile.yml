@@ -30,11 +30,20 @@ tasks:
     cmd: "{{.COMPOSE}} logs -f {{.SVC | default \"\"}}"
 
   fluid:bootstrap:demo:
-    desc: Create the demo-release FLUID runtime from TestPyPI
+    # Installs the LATEST data-product-forge release from TestPyPI by design,
+    # including pre-release alphas (the `--pre` flag). TestPyPI carries release
+    # candidates (e.g. 0.8.0a1) before they're promoted to stable PyPI, so this
+    # task demos what is about to ship. PyPI is only a fallback for transitive
+    # deps.
+    #
+    # To pin a version: `FLUID_DEMO_PACKAGE_SPEC='data-product-forge==X.Y.Z' task fluid:bootstrap:demo`
+    # To stay on stable-only releases: remove `--pre` from the install command below.
+    # To swap to stable PyPI: `FLUID_TESTPYPI_SIMPLE_URL=https://pypi.org/simple/ task fluid:bootstrap:demo`
+    desc: Create the demo-release FLUID runtime from the latest TestPyPI release (includes pre-release alphas)
     cmds:
       - python3 -m venv {{.FLUID_DEMO_VENV}}
       - "{{.FLUID_DEMO_VENV}}/bin/pip install --upgrade pip"
-      - "{{.FLUID_DEMO_VENV}}/bin/pip install --index-url \"${FLUID_TESTPYPI_SIMPLE_URL:-https://test.pypi.org/simple/}\" --extra-index-url \"${FLUID_PYPI_FALLBACK_URL:-https://pypi.org/simple/}\" \"${FLUID_DEMO_PACKAGE_SPEC:-data-product-forge}\""
+      - "{{.FLUID_DEMO_VENV}}/bin/pip install --pre --index-url \"${FLUID_TESTPYPI_SIMPLE_URL:-https://test.pypi.org/simple/}\" --extra-index-url \"${FLUID_PYPI_FALLBACK_URL:-https://pypi.org/simple/}\" \"${FLUID_DEMO_PACKAGE_SPEC:-data-product-forge}\""
 
   fluid:bootstrap:dev:
     desc: Create the dev-source FLUID runtime from the sibling forge-cli checkout
@@ -70,6 +79,14 @@ tasks:
   dbt:docs:refresh:
     desc: Refresh the local dbt docs site for a demo scenario (`task dbt:docs:refresh SCENARIO=A1`)
     cmd: "python3 scripts/refresh_dbt_docs.py --scenario \"{{.SCENARIO}}\""
+
+  workspaces:bootstrap:
+    desc: Create ./gitlab/path-a-... and ./gitlab/path-b-... from fluid/fixtures/workspaces templates
+    cmd: "python3 scripts/bootstrap_workspaces.py {{.CLI_ARGS}}"
+
+  workspaces:reset:
+    desc: Wipe and re-create ./gitlab/ workspaces from the tracked templates
+    cmd: "python3 scripts/bootstrap_workspaces.py --force {{.CLI_ARGS}}"
 
   seed:generate:
     desc: Generate deterministic telco CSV seeds

@@ -6,21 +6,22 @@ This is the secondary variation for teams that already have dbt assets and want 
 
 ```bash
 export LAB_REPO="/Users/A200004702/Documents/Open-Source Community/snowflake-biz-lab"
-export EXISTING_DBT_WORKSPACE="$LOCAL_REPOS_DIR/gitlab/path-b-ai-telco-silver-import-demo"
+export EXISTING_DBT_WORKSPACE="$LAB_REPO/gitlab/path-b-ai-telco-silver-import-demo"
 export FLUID_SECRETS_FILE="$LAB_REPO/runtime/generated/fluid.local.env"
 ```
 
 ## Before You Start
 
-If you want local Airflow to show the generated DAGs from this workspace, change `FLUID_DEMO_GITLAB_WORKSPACE` in `$LAB_REPO/.env` to this workspace and restart the core stack:
+Make sure the demo workspaces are freshly bootstrapped so the import demo starts from an empty `path-b-ai-telco-silver-import-demo`:
 
 ```bash
 cd "$LAB_REPO"
-task down
-task up
+task workspaces:reset
 ```
 
-If you want the local dbt docs UI to refresh against generated assets in this workspace, also set `FLUID_AI_GITLAB_WORKSPACE` in `$LAB_REPO/.env` to this workspace.
+Use `task workspaces:bootstrap` instead if the workspaces already exist and you want to keep whatever is there.
+
+docker-compose mounts `./gitlab/path-a-telco-silver-product-demo` (greenfield) and `./gitlab/path-b-ai-telco-silver-import-demo` (AI/import) into Airflow by default, so no `.env` changes are needed for the standard layout.
 
 ## Step 1: Install `data-product-forge`
 
@@ -29,7 +30,11 @@ cd "$EXISTING_DBT_WORKSPACE"
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ data-product-forge
+# Pulls the LATEST data-product-forge from TestPyPI by design (release candidates
+# ship there before stable PyPI). PyPI is only a fallback for transitive deps.
+# To pin: `pip install data-product-forge==X.Y.Z` with the same flags.
+# To use stable PyPI instead: drop `--index-url`.
+pip install --pre --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ data-product-forge
 fluid version
 fluid doctor
 ```

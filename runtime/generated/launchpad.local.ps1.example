@@ -1,9 +1,13 @@
 $env:LOCAL_REPOS_DIR = "C:\\absolute\\path\\to\\your\\local\\repos" # parent folder that holds snowflake-biz-lab and forge-cli
 $env:LAB_REPO = "$env:LOCAL_REPOS_DIR\\snowflake-biz-lab" # local clone of this repo
 $env:FORGE_CLI_REPO = "$env:LOCAL_REPOS_DIR\\forge-cli" # editable forge-cli checkout or worktree
-$env:DEMO_WORKSPACES_DIR = "$env:LOCAL_REPOS_DIR\\gitlab" # parent folder for the GitLab demo workspaces
-$env:GREENFIELD_WORKSPACE = "$env:DEMO_WORKSPACES_DIR\\path-a-telco-silver-product-demo" # GitLab working copy for path A (reference-mapped silver)
-$env:EXISTING_DBT_WORKSPACE = "$env:DEMO_WORKSPACES_DIR\\path-b-ai-telco-silver-import-demo" # GitLab working copy for path B (AI-forged silver)
+# GitLab demo workspaces live INSIDE the lab repo at .\gitlab\ (gitignored).
+# They are bootstrapped from fluid\fixtures\workspaces\ templates via
+# `task workspaces:bootstrap`. Leave these pointed at $env:LAB_REPO\gitlab\*
+# unless you have deliberately moved them.
+$env:DEMO_WORKSPACES_DIR = "$env:LAB_REPO\\gitlab"
+$env:GREENFIELD_WORKSPACE = "$env:DEMO_WORKSPACES_DIR\\path-a-telco-silver-product-demo" # working copy for path A (reference-mapped silver)
+$env:EXISTING_DBT_WORKSPACE = "$env:DEMO_WORKSPACES_DIR\\path-b-ai-telco-silver-import-demo" # working copy for path B (AI-forged silver)
 $env:GREENFIELD_GITLAB_URL = "" # Git clone URL for the main demo workspace
 $env:EXISTING_DBT_GITLAB_URL = "" # Git clone URL for the existing-dbt demo workspace
 $env:FLUID_SECRETS_FILE = "$env:LAB_REPO\\runtime\\generated\\fluid.local.env" # ignored file that holds Snowflake and DMM secrets

@@ -13,6 +13,7 @@ x-snowflake-env: &snowflake-env
   SNOWFLAKE_ROLE: ${SNOWFLAKE_ROLE:-}
   SNOWFLAKE_STAGE_SCHEMA: ${SNOWFLAKE_STAGE_SCHEMA:-TELCO_STAGE_LOAD}
   SNOWFLAKE_DBT_SCHEMA: ${SNOWFLAKE_DBT_SCHEMA:-TELCO_STAGE_DBT}
+  SNOWFLAKE_FLUID_SCHEMA: ${SNOWFLAKE_FLUID_SCHEMA:-TELCO_FLUID_DEMO}
   SNOWFLAKE_GOVERNANCE_SCHEMA: ${SNOWFLAKE_GOVERNANCE_SCHEMA:-TELCO_GOVERNANCE}
   SNOWFLAKE_INTERNAL_STAGE: ${SNOWFLAKE_INTERNAL_STAGE:-TELCO_SEED_STAGE}
   SNOWFLAKE_FILE_FORMAT: ${SNOWFLAKE_FILE_FORMAT:-TELCO_SEED_CSV}
@@ -39,8 +40,8 @@ x-airflow-common: &airflow-common
     PYTHONPATH: /opt/project
   volumes:
     - ../../airflow/dags:/opt/airflow/dags
-    - ${FLUID_DEMO_GITLAB_WORKSPACE:-../../runtime/demo-workspace}:/opt/airflow/dags/workspace-greenfield
-    - ${FLUID_AI_GITLAB_WORKSPACE:-../../runtime/demo-import-workspace}:/opt/airflow/dags/workspace-import
+    - ${FLUID_DEMO_GITLAB_WORKSPACE:-../../gitlab/path-a-telco-silver-product-demo}:/opt/airflow/dags/workspace-greenfield
+    - ${FLUID_AI_GITLAB_WORKSPACE:-../../gitlab/path-b-ai-telco-silver-import-demo}:/opt/airflow/dags/workspace-import
     - ../../airflow/plugins:/opt/airflow/plugins
     - ../../airflow/config:/opt/airflow/config
     - ../../dbt:/opt/project/dbt
@@ -134,8 +135,8 @@ services:
       - ../../docs:/opt/project/docs
       - ../../runtime:/opt/project/runtime
       - ../../README.md:/opt/project/README.md:ro
-      - ${FLUID_DEMO_GITLAB_WORKSPACE:-../../runtime/demo-workspace}:/workspace/greenfield
-      - ${FLUID_AI_GITLAB_WORKSPACE:-../../runtime/demo-import-workspace}:/workspace/import
+      - ${FLUID_DEMO_GITLAB_WORKSPACE:-../../gitlab/path-a-telco-silver-product-demo}:/workspace/greenfield
+      - ${FLUID_AI_GITLAB_WORKSPACE:-../../gitlab/path-b-ai-telco-silver-import-demo}:/workspace/import
 
   dbt-docs:
     image: python:3.12-slim
@@ -184,8 +185,9 @@ services:
       # Mount the gitlab demo workspaces read-only so the CasC-provisioned
       # Pipeline jobs can fetch each variant's Jenkinsfile from the local
       # git repos. The path on the host is supplied via ``DEMO_WORKSPACES_DIR``
-      # in the launchpad (defaults to the sibling ``gitlab/`` directory).
-      - ${DEMO_WORKSPACES_DIR:-../../../gitlab}:/workspace/gitlab:ro
+      # in the launchpad (defaults to ``./gitlab/`` inside the lab repo,
+      # which is gitignored and bootstrapped via ``task workspaces:bootstrap``).
+      - ${DEMO_WORKSPACES_DIR:-../../gitlab}:/workspace/gitlab:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login >/dev/null || exit 1"]
       interval: 20s
