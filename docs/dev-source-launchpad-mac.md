@@ -59,6 +59,26 @@ Use the shared scenario names when you test contributor changes in `forge-cli`.
 
 Use [Scenario Validation Matrix](scenario-validation-matrix.md) for the exact contract paths, dbt roots, DAG paths, DAG IDs, Jenkinsfile paths, and expose names.
 
+## 11-Stage Pipeline Commands
+
+The dev-source `$FLUID_DEV_BIN` ships the full 11-stage pipeline surface. The variant playbook uses the minimum sequence (validate → plan → apply → publish), but you can run every stage locally:
+
+| Stage | Command | Purpose |
+|---|---|---|
+| 1 Bundle | `fluid bundle contract.fluid.yaml --format tgz --out runtime/bundle.tgz` | Deterministic tgz + `MANIFEST.json` (SHA-256 merkle root) |
+| 2 Validate | `fluid validate contract.fluid.yaml` or `... runtime/bundle.tgz` | Schema + extension-routed checks (sqlglot, openapi-spec-validator) |
+| 3 Generate artifacts | `fluid generate artifacts contract.fluid.yaml --out runtime/artifacts/` | ODCS + ODPS-Bitol + OPDS + schedule + policy fanout |
+| 4 Validate artifacts | `fluid validate-artifacts runtime/artifacts/` | Re-verify SHA-256 + per-format validators; OPA if `tests/policies/*.rego` exists |
+| 5 Diff (drift gate) | `fluid diff contract.fluid.yaml --exit-on-drift --env dev` | Hard-fail on drift before planning |
+| 6 Plan | `fluid plan contract.fluid.yaml --out runtime/plan.json --html` | Emits `bundleDigest` + `planDigest` |
+| 7 Apply | `fluid apply runtime/plan.json --mode amend-and-build --build <id> --env dev --yes` | Mode matrix; verifies `planDigest` before any DDL |
+| 8 Policy apply | `fluid policy-apply runtime/artifacts/policy/bindings.json --mode enforce --env dev` | GRANTs after apply, before verify |
+| 9 Verify | `fluid verify contract.fluid.yaml --strict --env dev --report runtime/verify.json` | Post-apply reconciliation |
+| 10 Publish | `fluid publish contract.fluid.yaml --target datamesh-manager --target datahub --env dev` | `--target` is repeatable; accepts `NAME:endpoint` override |
+| 11 Schedule sync | `fluid schedule-sync --scheduler airflow --dags-dir runtime/artifacts/schedule/` | Path-A DAG push (Phase-7 — mwaa/composer/astronomer/prefect/dagster) |
+
+Destructive modes (`replace`, `replace-and-build`) require `--allow-data-loss` when `FLUID_ENV != dev` or the target has rows. See `fluid apply --help` for the full flag matrix.
+
 ## Run The Variants
 
 Follow [Variant Playbook (Mac)](variant-playbook-mac.md) for Bronze, A1, A2, B1, and B2. The playbook enforces the mandatory plan verification gate and captures the validation steps for each scenario. Skip the "Demo-release only" venv-activation callouts in the playbook — your single `$FLUID_DEV_BIN` already covers every variant.

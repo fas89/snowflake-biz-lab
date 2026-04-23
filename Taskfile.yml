@@ -149,3 +149,84 @@ tasks:
   catalogs:logs:
     desc: Tail logs for the local Entropy Data CE stack
     cmd: "{{.CATALOGS_COMPOSE}} logs -f {{.SVC | default \"\"}}"
+
+  # ---------------------------------------------------------------------------
+  # 11-stage pipeline — the canonical sequence that `fluid generate ci` emits
+  # into generated Jenkinsfiles / GitHub Actions workflows. Call this locally
+  # to exercise the full flow against a real contract.
+  #
+  # Vars:
+  #   CONTRACT      — path to contract.fluid.yaml (default: contract.fluid.yaml in CWD)
+  #   FLUID_ENV     — environment overlay (default: dev)
+  #   APPLY_MODE    — one of dry-run, create-only, amend, amend-and-build,
+  #                   replace, replace-and-build (default: amend)
+  #   BUILD_ID      — required only for amend-and-build / replace-and-build
+  #   TARGETS       — space-separated publish targets (default: datamesh-manager)
+  #   SCHEDULER     — airflow / mwaa / composer / astronomer / prefect / dagster
+  #
+  # Stages 4, 8, 11 self-gate on file existence so reference-only contracts
+  # (pattern: hybrid-reference) skip them silently.
+  # ---------------------------------------------------------------------------
+  fluid:11-stage:
+    desc: Run the full 11-stage pipeline locally (dev-source FLUID_DEV_BIN)
+    vars:
+      CONTRACT: '{{.CONTRACT | default "contract.fluid.yaml"}}'
+      FLUID_ENV: '{{.FLUID_ENV | default "dev"}}'
+      APPLY_MODE: '{{.APPLY_MODE | default "amend"}}'
+      BUILD_ID: '{{.BUILD_ID | default ""}}'
+      TARGETS: '{{.TARGETS | default "datamesh-manager"}}'
+      SCHEDULER: '{{.SCHEDULER | default ""}}'
+      FLUID: '{{.FLUID_DEV_VENV}}/bin/fluid'
+    cmds:
+      # Stage 1 — bundle
+      - '{{.FLUID}} bundle {{.CONTRACT}} --format tgz --out runtime/bundle.tgz'
+      # Stage 2 — validate (against the bundle, exercises SHA-256 check)
+      - '{{.FLUID}} validate runtime/bundle.tgz'
+      # Stage 3 — generate artifacts (ODCS + ODPS-Bitol + schedule + policy)
+      - '{{.FLUID}} generate artifacts {{.CONTRACT}} --out runtime/artifacts/'
+      # Stage 4 — validate artifacts (re-verify SHA-256 + per-format validators)
+      - '{{.FLUID}} validate-artifacts runtime/artifacts/'
+      # Stage 5 — drift gate
+      - '{{.FLUID}} diff {{.CONTRACT}} --exit-on-drift --env {{.FLUID_ENV}}'
+      # Stage 6 — plan (emits bundleDigest + planDigest)
+      - '{{.FLUID}} plan {{.CONTRACT}} --out runtime/plan.json --html'
+      # Stage 7 — apply (mode matrix; --build empty is a no-op for amend)
+      - |
+        if [ -n "{{.BUILD_ID}}" ]; then
+          {{.FLUID}} apply runtime/plan.json --mode {{.APPLY_MODE}} --build {{.BUILD_ID}} \
+            --env {{.FLUID_ENV}} --yes --report runtime/apply_report.html
+        else
+          {{.FLUID}} apply runtime/plan.json --mode {{.APPLY_MODE}} \
+            --env {{.FLUID_ENV}} --yes --report runtime/apply_report.html
+        fi
+      # Stage 8 — policy apply (self-gated)
+      - |
+        if [ -f runtime/artifacts/policy/bindings.json ]; then
+          {{.FLUID}} policy-apply runtime/artifacts/policy/bindings.json \
+            --mode enforce --env {{.FLUID_ENV}}
+        fi
+      # Stage 9 — verify
+      - '{{.FLUID}} verify {{.CONTRACT}} --strict --env {{.FLUID_ENV}} --report runtime/verify.json'
+      # Stage 10 — publish (TARGETS expands to --target X --target Y ...)
+      - |
+        TARGET_FLAGS=""
+        for t in {{.TARGETS}}; do TARGET_FLAGS="$TARGET_FLAGS --target $t"; done
+        {{.FLUID}} publish {{.CONTRACT}} $TARGET_FLAGS --env {{.FLUID_ENV}}
+      # Stage 11 — schedule sync (Path A only; self-gated on SCHEDULER)
+      - |
+        if [ -n "{{.SCHEDULER}}" ] && [ -d runtime/artifacts/schedule ]; then
+          {{.FLUID}} schedule-sync --scheduler {{.SCHEDULER}} \
+            --dags-dir runtime/artifacts/schedule --env {{.FLUID_ENV}}
+        fi
+
+  fluid:11-stage:dry-run:
+    desc: Same as fluid:11-stage but apply runs in dry-run mode (zero warehouse DDL)
+    vars:
+      CONTRACT: '{{.CONTRACT | default "contract.fluid.yaml"}}'
+      FLUID_ENV: '{{.FLUID_ENV | default "dev"}}'
+    cmds:
+      - task: fluid:11-stage
+        vars:
+          CONTRACT: '{{.CONTRACT}}'
+          FLUID_ENV: '{{.FLUID_ENV}}'
+          APPLY_MODE: dry-run

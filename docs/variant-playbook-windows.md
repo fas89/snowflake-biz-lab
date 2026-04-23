@@ -22,7 +22,24 @@ Every variant must stop after `fluid plan`. Use this gate inside each variant bl
 Start-Process .\runtime\plan.html
 ```
 
-Then review [Plan Verification Checklist](plan-verification-checklist.md). Do not run `& $env:FLUID_CLI apply --build` until the checklist is complete and the plan is confirmed.
+Then review [Plan Verification Checklist](plan-verification-checklist.md). Do not run `& $env:FLUID_CLI apply --mode amend-and-build --build …` until the checklist is complete and the plan is confirmed.
+
+> **What changed:** the old `--build <id>` shorthand auto-upgrades to `--mode amend-and-build --build <id>` with a deprecation warning. The 11-stage pipeline requires the explicit `--mode` flag (see [Apply Modes](#apply-modes-11-stage-pipeline) below). `--target` replaces `--catalog` for `fluid publish` — `--catalog` still works one more release with a deprecation warning.
+
+## Apply Modes (11-Stage Pipeline)
+
+`fluid apply --mode <mode>` is the stage-7 surface of the 11-stage pipeline:
+
+| Mode | DDL | DML | Existing data |
+|---|---|---|---|
+| `dry-run` | render only | — | untouched |
+| `create-only` | `CREATE IF NOT EXISTS` + fail-if-exists | — | untouched |
+| `amend` (default) | `ALTER ADD COLUMN IF NOT EXISTS`; views `CREATE OR REPLACE` | — | preserved; new cols NULL |
+| `amend-and-build` | same as `amend` | `dbt run` + `dbt test` | preserved; transforms refreshed |
+| `replace` | auto-snapshot → `CREATE OR REPLACE TABLE` | — | **dropped**; backup retained |
+| `replace-and-build` | same as `replace` | `dbt run --full-refresh` | **dropped**; rebuilt |
+
+Destructive modes (`replace*`) require `--allow-data-loss` when `FLUID_ENV != dev` or the target has rows. Every variant below uses `--mode amend-and-build --build <id>` because each owns dbt assets that need to re-run after the schema evolves.
 
 ## Scenario Vocabulary
 
@@ -31,6 +48,21 @@ Then review [Plan Verification Checklist](plan-verification-checklist.md). Do no
 - **A2** — internal-reference silver contract
 - **B1** — AI forge with external references
 - **B2** — AI forge with generated assets
+
+### Install-Mode Partition (Jenkins CI surface)
+
+Each variant's generated `Jenkinsfile` is pinned to one of two install modes — chosen when you run `fluid generate ci`. This determines how the Jenkins container installs `fluid` at build time:
+
+| Variant | `--install-mode` | Where Jenkins gets `fluid` | Demo track |
+|---|---|---|---|
+| **A1** | `dev-source` | Bind-mounted `/forge-cli-src` in the Jenkins container (see [dev-source-launchpad-windows.md](dev-source-launchpad-windows.md)) | lab iteration — contributors testing forge-cli changes against real A1 contract |
+| **A2** | `dev-source` | Same bind mount as A1 | lab iteration |
+| **B1** | `pypi` | `pip install data-product-forge` from **TestPyPI** via Jenkins build-params (`FLUID_PIP_INDEX_URL=https://test.pypi.org/simple/`, `FLUID_ALLOW_PRERELEASE=true`) | demo-release showcase — pre-release pilot track |
+| **B2** | `pypi` | `pip install data-product-forge` from stable PyPI. Zero overrides. | production — what a customer team actually ships |
+
+Bronze contracts (`telco_seed_*`) don't publish Jenkinsfiles today; they're published to the catalog directly via `fluid publish` without a CI step.
+
+The `pypi` vs `dev-source` choice is part of `fluid generate ci --install-mode` — it lives in the Jenkinsfile itself. TestPyPI is NOT a separate mode; it's a **build-time override** inside `pypi` mode, exposed as Jenkins UI parameters (`FLUID_PIP_INDEX_URL`, `FLUID_PIP_EXTRA_INDEX_URL`, `FLUID_ALLOW_PRERELEASE`, `FLUID_PACKAGE_SPEC`). B1 demos flip those; B2 leaves them at their production defaults.
 
 Use [Scenario Validation Matrix](scenario-validation-matrix.md) for the exact contract paths, dbt roots, DAG paths, DAG IDs, Jenkinsfile paths, and expose names.
 
@@ -48,7 +80,7 @@ foreach ($domain in 'billing','party','usage') {
   $contract = "fluid\contracts\telco_seed_$domain\contract.fluid.yaml"
   & $env:FLUID_CLI validate $contract
   & $env:FLUID_CLI plan $contract --out "fluid\contracts\telco_seed_$domain\runtime\plan.json" --html
-  & $env:FLUID_CLI publish $contract --catalog datamesh-manager
+  & $env:FLUID_CLI publish $contract --target datamesh-manager
 }
 ```
 
@@ -85,11 +117,13 @@ Get-Content $env:FLUID_SECRETS_FILE | ForEach-Object { if ($_ -match '^(?!#)([^=
 & $env:FLUID_CLI validate contract.fluid.yaml
 & $env:FLUID_CLI plan contract.fluid.yaml --out runtime/plan.json --html
 Start-Process .\runtime\plan.html
-& $env:FLUID_CLI apply contract.fluid.yaml --build dv2_subscriber360_reference_build --yes --report runtime/apply_report.html
-& $env:FLUID_CLI generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
+& $env:FLUID_CLI apply contract.fluid.yaml --mode amend-and-build --build dv2_subscriber360_reference_build --yes --report runtime/apply_report.html
+# A1 is a dev-source scenario — Jenkinsfile installs fluid from the
+# /forge-cli-src bind mount. See docs/dev-source-launchpad-windows.md.
+& $env:FLUID_CLI generate ci contract.fluid.yaml --system jenkins --install-mode dev-source --out Jenkinsfile
 git add .
 git commit -m "Refresh external-reference silver variant"
-& $env:FLUID_CLI publish contract.fluid.yaml --catalog datamesh-manager
+& $env:FLUID_CLI publish contract.fluid.yaml --target datamesh-manager
 ```
 
 Validation:
@@ -107,11 +141,12 @@ Get-Content $env:FLUID_SECRETS_FILE | ForEach-Object { if ($_ -match '^(?!#)([^=
 & $env:FLUID_CLI validate contract.fluid.yaml
 & $env:FLUID_CLI plan contract.fluid.yaml --out runtime/plan.json --html
 Start-Process .\runtime\plan.html
-& $env:FLUID_CLI apply contract.fluid.yaml --build dv2_subscriber360_internal_build --yes --report runtime/apply_report.html
-& $env:FLUID_CLI generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
+& $env:FLUID_CLI apply contract.fluid.yaml --mode amend-and-build --build dv2_subscriber360_internal_build --yes --report runtime/apply_report.html
+# A2 is a dev-source scenario — same bind-mount flow as A1.
+& $env:FLUID_CLI generate ci contract.fluid.yaml --system jenkins --install-mode dev-source --out Jenkinsfile
 git add .
 git commit -m "Refresh internal-reference silver variant"
-& $env:FLUID_CLI publish contract.fluid.yaml --catalog datamesh-manager
+& $env:FLUID_CLI publish contract.fluid.yaml --target datamesh-manager
 ```
 
 Validation:
@@ -164,11 +199,17 @@ Copy-Item "$env:LAB_REPO\fluid\fixtures\forge-golden\B1-ai-reference-external\co
 & $env:FLUID_CLI plan contract.fluid.yaml --out runtime/plan.json --html
 Start-Process .\runtime\plan.html
 $buildId = (py -3 "$env:LAB_REPO\scripts\get_first_build_id.py" contract.fluid.yaml).Trim()
-& $env:FLUID_CLI apply contract.fluid.yaml --build $buildId --yes --report runtime/apply_report.html
-& $env:FLUID_CLI generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
+& $env:FLUID_CLI apply contract.fluid.yaml --mode amend-and-build --build $buildId --yes --report runtime/apply_report.html
+# B1 is an AI-forge demo scenario — Jenkinsfile installs fluid from PyPI
+# (default --install-mode pypi). For the TestPyPI-backed demo track, set
+# the Jenkins Build-With-Parameters dialog's:
+#     FLUID_PIP_INDEX_URL        = https://test.pypi.org/simple/
+#     FLUID_PIP_EXTRA_INDEX_URL  = https://pypi.org/simple/
+#     FLUID_ALLOW_PRERELEASE     = true
+& $env:FLUID_CLI generate ci contract.fluid.yaml --system jenkins --install-mode pypi --out Jenkinsfile
 git add .
 git commit -m "Generate AI external-reference silver variant"
-& $env:FLUID_CLI publish contract.fluid.yaml --catalog datamesh-manager
+& $env:FLUID_CLI publish contract.fluid.yaml --target datamesh-manager
 ```
 
 Validation:
@@ -208,11 +249,14 @@ Start-Process .\runtime\plan.html
 & $env:FLUID_CLI generate transformation contract.fluid.yaml --engine dbt -o generated/dbt --overwrite
 & $env:FLUID_CLI generate schedule contract.fluid.yaml --scheduler airflow -o generated/airflow --overwrite
 $buildId = (py -3 "$env:LAB_REPO\scripts\get_first_build_id.py" contract.fluid.yaml).Trim()
-& $env:FLUID_CLI apply contract.fluid.yaml --build $buildId --yes --report runtime/apply_report.html
-& $env:FLUID_CLI generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
+& $env:FLUID_CLI apply contract.fluid.yaml --mode amend-and-build --build $buildId --yes --report runtime/apply_report.html
+# B2 is the production-facing AI-forge scenario — Jenkinsfile installs fluid
+# from stable PyPI with ZERO overrides. This is what a real customer team
+# gets after running `fluid forge` and committing the result.
+& $env:FLUID_CLI generate ci contract.fluid.yaml --system jenkins --install-mode pypi --out Jenkinsfile
 git add .
 git commit -m "Generate AI in-workspace silver variant"
-& $env:FLUID_CLI publish contract.fluid.yaml --catalog datamesh-manager
+& $env:FLUID_CLI publish contract.fluid.yaml --target datamesh-manager
 ```
 
 Validation:
