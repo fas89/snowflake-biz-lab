@@ -188,6 +188,16 @@ services:
       # in the launchpad (defaults to ``./gitlab/`` inside the lab repo,
       # which is gitignored and bootstrapped via ``task workspaces:bootstrap``).
       - ${DEMO_WORKSPACES_DIR:-../../gitlab}:/workspace/gitlab:ro
+      # Bind-mount the sibling forge-cli checkout read-only so Jenkins can
+      # ``pip install -e`` the editable dev-source FLUID CLI. Without this,
+      # ``pip install data-product-forge`` from PyPI gives 0.7.10 (stable,
+      # predates the 11-stage surface); TestPyPI pre-releases (0.8.0a1 etc.)
+      # currently ship a broken httpx dep. Bind-mounting the local checkout
+      # sidesteps both and gives the generated Jenkinsfiles the same CLI
+      # surface as ``.venv.fluid-dev`` on the host.
+      # Override the host path via FORGE_CLI_REPO in the launchpad if your
+      # checkout lives somewhere other than ../../../forge-cli.
+      - ${FORGE_CLI_REPO:-../../../forge-cli}:/forge-cli-src:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login >/dev/null || exit 1"]
       interval: 20s
