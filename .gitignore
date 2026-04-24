@@ -9,6 +9,8 @@
 __pycache__/
 *.pyc
 
+airflow/dags/active/current/
+
 dbt/dbt_packages/
 dbt/logs/
 dbt/target/

@@ -6,11 +6,11 @@ import shutil
 import subprocess
 import sys
 import time
-import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
 from local_env_utils import parse_env_file
+from local_url_utils import safe_http_get, validate_local_http_url
 
 
 @dataclass(frozen=True)
@@ -104,10 +104,9 @@ def wait_for_docs(url: str, timeout_seconds: float = 20.0) -> None:
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
         try:
-            with urllib.request.urlopen(url) as response:
-                if response.status == 200:
-                    return
-        except Exception:
+            if safe_http_get(url, label="dbt docs URL", timeout=3).status == 200:
+                return
+        except (ValueError, OSError):
             time.sleep(0.5)
             continue
         time.sleep(0.5)
@@ -171,7 +170,10 @@ def main() -> None:
     )
 
     dbt_docs_port = env.get("DBT_DOCS_PORT", "8086")
-    docs_url = f"http://localhost:{dbt_docs_port}/catalog.json"
+    docs_url = validate_local_http_url(
+        f"http://localhost:{dbt_docs_port}/catalog.json",
+        label="dbt docs URL",
+    )
     run(
         [
             "docker",

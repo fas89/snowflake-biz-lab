@@ -15,31 +15,31 @@ metadata:
     email: customer-intelligence@example.com
 
 consumes:
-  - productId: bronze.telco.seed_sources_v1
+  - productId: bronze.telco.party_v1
     exposeId: account_source
     purpose: Account and billing relationship grain for Subscriber 360.
-  - productId: bronze.telco.seed_sources_v1
+  - productId: bronze.telco.party_v1
     exposeId: service_source
     purpose: Operational service status and activation history.
-  - productId: bronze.telco.seed_sources_v1
+  - productId: bronze.telco.party_v1
     exposeId: subscription_source
     purpose: Commercial plan and renewal relationships for each service.
-  - productId: bronze.telco.seed_sources_v1
+  - productId: bronze.telco.party_v1
     exposeId: product_offering_source
     purpose: Product plan names, categories, and recurring pricing.
-  - productId: bronze.telco.seed_sources_v1
+  - productId: bronze.telco.usage_v1
     exposeId: usage_event_source
     purpose: Recent usage intensity and service activity.
-  - productId: bronze.telco.seed_sources_v1
+  - productId: bronze.telco.billing_v1
     exposeId: invoice_charge_source
     purpose: Charge and recurring revenue signals for support prioritization.
-  - productId: bronze.telco.seed_sources_v1
+  - productId: bronze.telco.billing_v1
     exposeId: invoice_source
     purpose: Invoice-to-account relationship required for charge attribution.
-  - productId: bronze.telco.seed_sources_v1
+  - productId: bronze.telco.usage_v1
     exposeId: customer_interaction_source
     purpose: Recent engagement and support contact history.
-  - productId: bronze.telco.seed_sources_v1
+  - productId: bronze.telco.usage_v1
     exposeId: trouble_ticket_source
     purpose: Open ticket posture and severity indicators.
 
@@ -323,7 +323,7 @@ exposes:
 lineage:
   granularity: field_level
   upstream:
-    - productId: bronze.telco.seed_sources_v1
+    - productId: bronze.telco.party_v1
       exposeId: account_source
       relationship: direct_consumption
       fieldMappings:
@@ -342,7 +342,7 @@ lineage:
           transformation:
             type: direct_mapping
             expression: sat_account_profile.account_number
-    - productId: bronze.telco.seed_sources_v1
+    - productId: bronze.telco.party_v1
       exposeId: service_source
       relationship: direct_consumption
       fieldMappings:
@@ -356,7 +356,7 @@ lineage:
           transformation:
             type: direct_mapping
             expression: stg_telco__service.service_status
-    - productId: bronze.telco.seed_sources_v1
+    - productId: bronze.telco.party_v1
       exposeId: subscription_source
       relationship: direct_consumption
       fieldMappings:
@@ -365,7 +365,7 @@ lineage:
           transformation:
             type: direct_mapping
             expression: stg_telco__subscription.subscription_id
-    - productId: bronze.telco.seed_sources_v1
+    - productId: bronze.telco.party_v1
       exposeId: product_offering_source
       relationship: lookup_enrichment
       fieldMappings:
@@ -379,7 +379,7 @@ lineage:
           transformation:
             type: direct_mapping
             expression: stg_telco__product_offering.price_chf
-    - productId: bronze.telco.seed_sources_v1
+    - productId: bronze.telco.usage_v1
       exposeId: usage_event_source
       relationship: aggregation
       fieldMappings:
@@ -393,7 +393,7 @@ lineage:
           transformation:
             type: aggregation
             expression: count(*)
-    - productId: bronze.telco.seed_sources_v1
+    - productId: bronze.telco.usage_v1
       exposeId: customer_interaction_source
       relationship: aggregation
       fieldMappings:
@@ -407,7 +407,7 @@ lineage:
           transformation:
             type: aggregation
             expression: max(interaction_timestamp)
-    - productId: bronze.telco.seed_sources_v1
+    - productId: bronze.telco.usage_v1
       exposeId: trouble_ticket_source
       relationship: aggregation
       fieldMappings:
@@ -421,7 +421,7 @@ lineage:
           transformation:
             type: calculation
             expression: avg(case severity when 'critical' then 4 when 'high' then 3 when 'medium' then 2 else 1 end)
-    - productId: bronze.telco.seed_sources_v1
+    - productId: bronze.telco.billing_v1
       exposeId: invoice_charge_source
       relationship: aggregation
       fieldMappings:
@@ -435,7 +435,7 @@ lineage:
           transformation:
             type: aggregation
             expression: sum(case when charge_type = 'recurring_charge' then amount_chf else 0 end)
-    - productId: bronze.telco.seed_sources_v1
+    - productId: bronze.telco.billing_v1
       exposeId: invoice_source
       relationship: lookup_enrichment
       fieldMappings:

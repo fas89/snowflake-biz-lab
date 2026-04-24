@@ -13,6 +13,7 @@ from urllib import error, parse, request
 import yaml
 
 from local_env_utils import parse_env_file, update_env_file
+from local_url_utils import safe_http_get, validate_local_http_url
 
 FLUID_CONFIG_PATH = Path.home() / ".fluid" / "config.yaml"
 
@@ -104,10 +105,79 @@ def extract_meta_value(html: str, meta_name: str) -> str:
     return match.group(1)
 
 
-def fetch_mailhog_messages(mailhog_base_url: str) -> list[dict]:
-    with request.urlopen(f"{mailhog_base_url}/api/v2/messages") as resp:
-        payload = json.loads(resp.read().decode("utf-8"))
-    return payload.get("items", [])
+def fetch_json(url: str) -> dict:
+    response = safe_http_get(url, label="mail capture URL", timeout=5.0)
+    if response.status >= 400:
+        raise RuntimeError(f"Mail capture API returned HTTP {response.status}")
+    return json.loads(response.body)
+
+
+def fetch_mail_messages(mail_base_url: str) -> list[dict]:
+    """Return captured messages from Mailpit or legacy MailHog in one shape."""
+    try:
+        payload = fetch_json(f"{mail_base_url}/api/v1/messages")
+        messages = payload.get("messages")
+        if isinstance(messages, list):
+            hydrated: list[dict] = []
+            for summary in messages:
+                message_id = summary.get("ID") if isinstance(summary, dict) else None
+                if not message_id:
+                    continue
+                try:
+                    message = fetch_json(
+                        f"{mail_base_url}/api/v1/message/{parse.quote(message_id, safe='')}"
+                    )
+                except (RuntimeError, OSError, json.JSONDecodeError):
+                    message = dict(summary)
+                message["_mail_capture"] = "mailpit"
+                hydrated.append(message)
+            return hydrated
+    except (RuntimeError, OSError, json.JSONDecodeError):
+        pass
+
+    payload = fetch_json(f"{mail_base_url}/api/v2/messages")
+    messages = payload.get("items", [])
+    for message in messages:
+        if isinstance(message, dict):
+            message["_mail_capture"] = "mailhog"
+    return messages
+
+
+def wait_for_mail_capture(mail_base_url: str, timeout_seconds: int, poll_interval_seconds: float) -> None:
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        try:
+            fetch_mail_messages(mail_base_url)
+            return
+        except (RuntimeError, OSError, json.JSONDecodeError):
+            time.sleep(poll_interval_seconds)
+    raise RuntimeError(f"Timed out waiting for mail capture API at {mail_base_url}")
+
+
+def message_recipients_include(message: dict, email: str) -> bool:
+    mailbox, _, domain = email.partition("@")
+    normalized = email.lower()
+    for recipient in message.get("To", []):
+        if not isinstance(recipient, dict):
+            continue
+        if recipient.get("Address", "").lower() == normalized:
+            return True
+        if recipient.get("Mailbox") == mailbox and recipient.get("Domain") == domain:
+            return True
+    return False
+
+
+def message_body(message: dict) -> str:
+    return "\n".join(
+        str(part or "")
+        for part in (
+            message.get("Text"),
+            message.get("HTML"),
+            message.get("Content", {}).get("Body", "")
+            if isinstance(message.get("Content"), dict)
+            else "",
+        )
+    )
 
 
 def find_verification_link(
@@ -118,31 +188,25 @@ def find_verification_link(
     timeout_seconds: int,
     poll_interval_seconds: float,
 ) -> str:
-    mailbox, _, domain = email.partition("@")
     deadline = time.time() + timeout_seconds
     pattern = re.compile(r"(https?://[^\s]+/verify\?token=[A-Za-z0-9]+)")
 
     while time.time() < deadline:
-        for message in fetch_mailhog_messages(mailhog_base_url):
+        for message in fetch_mail_messages(mailhog_base_url):
             message_id = message.get("ID")
             if message_id in existing_ids:
                 continue
 
-            recipients = message.get("To", [])
-            if not any(
-                recipient.get("Mailbox") == mailbox and recipient.get("Domain") == domain
-                for recipient in recipients
-            ):
+            if not message_recipients_include(message, email):
                 continue
 
-            body = message.get("Content", {}).get("Body", "")
-            match = pattern.search(body)
+            match = pattern.search(message_body(message))
             if match:
                 return match.group(1)
 
         time.sleep(poll_interval_seconds)
 
-    raise RuntimeError("Timed out waiting for the Entropy verification email in MailHog")
+    raise RuntimeError("Timed out waiting for the Entropy verification email in the local mail capture UI")
 
 
 def is_logged_in(opener: request.OpenerDirector, web_base_url: str) -> bool:
@@ -176,7 +240,7 @@ def create_account(opener: request.OpenerDirector, config: BootstrapConfig) -> N
         raise RuntimeError("Could not load the Entropy create-account page")
 
     csrf = extract_hidden_value(body, "_csrf")
-    existing_ids = {message.get("ID", "") for message in fetch_mailhog_messages(config.mailhog_base_url)}
+    existing_ids = {message.get("ID", "") for message in fetch_mail_messages(config.mailhog_base_url)}
 
     status, body, _, _ = http_request(
         opener,
@@ -295,6 +359,13 @@ def update_fluid_catalog_config(web_base_url: str) -> None:
     catalogs["datamesh-manager"] = {
         "endpoint": web_base_url,
         "enabled": True,
+        # Product-to-product lineage is represented by Entropy Access agreements.
+        # Keep the lab on the contract-first mode so Silver products do not grow
+        # duplicate SourceSystem input nodes for Bronze dependencies.
+        "odps_lineage_mode": "contract",
+        # Local sandbox convenience only: keep Access lineage visible immediately.
+        # forge-cli's provider default remains review-safe unless this is explicit.
+        "auto_approve_access": True,
         "auth": {
             "type": "api_key",
             "api_key": "${DMM_API_KEY}",
@@ -342,7 +413,7 @@ def main() -> None:
         "--timeout-seconds",
         type=int,
         default=120,
-        help="How long to wait for Entropy or MailHog to become ready.",
+        help="How long to wait for Entropy or the local mail capture service to become ready.",
     )
     parser.add_argument(
         "--poll-interval-seconds",
@@ -360,12 +431,17 @@ def main() -> None:
     fluid_secrets_file = Path(args.fluid_secrets_file).expanduser().resolve()
     fluid_secrets = parse_env_file(fluid_secrets_file)
 
-    web_base_url = (
+    web_base_url = validate_local_http_url(
         catalog_env.get("ENTROPY_EXTERNAL_URL")
         or catalog_env.get("DMM_API_URL")
-        or "http://localhost:8095"
-    ).rstrip("/")
-    mailhog_base_url = f"http://localhost:{catalog_env.get('MAILHOG_UI_PORT', '8026')}"
+        or "http://localhost:8095",
+        label="Entropy / DMM URL",
+        allow_env="LAB_ALLOW_REMOTE_HTTP",
+    )
+    mailhog_base_url = validate_local_http_url(
+        f"http://localhost:{catalog_env.get('MAILHOG_UI_PORT', '8026')}",
+        label="Mail capture URL",
+    )
 
     config = BootstrapConfig(
         web_base_url=web_base_url,
@@ -394,7 +470,7 @@ def main() -> None:
     )
 
     wait_for_ready(f"{config.web_base_url}/actuator/health", config.timeout_seconds, config.poll_interval_seconds)
-    wait_for_ready(f"{config.mailhog_base_url}/api/v2/messages", config.timeout_seconds, config.poll_interval_seconds)
+    wait_for_mail_capture(config.mailhog_base_url, config.timeout_seconds, config.poll_interval_seconds)
 
     existing_api_key = fluid_secrets.get("DMM_API_KEY", "")
     if existing_api_key and validate_api_key(config.web_base_url, existing_api_key):
@@ -403,6 +479,8 @@ def main() -> None:
             {
                 "DMM_API_URL": config.web_base_url,
                 "DMM_API_KEY": existing_api_key,
+                "DMM_ODPS_LINEAGE_MODE": "contract",
+                "DMM_AUTO_APPROVE_ACCESS": "true",
             },
         )
         update_fluid_catalog_config(config.web_base_url)
@@ -420,6 +498,8 @@ def main() -> None:
         {
             "DMM_API_URL": config.web_base_url,
             "DMM_API_KEY": api_key,
+            "DMM_ODPS_LINEAGE_MODE": "contract",
+            "DMM_AUTO_APPROVE_ACCESS": "true",
         },
     )
     update_fluid_catalog_config(config.web_base_url)

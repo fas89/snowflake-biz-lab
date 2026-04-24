@@ -13,6 +13,7 @@ from pathlib import Path
 from textwrap import dedent
 
 from local_env_utils import parse_env_file
+from local_url_utils import validate_local_http_url
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -188,8 +189,11 @@ def main() -> None:
 
     scenario = SCENARIOS[args.scenario]
     env = load_env()
-    jenkins_url = env.get("JENKINS_URL", "http://localhost:8081/").strip() or "http://localhost:8081/"
-    jenkins_url = jenkins_url.rstrip("/")
+    jenkins_url = validate_local_http_url(
+        env.get("JENKINS_URL", "http://localhost:8081/").strip() or "http://localhost:8081/",
+        label="Jenkins URL",
+        allow_env="LAB_ALLOW_REMOTE_HTTP",
+    )
     jenkins_user = env.get("JENKINS_ADMIN_ID", "admin").strip() or "admin"
     jenkins_password = env.get("JENKINS_ADMIN_PASSWORD", "").strip()
     if not jenkins_password:

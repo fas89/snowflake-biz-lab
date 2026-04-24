@@ -30,8 +30,9 @@ The quickstart now treats "from zero" literally:
 - Jenkins starts with no scenario jobs
 - Airflow starts with no scenario DAGs
 - DMM is ready to log into
+- local Docker ports bind to `127.0.0.1` by default, so the default demo passwords are not exposed to your network
 - A1 and A2 only appear in Jenkins after `task jenkins:sync`
-- A1 and A2 only appear in Airflow after the native `fluid generate artifacts` and `fluid schedule-sync` commands
+- A1 and A2 only appear in Airflow after the native `fluid schedule-sync` command copies their existing DAG assets into `airflow/dags/active/current`
 
 ## Local URLs
 
@@ -39,7 +40,7 @@ The quickstart now treats "from zero" literally:
 - dbt docs: [http://localhost:8086](http://localhost:8086)
 - Jenkins: [http://localhost:8081](http://localhost:8081)
 - Entropy / DMM: [http://localhost:8095](http://localhost:8095)
-- MailHog: [http://localhost:8026](http://localhost:8026)
+- Mailpit: [http://localhost:8026](http://localhost:8026)
 
 ## Repo Map
 

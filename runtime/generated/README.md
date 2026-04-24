@@ -55,7 +55,7 @@ task catalogs:up
 task catalogs:bootstrap
 ```
 
-That helper creates or reuses the local Entropy admin account and writes a fresh `DMM_API_KEY` into this file.
+That helper creates or reuses the local Entropy admin account and writes a fresh `DMM_API_KEY` into this file. It also writes the local-sandbox lineage defaults used by the DMM provider.
 
 ## Suggested Contents
 
@@ -72,6 +72,8 @@ SNOWFLAKE_STAGE_SCHEMA=TELCO_STAGE_LOAD
 SNOWFLAKE_FLUID_SCHEMA=TELCO_FLUID_DEMO
 DMM_API_URL=http://localhost:8095
 DMM_API_KEY=
+DMM_ODPS_LINEAGE_MODE=contract
+DMM_AUTO_APPROVE_ACCESS=true
 ```
 
 Use the same authorized Snowflake role and warehouse here that you use in `.env`, unless you intentionally want the FLUID runtime to connect with different credentials.

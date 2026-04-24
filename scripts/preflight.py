@@ -30,11 +30,11 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from urllib import error, request
 
 # Re-use the shared env-file parser from the existing bootstrap scripts.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from local_env_utils import parse_env_file  # noqa: E402
+from local_url_utils import safe_http_get, validate_local_http_url  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -56,10 +56,9 @@ COMPOSE_ENV_FILE = REPO_ROOT / ".env"
 
 BOOTSTRAP_ENTROPY_SCRIPT = REPO_ROOT / "scripts" / "bootstrap_entropy_local.py"
 
-# Bronze contract IDs that A1 / A2 silver products reference via inputPorts.
-# If these are missing from DMM, silver publish still succeeds but the product's
-# input-port lineage renders as unresolved in the DMM UI (contractId points at a
-# contract that doesn't exist). Informational only — `task publish:bronze` fixes it.
+# Bronze product IDs that A1 / A2 silver products consume through Entropy Access
+# agreements. Informational only because first-run preflight normally happens
+# before the Bronze block in the variant playbook.
 BRONZE_CONTRACT_IDS = (
     "bronze.telco.party_v1",
     "bronze.telco.usage_v1",
@@ -81,11 +80,20 @@ def _run(cmd: list[str]) -> tuple[int, str]:
 # Check 1: Entropy reachability (prerequisite for the DMM key check)
 # -----------------------------------------------------------------------------
 def check_entropy_reachable(dmm_url: str, *, timeout: float = 3.0) -> bool:
+    dmm_url = validate_local_http_url(
+        dmm_url,
+        label="DMM URL",
+        allow_env="LAB_ALLOW_REMOTE_HTTP",
+    )
     url = f"{dmm_url.rstrip('/')}/actuator/health"
     try:
-        with request.urlopen(url, timeout=timeout) as resp:
-            return resp.status == 200
-    except (error.URLError, error.HTTPError, OSError):
+        return safe_http_get(
+            url,
+            label="DMM health URL",
+            timeout=timeout,
+            allow_env="LAB_ALLOW_REMOTE_HTTP",
+        ).status == 200
+    except (ValueError, OSError):
         return False
 
 
@@ -95,14 +103,20 @@ def check_entropy_reachable(dmm_url: str, *, timeout: float = 3.0) -> bool:
 def _validate_dmm_key(dmm_url: str, api_key: str, *, timeout: float = 5.0) -> bool:
     if not api_key:
         return False
-    req = request.Request(
-        f"{dmm_url.rstrip('/')}/api/teams",
-        headers={"x-api-key": api_key},
+    dmm_url = validate_local_http_url(
+        dmm_url,
+        label="DMM URL",
+        allow_env="LAB_ALLOW_REMOTE_HTTP",
     )
     try:
-        with request.urlopen(req, timeout=timeout) as resp:
-            return resp.status == 200
-    except (error.URLError, error.HTTPError, OSError):
+        return safe_http_get(
+            f"{dmm_url.rstrip('/')}/api/teams",
+            label="DMM teams URL",
+            headers={"x-api-key": api_key},
+            timeout=timeout,
+            allow_env="LAB_ALLOW_REMOTE_HTTP",
+        ).status == 200
+    except (ValueError, OSError):
         return False
 
 
@@ -154,41 +168,43 @@ def check_dmm_key(
 # -----------------------------------------------------------------------------
 # Check 3: Bronze products present in DMM (informational)
 # -----------------------------------------------------------------------------
-# Note on naming: A1 / A2 silver contracts reference bronze via
-# ``inputPorts[].contractId: bronze.telco.<domain>_v1``. Those IDs exist in
-# DMM as *products* (``/api/dataproducts/<id>``), not as contracts —
-# ``fluid publish`` emits one data product per FLUID contract plus one ODCS
-# contract per ``expose:`` (i.e. ``bronze.telco.party_v1.account_source``).
-# So the right health check for "is A1's inputPort lineage target known to
-# DMM?" is to hit the data-products endpoint, not the data-contracts one.
+# Note on naming: A1 / A2 silver contracts consume bronze products via
+# ``consumes[].productId: bronze.telco.<domain>_v1``. Those IDs exist in DMM as
+# products (``/api/dataproducts/<id>``), while each bronze expose gets its own
+# ODCS contract (for example ``bronze.telco.party_v1.account_source``). The
+# health check therefore hits the data-products endpoint before Silver publish
+# tries to create Entropy Access agreements to those products.
 def check_bronze_products_in_dmm(dmm_url: str, api_key: str) -> bool:
-    """Warn when A1/A2 input-port references are not in DMM.
+    """Warn when A1/A2 Access lineage targets are not in DMM.
 
-    Informational only — returns True regardless. Silver publish succeeds without
-    bronze in DMM; this tells operators the input-port lineage will render as
-    unresolved until they run ``task publish:bronze``.
+    Informational only — returns True regardless so first-run preflight can run
+    before the documented Bronze publish block.
     """
     if not api_key:
         return True  # handled by check_dmm_key
+    dmm_url = validate_local_http_url(
+        dmm_url,
+        label="DMM URL",
+        allow_env="LAB_ALLOW_REMOTE_HTTP",
+    )
 
     missing: list[str] = []
     for product_id in BRONZE_CONTRACT_IDS:
-        req = request.Request(
-            f"{dmm_url.rstrip('/')}/api/dataproducts/{product_id}",
-            headers={"x-api-key": api_key},
-        )
         try:
-            with request.urlopen(req, timeout=5) as resp:
-                if resp.status != 200:
-                    missing.append(product_id)
-        except error.HTTPError as exc:
-            if exc.code == 404:
+            status = safe_http_get(
+                f"{dmm_url.rstrip('/')}/api/dataproducts/{product_id}",
+                label="DMM data product URL",
+                headers={"x-api-key": api_key},
+                timeout=5,
+                allow_env="LAB_ALLOW_REMOTE_HTTP",
+            ).status
+            if status == 404:
                 missing.append(product_id)
-            else:
+            elif status != 200:
                 # Treat non-404 errors as unknown; skip the check rather than
                 # false-positive warn.
                 return True
-        except (error.URLError, OSError):
+        except (ValueError, OSError):
             return True
 
     if not missing:
@@ -199,8 +215,8 @@ def check_bronze_products_in_dmm(dmm_url: str, api_key: str) -> bool:
         return True
 
     print(f"INFO Bronze products missing from DMM: {', '.join(missing)}")
-    print("     Silver publish still succeeds, but A1/A2 input-port lineage will render")
-    print("     as unresolved in the DMM UI. Run `task publish:bronze` to fix.")
+    print("     Publish the Bronze block in the variant playbook before A1/A2 so")
+    print("     Silver Access lineage can resolve to real Bronze products.")
     return True
 
 
@@ -298,4 +314,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except ValueError as exc:
+        print(f"FAIL {exc}", file=sys.stderr)
+        sys.exit(1)

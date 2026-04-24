@@ -44,8 +44,15 @@ Run from the scenario directory:
 
 ```bash
 "$FLUID_CLI" generate ci contract.fluid.yaml --system jenkins --install-mode "$JENKINS_INSTALL_MODE" --default-publish-target datamesh-manager --out Jenkinsfile
+# For A1 only, add:
+#   --no-verify-strict-default --publish-stage-default --no-publish-include-env
+git status --short -- Jenkinsfile
 git add Jenkinsfile
-git commit -m "Refresh generated Jenkins pipeline"
+if ! git diff --cached --quiet -- Jenkinsfile; then
+  git commit -m "Refresh generated Jenkins pipeline"
+else
+  echo "Jenkinsfile already committed"
+fi
 cd "$LAB_REPO"
 task jenkins:sync SCENARIO=A1
 task jenkins:build SCENARIO=A1

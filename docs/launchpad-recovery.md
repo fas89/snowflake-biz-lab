@@ -26,6 +26,8 @@ task catalogs:bootstrap
 
 If the DMM UI still looks wrong, do a full catalog reset and re-run the scenario publishes:
 
+For Silver lineage, check DMM Access agreements as the source of truth. Product-to-product Bronze dependencies should appear as approved Access edges, not as duplicated SourceSystem nodes or ODPS input ports on the Silver product.
+
 ### Mac
 
 ```bash
