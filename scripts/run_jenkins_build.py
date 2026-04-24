@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from local_env_utils import parse_env_file
+from local_url_utils import validate_local_http_url
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -135,6 +136,19 @@ def fetch_json(
         return json.load(response)
 
 
+def job_has_parameter_definitions(job_data: dict[str, object]) -> bool:
+    actions = job_data.get("actions")
+    if not isinstance(actions, list):
+        return False
+    for action in actions:
+        if not isinstance(action, dict):
+            continue
+        definitions = action.get("parameterDefinitions")
+        if isinstance(definitions, list) and definitions:
+            return True
+    return False
+
+
 def fetch_console_tail(
     opener: urllib.request.OpenerDirector,
     url: str,
@@ -169,8 +183,11 @@ def main() -> None:
 
     scenario = SCENARIOS[args.scenario]
     env = load_env()
-    jenkins_url = env.get("JENKINS_URL", "http://localhost:8081/").strip() or "http://localhost:8081/"
-    jenkins_url = jenkins_url.rstrip("/")
+    jenkins_url = validate_local_http_url(
+        env.get("JENKINS_URL", "http://localhost:8081/").strip() or "http://localhost:8081/",
+        label="Jenkins URL",
+        allow_env="LAB_ALLOW_REMOTE_HTTP",
+    )
     jenkins_user = env.get("JENKINS_ADMIN_ID", "admin").strip() or "admin"
     jenkins_password = env.get("JENKINS_ADMIN_PASSWORD", "").strip()
     if not jenkins_password:
@@ -200,23 +217,60 @@ def main() -> None:
     else:
         print("Build parameters: none (use Jenkinsfile defaults)")
 
-    crumb_headers = fetch_crumb(opener, jenkins_url, jenkins_user, jenkins_password)
+    job_api_url = (
+        jenkins_url
+        + f"/job/{urllib.parse.quote(scenario.job_name)}/api/json?tree=actions[parameterDefinitions[name]]"
+    )
+    job_data = fetch_json(opener, job_api_url, jenkins_user, jenkins_password)
+    supports_parameters = job_has_parameter_definitions(job_data)
+    build_endpoint = "buildWithParameters" if params else "build"
+    bootstrap_fallback = False
     data = None
-    headers = dict(crumb_headers)
     if params:
         data = urllib.parse.urlencode(params).encode("utf-8")
+        if supports_parameters:
+            print("Jenkins parameter metadata is visible; using /buildWithParameters.")
+        else:
+            bootstrap_fallback = True
+            print(
+                "Jenkins parameter metadata is not visible through the API yet; using /buildWithParameters and retrying /build only if Jenkins rejects the first bootstrap request."
+            )
+            print(
+                "If the fallback is needed, that bootstrap run uses Jenkinsfile defaults; parameter overrides apply on the next accepted buildWithParameters run."
+            )
+
+    crumb_headers = fetch_crumb(opener, jenkins_url, jenkins_user, jenkins_password)
+    headers = dict(crumb_headers)
+    if data is not None:
         headers["Content-Type"] = "application/x-www-form-urlencoded"
 
     request = build_request(
-        jenkins_url + f"/job/{urllib.parse.quote(scenario.job_name)}/buildWithParameters",
+        jenkins_url + f"/job/{urllib.parse.quote(scenario.job_name)}/{build_endpoint}",
         jenkins_user,
         jenkins_password,
         method="POST",
         data=data,
         extra_headers=headers,
     )
-    with open_request(opener, request) as response:
-        queue_url = response.headers.get("Location", "").strip()
+    try:
+        with open_request(opener, request) as response:
+            queue_url = response.headers.get("Location", "").strip()
+    except urllib.error.HTTPError as exc:
+        if not (bootstrap_fallback and exc.code == 400 and build_endpoint == "buildWithParameters"):
+            raise
+        print(
+            "Jenkins rejected buildWithParameters before parameter metadata was visible; retrying the bootstrap controller run via /build."
+        )
+        request = build_request(
+            jenkins_url + f"/job/{urllib.parse.quote(scenario.job_name)}/build",
+            jenkins_user,
+            jenkins_password,
+            method="POST",
+            data=None,
+            extra_headers=crumb_headers,
+        )
+        with open_request(opener, request) as response:
+            queue_url = response.headers.get("Location", "").strip()
 
     if not queue_url:
         raise RuntimeError("Jenkins accepted the request but did not return a queue item URL.")

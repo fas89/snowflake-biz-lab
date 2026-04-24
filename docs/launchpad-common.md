@@ -27,7 +27,13 @@ The source of truth for overrides is:
 - `.env` for Airflow
 - `.env` or `.env.jenkins` for Jenkins
 
-`task catalogs:bootstrap` also refreshes `DMM_API_KEY` in `runtime/generated/fluid.local.env` for `fluid publish`.
+`task catalogs:bootstrap` also refreshes `DMM_API_KEY`, `DMM_ODPS_LINEAGE_MODE=contract`, and `DMM_AUTO_APPROVE_ACCESS=true` in `runtime/generated/fluid.local.env` for the local sandbox. Bronze-to-Silver product dependencies are published through Entropy `Access` agreements generated from `consumes[]`; they are not mirrored as DMM SourceSystems.
+
+Security defaults:
+
+- local Docker ports bind to `127.0.0.1` by default
+- keep that default for normal laptop runs
+- set `LAB_BIND_ADDRESS=0.0.0.0` only for an intentional shared demo, and rotate the default local passwords first
 
 ## 1. Set Up Your Local Paths
 
@@ -166,6 +172,7 @@ What you should see now:
 - Jenkins opens at [http://localhost:8081](http://localhost:8081) and shows no A1 or A2 jobs yet
 - DMM opens at [http://localhost:8095](http://localhost:8095) and accepts the bootstrap login above
 - dbt docs opens at [http://localhost:8086](http://localhost:8086), but the silver docs are not meaningful until you refresh them for A1 or A2
+- Mailpit opens at [http://localhost:8026](http://localhost:8026) if you want to inspect local catalog signup email
 
 Useful local URLs:
 
@@ -173,7 +180,7 @@ Useful local URLs:
 - dbt docs: [http://localhost:8086](http://localhost:8086)
 - Jenkins: [http://localhost:8081](http://localhost:8081)
 - Entropy / DMM: [http://localhost:8095](http://localhost:8095)
-- MailHog: [http://localhost:8026](http://localhost:8026)
+- Mailpit: [http://localhost:8026](http://localhost:8026)
 
 ## 6. Seed Snowflake Staging And Metadata
 

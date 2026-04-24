@@ -41,7 +41,8 @@ For A1:
 - the contract validates and plans cleanly
 - the plan review is completed before `apply`
 - `apply` finishes with build ID `dv2_subscriber360_reference_build`
-- the generated `Jenkinsfile` exists, is committed, has `VERIFY_STRICT=false` plus `RUN_STAGE_10_PUBLISH=true`, and removes the unsupported `fluid publish --env ...` flag
+- the generated `Jenkinsfile` exists, is committed, and was emitted with `--no-verify-strict-default --publish-stage-default --no-publish-include-env`
+- the resulting A1 `Jenkinsfile` has `VERIFY_STRICT=false`, `RUN_STAGE_10_PUBLISH=true`, and a stage-10 `fluid publish` command without the extra `--env` argument
 - `task jenkins:sync SCENARIO=A1` succeeds and `A1-external-reference` appears
 - `task jenkins:build SCENARIO=A1` succeeds via Jenkins `buildWithParameters`
 - the Jenkins console still shows the Snowflake nullability mismatch in `fluid verify`, but non-strict verify keeps it informational for A1
@@ -49,6 +50,9 @@ For A1:
 - DAG `telco_subscriber360_reference` appears only after schedule sync
 - `task dbt:docs:refresh SCENARIO=A1` succeeds
 - the expected exposes appear in DMM after the explicit publish step, and the A1 Jenkins publish stage also completes successfully
+- DMM has approved `Access` agreements from `bronze.telco.party_v1`, `bronze.telco.usage_v1`, and `bronze.telco.billing_v1` output ports into the A1 silver product
+- DMM Access and lineage views show named Bronze output ports such as `Usage Event Source`, not `Deleted Output Port`
+- DMM has no duplicate Bronze SourceSystem nodes for A1 and the A1 silver product has no product-to-product ODPS input ports
 
 For A2:
 
@@ -62,9 +66,12 @@ For A2:
 - DAG `telco_subscriber360_internal` appears only after schedule sync
 - `task dbt:docs:refresh SCENARIO=A2` succeeds
 - the expected exposes appear in DMM after the explicit local `publish` step
+- DMM has approved `Access` agreements from the Bronze output ports into the A2 silver product
+- DMM has no duplicate Bronze SourceSystem nodes for A2 and the A2 silver product has no product-to-product ODPS input ports
 
 For Bronze:
 
 - all three contracts validate and plan cleanly
 - all three products appear in DMM
+- each Bronze output port links to its per-expose ODCS contract
 - no Airflow, dbt, or Jenkins assets are expected

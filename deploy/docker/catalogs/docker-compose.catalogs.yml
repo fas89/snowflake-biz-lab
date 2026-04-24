@@ -18,21 +18,21 @@ services:
       - ./entropy-postgres-init.sql:/docker-entrypoint-initdb.d/00-extensions.sql:ro
 
   mailhog:
-    image: mailhog/mailhog:v1.0.1
+    image: axllent/mailpit:v1.29.7
     restart: unless-stopped
     ports:
-      - "${MAILHOG_UI_PORT:-8026}:8025"
-      - "${MAILHOG_SMTP_PORT:-1026}:1025"
+      - "${LAB_BIND_ADDRESS:-127.0.0.1}:${MAILHOG_UI_PORT:-8026}:8025"
+      - "${LAB_BIND_ADDRESS:-127.0.0.1}:${MAILHOG_SMTP_PORT:-1026}:1025"
     healthcheck:
       test:
         - CMD-SHELL
-        - wget --spider -q http://localhost:8025 || exit 1
+        - wget --spider -q http://localhost:8025/api/v1/info || exit 1
       interval: 10s
       timeout: 5s
       retries: 10
 
   entropy-data:
-    image: entropydata/entropy-data-ce:${ENTROPY_IMAGE_TAG:-latest}
+    image: entropydata/entropy-data-ce:${ENTROPY_IMAGE_TAG:-2.0.1}
     platform: linux/amd64
     restart: unless-stopped
     depends_on:
@@ -57,7 +57,7 @@ services:
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "false"
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "false"
     ports:
-      - "${ENTROPY_WEB_PORT:-8095}:8080"
+      - "${LAB_BIND_ADDRESS:-127.0.0.1}:${ENTROPY_WEB_PORT:-8095}:8080"
     healthcheck:
       test:
         - CMD-SHELL

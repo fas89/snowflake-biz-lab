@@ -5,7 +5,7 @@ The lab now creates Jenkins jobs on demand instead of seeding them at startup.
 ## Supported Flow
 
 1. Generate a `Jenkinsfile` from the contract with `fluid generate ci --system jenkins --default-publish-target datamesh-manager`. The `--default-publish-target` flag bakes the catalog name into the Stage 10 `${PUBLISH_TARGETS:-datamesh-manager}` shell fallback so the very first Jenkins SCM build (which runs before the `parameters { }` block exports env vars) still publishes to DMM instead of failing with an empty target list.
-   For A1 only, flip `VERIFY_STRICT` to `false`, flip `RUN_STAGE_10_PUBLISH` to `true`, and remove the unsupported `fluid publish --env ...` argument before committing the file.
+   For A1 only, generate the file with `--no-verify-strict-default --publish-stage-default --no-publish-include-env` so the A1 lab defaults are emitted directly instead of patching the file afterward.
 2. Commit that `Jenkinsfile` in the local workspace repo.
 3. Run `task jenkins:sync SCENARIO=A1` or `task jenkins:sync SCENARIO=A2`.
 4. Run `task jenkins:build SCENARIO=A1` or `task jenkins:build SCENARIO=A2`.
@@ -45,7 +45,7 @@ The Jenkins container reads the repo from the local bind mount. No `git push` is
 
 ## Scenario Defaults
 
-- A1 is lab-tuned to keep `VERIFY_STRICT=false`, `RUN_STAGE_10_PUBLISH=true`, and a `fluid publish` command without the unsupported `--env` flag. The reference dbt assets build and publish successfully, but the live Snowflake tables still report nullable-vs-required mismatches that would fail a strict verify gate.
+- A1 is lab-tuned to generate `VERIFY_STRICT=false`, `RUN_STAGE_10_PUBLISH=true`, and a `fluid publish` command without the stage-level `--env` flag. The reference dbt assets build and publish successfully, but the live Snowflake tables still report nullable-vs-required mismatches that would fail a strict verify gate.
 - A2 keeps the generated strict default. Its Jenkins run is expected to stop at stage `9 · verify` on `fluid verify ... --strict`, which is part of the teaching flow rather than a broken lab.
 
 ## What Is Not Wired

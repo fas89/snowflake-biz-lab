@@ -15,21 +15,21 @@ with DAG(
 ) as dag:
     validate_contract = BashOperator(
         task_id="validate_contract",
-        bash_command="fluid validate variants/internal-reference/contract.fluid.yaml",
+        bash_command="fluid validate variants/A2-internal-reference/contract.fluid.yaml",
     )
 
     plan_contract = BashOperator(
         task_id="plan_contract",
         bash_command=(
-            "fluid plan variants/internal-reference/contract.fluid.yaml "
-            "--out variants/internal-reference/runtime/plan.json --html"
+            "fluid plan variants/A2-internal-reference/contract.fluid.yaml "
+            "--out variants/A2-internal-reference/runtime/plan.json --html"
         ),
     )
 
     run_dbt = BashOperator(
         task_id="run_dbt_subscriber360",
         bash_command=(
-            "dbt run --project-dir variants/internal-reference/dbt_dv2_subscriber360 "
+            "dbt run --project-dir variants/A2-internal-reference/dbt_dv2_subscriber360 "
             "--profiles-dir /workspace/config/dbt --profile telco "
             "--select mart_subscriber360_core mart_subscriber_health_scorecard"
         ),
@@ -37,7 +37,7 @@ with DAG(
 
     publish_marketplace = BashOperator(
         task_id="publish_marketplace",
-        bash_command="fluid publish variants/internal-reference/contract.fluid.yaml --catalog datamesh-manager",
+        bash_command="fluid publish variants/A2-internal-reference/contract.fluid.yaml --target datamesh-manager",
     )
 
     validate_contract >> plan_contract >> run_dbt >> publish_marketplace

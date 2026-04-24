@@ -15,14 +15,14 @@ with DAG(
 ) as dag:
     validate_contract = BashOperator(
         task_id="validate_contract",
-        bash_command="fluid validate variants/external-reference/contract.fluid.yaml",
+        bash_command="fluid validate variants/A1-external-reference/contract.fluid.yaml",
     )
 
     plan_contract = BashOperator(
         task_id="plan_contract",
         bash_command=(
-            "fluid plan variants/external-reference/contract.fluid.yaml "
-            "--out variants/external-reference/runtime/plan.json --html"
+            "fluid plan variants/A1-external-reference/contract.fluid.yaml "
+            "--out variants/A1-external-reference/runtime/plan.json --html"
         ),
     )
 
@@ -37,7 +37,7 @@ with DAG(
 
     publish_marketplace = BashOperator(
         task_id="publish_marketplace",
-        bash_command="fluid publish variants/external-reference/contract.fluid.yaml --catalog datamesh-manager",
+        bash_command="fluid publish variants/A1-external-reference/contract.fluid.yaml --target datamesh-manager",
     )
 
     validate_contract >> plan_contract >> run_dbt >> publish_marketplace

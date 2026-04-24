@@ -12,6 +12,8 @@ Use `.env` for non-secret local settings, especially:
 - local Docker defaults
 - GitLab project URL placeholders
 
+The secure local default is `LAB_BIND_ADDRESS=127.0.0.1`, which keeps Airflow, Jenkins, DMM, Mailpit, dbt docs, and Postgres reachable from your laptop only. Use `0.0.0.0` only for an intentional shared demo.
+
 `FLUID_DEMO_GITLAB_WORKSPACE` / `FLUID_AI_GITLAB_WORKSPACE` can stay blank. docker-compose defaults them to `./gitlab/path-a-telco-silver-product-demo` and `./gitlab/path-b-ai-telco-silver-import-demo` inside the lab repo (bootstrapped from `fluid/fixtures/workspaces/` via `task workspaces:bootstrap`). Set them explicitly only if you have deliberately moved the workspaces elsewhere.
 
 ### `runtime/generated/fluid.local.env`
@@ -89,8 +91,12 @@ For local Entropy / DMM publication, keep these in `runtime/generated/fluid.loca
 
 - `DMM_API_URL`
 - `DMM_API_KEY`
+- `DMM_ODPS_LINEAGE_MODE=contract`
+- `DMM_AUTO_APPROVE_ACCESS=true`
 
 The repo defaults the local API URL to `http://localhost:8095`, and `task catalogs:bootstrap` is the standard way to refresh the local `DMM_API_KEY`.
+
+`DMM_AUTO_APPROVE_ACCESS=true` is local-sandbox convenience so Bronze-to-Silver lineage is visible immediately. Do not carry that setting into governed/shared catalog environments unless automatic Access approval is your intended policy.
 
 ## Hosted GitLab
 

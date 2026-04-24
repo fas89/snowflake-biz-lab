@@ -4,7 +4,7 @@ dotenv:
 
 vars:
   COMPOSE: docker compose -f deploy/docker/docker-compose.yml --env-file .env
-  CATALOGS_COMPOSE: docker compose -f deploy/docker/catalogs/docker-compose.catalogs.yml --env-file .env.catalogs
+  CATALOGS_COMPOSE: docker compose -p ${CATALOGS_COMPOSE_PROJECT:-snowflake-telco-catalogs} -f deploy/docker/catalogs/docker-compose.catalogs.yml --env-file .env.catalogs
   DBT_RUNNER: '{{.COMPOSE}} exec -T dbt-runner'
   FLUID_DEMO_VENV: .venv.fluid-demo
   FLUID_DEV_VENV: .venv.fluid-dev
@@ -14,6 +14,7 @@ tasks:
     desc: Start Postgres, Airflow, dbt-runner, and the local dbt docs UI
     cmds:
       - "{{.COMPOSE}} up -d --build postgres airflow-init airflow-webserver airflow-scheduler dbt-runner dbt-docs"
+      - 'echo "Local bind address: ${LAB_BIND_ADDRESS:-127.0.0.1}"'
       - 'echo "Airflow: http://localhost:${AIRFLOW_WEB_PORT:-8085}"'
       - 'echo "dbt Docs: http://localhost:${DBT_DOCS_PORT:-8086}"'
 
@@ -146,7 +147,10 @@ tasks:
 
   catalogs:up:
     desc: Start the local Entropy Data CE stack
-    cmd: "{{.CATALOGS_COMPOSE}} up -d"
+    cmds:
+      - "{{.CATALOGS_COMPOSE}} up -d"
+      - 'echo "Entropy / DMM: http://localhost:${ENTROPY_WEB_PORT:-8095}"'
+      - 'echo "Mailpit: http://localhost:${MAILHOG_UI_PORT:-8026}"'
 
   catalogs:bootstrap:
     desc: Complete the local Entropy signup flow and refresh DMM_API_KEY

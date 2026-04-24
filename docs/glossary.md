@@ -15,8 +15,10 @@ If you are new to this repo, keep this tab open while reading
   downstream is derived from it.
 - **expose** — an output port of a data product: a named table/view/API that
   the product publishes. Each expose gets its own ODCS contract in DMM.
-- **consume (input port)** — a declared dependency on another product's
-  expose. Drives the lineage graph you see in DMM.
+- **consume** — a declared dependency on another product's expose. `fluid
+  publish --target datamesh-manager` turns product-to-product consumes into
+  Entropy `Access` agreements, which are the DMM graph edges. These product
+  consumes are not mirrored as DMM SourceSystems or ODPS input ports.
 - **forge-cli** — the source repository that builds `data-product-forge`
   (the pip package that ships `fluid`). Lives at
   `https://github.com/agentics-transformation/forge-cli`.
@@ -43,11 +45,10 @@ If you are new to this repo, keep this tab open while reading
   --target datamesh-manager` pushes the contract here.
 - **Horizon** — a separate catalog target (not the default for this lab).
 - **umbrella contract** — an ODCS contract `fluid publish` writes at
-  `/api/datacontracts/{productId}` (no expose suffix) so product-level
-  `inputPorts[].contractId: {productId}` references still resolve in the
-  DMM UI. The per-expose contracts at
+  `/api/datacontracts/{productId}` (no expose suffix) as a defensive resolution
+  stub. The per-expose contracts at
   `/api/datacontracts/{productId}.{exposeId}` are what the schema actually
-  lives in; the umbrella is a resolution stub.
+  lives in.
 - **provider hint** — passed to DMM to select the data-product
   specification shape (`dps` vs `odps`). The lab defaults to `odps`.
 
