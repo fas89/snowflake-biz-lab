@@ -86,18 +86,18 @@ The observations below should be rechecked against the latest `data-product-forg
 - Acceptance criteria:
   A user can import an existing dbt project, keep the relevant references, refine the result with AI assistance, and continue into schedule/CI generation without manual contract surgery.
 
-## Airflow generation + local Mac workspace bridge
+## Airflow generation + native local schedule sync
 
 - Desired demo behavior:
-  Generated Airflow artifacts land where the local Airflow instance can consume them immediately from the GitLab workspace on the Mac.
+  Existing Airflow DAG assets or generated schedule outputs land where the local Airflow instance can consume them immediately from the documented local destination.
 - Current observed behavior:
-  `fluid generate schedule` can write to an output directory, and this repo now mounts one active workspace bridge into Airflow, but switching workspaces still requires explicit local alignment.
+  `fluid schedule-sync --scheduler airflow --destination <local path>` works, but the operator still has to pick and clear the destination explicitly in the lab docs.
 - Why it matters in the demo:
   The orchestration step feels strongest when the generated DAGs become visible in Airflow right away.
 - Likely `forge-cli` area to change later:
-  `fluid_build/cli/generate_schedule.py`, scheduler output defaults, and any future workspace-aware generation hooks.
+  `fluid_build/cli/schedule_sync.py`, scheduler output defaults, and any future workspace-aware sync helpers.
 - Acceptance criteria:
-  A generated Airflow schedule from the active workspace appears in local Airflow without extra manual path wrangling beyond the documented workspace choice.
+  A selected DAG directory from the active workspace appears in local Airflow without extra manual destination cleanup or path wrangling.
 
 ## Standards + marketplace path
 

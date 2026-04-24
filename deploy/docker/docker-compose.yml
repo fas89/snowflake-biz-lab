@@ -40,8 +40,6 @@ x-airflow-common: &airflow-common
     PYTHONPATH: /opt/project
   volumes:
     - ../../airflow/dags:/opt/airflow/dags
-    - ${FLUID_DEMO_GITLAB_WORKSPACE:-../../gitlab/path-a-telco-silver-product-demo}:/opt/airflow/dags/workspace-greenfield
-    - ${FLUID_AI_GITLAB_WORKSPACE:-../../gitlab/path-b-ai-telco-silver-import-demo}:/opt/airflow/dags/workspace-import
     - ../../airflow/plugins:/opt/airflow/plugins
     - ../../airflow/config:/opt/airflow/config
     - ../../dbt:/opt/project/dbt
@@ -159,6 +157,8 @@ services:
       context: ../..
       dockerfile: deploy/docker/jenkins/Dockerfile
     container_name: snowflake-telco-jenkins
+    env_file:
+      - ../../runtime/generated/fluid.local.env
     environment:
       <<: *snowflake-env
       CASC_JENKINS_CONFIG: /var/jenkins_home/casc_configs/jenkins.yaml
@@ -167,12 +167,15 @@ services:
       JENKINS_URL: ${JENKINS_URL:-http://localhost:8081/}
       JENKINS_EXECUTORS: ${JENKINS_EXECUTORS:-2}
       DBT_TARGET: ${DBT_TARGET:-snowflake}
-      DMM_API_URL: ${DMM_API_URL:-http://localhost:8095}
-      DMM_API_KEY: ${DMM_API_KEY:-}
-      # ``hudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT`` allows the CasC-provisioned
-      # pipelines to check out from the local workspace repos mounted at
-      # /workspace/gitlab/. Safe here because this is a local lab container with no
-      # external ingress; do not copy this flag into a shared Jenkins controller.
+      # Local Entropy / DMM runs outside this compose project, so Jenkins
+      # must reach it through the Docker Desktop host bridge rather than
+      # container-local localhost.
+      DMM_API_URL: ${JENKINS_DMM_API_URL:-http://host.docker.internal:8095}
+      # ``hudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT`` allows the lab's
+      # on-demand Pipeline-from-SCM jobs to check out from the local workspace
+      # repos mounted at /workspace/gitlab/. Safe here because this is a local
+      # lab container with no external ingress; do not copy this flag into a
+      # shared Jenkins controller.
       JAVA_OPTS: -Djenkins.install.runSetupWizard=false -Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true
     ports:
       - "${JENKINS_WEB_PORT:-8081}:8080"
@@ -182,11 +185,12 @@ services:
       - ../../:/workspace
       - ../../jenkins/casc:/var/jenkins_home/casc_configs:ro
       - ../../runtime:/workspace/runtime
-      # Mount the gitlab demo workspaces read-only so the CasC-provisioned
-      # Pipeline jobs can fetch each variant's Jenkinsfile from the local
-      # git repos. The path on the host is supplied via ``DEMO_WORKSPACES_DIR``
-      # in the launchpad (defaults to ``./gitlab/`` inside the lab repo,
-      # which is gitignored and bootstrapped via ``task workspaces:bootstrap``).
+      # Mount the gitlab demo workspaces read-only so the on-demand
+      # Pipeline-from-SCM jobs created by ``task jenkins:sync`` can fetch each
+      # variant's Jenkinsfile from the local git repos. The path on the host is
+      # supplied via ``DEMO_WORKSPACES_DIR`` in the launchpad (defaults to
+      # ``./gitlab/`` inside the lab repo, which is gitignored and bootstrapped
+      # via ``task workspaces:bootstrap``).
       - ${DEMO_WORKSPACES_DIR:-../../gitlab}:/workspace/gitlab:ro
       # Bind-mount the sibling forge-cli checkout read-only so Jenkins can
       # ``pip install -e`` the editable dev-source FLUID CLI. Without this,

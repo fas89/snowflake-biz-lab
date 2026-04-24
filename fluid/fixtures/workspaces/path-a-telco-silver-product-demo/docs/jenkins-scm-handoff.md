@@ -2,7 +2,7 @@
 
 The current lab story for Jenkins is:
 
-1. Generate a `Jenkinsfile` from the contract with `fluid generate ci --system jenkins`.
+1. Generate a `Jenkinsfile` from the contract with `fluid generate ci --system jenkins --default-publish-target datamesh-manager`. The `--default-publish-target` flag bakes the catalog into the Stage 10 `${PUBLISH_TARGETS:-datamesh-manager}` fallback so the very first Jenkins SCM build (which runs before the `parameters { }` block exports env vars) still publishes to DMM instead of failing with an empty target list.
 2. Commit that generated `Jenkinsfile` into this GitLab workspace repo.
 3. Push the workspace repo to GitLab.
 4. Let Jenkins discover and run the generated pipeline from SCM.

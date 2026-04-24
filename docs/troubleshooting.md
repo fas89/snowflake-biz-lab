@@ -2,26 +2,24 @@
 
 ## Airflow Does Not Show The Generated DAGs
 
-Confirm the demo workspaces were bootstrapped:
+Confirm the active Airflow destination is where the playbook expects:
 
 ```bash
-ls gitlab/path-a-telco-silver-product-demo gitlab/path-b-ai-telco-silver-import-demo
+ls airflow/dags/active
 ```
 
-If either directory is missing, run:
+Then rerun the native sync from the scenario directory:
 
 ```bash
-task workspaces:bootstrap
+"$FLUID_CLI" schedule-sync --scheduler airflow --dags-dir ../../reference-assets/airflow_subscriber360/dags --destination "$LAB_REPO/airflow/dags/active/current"
 ```
 
-Then recycle the core stack:
+If the UI still looks stale, recycle the core stack:
 
 ```bash
 task down
 task up
 ```
-
-docker-compose mounts `./gitlab/path-a-telco-silver-product-demo` (for the greenfield/import DAGs) and `./gitlab/path-b-ai-telco-silver-import-demo` (for the AI DAGs) into Airflow by default. If you have pointed `FLUID_DEMO_GITLAB_WORKSPACE` or `FLUID_AI_GITLAB_WORKSPACE` at a non-default path in `.env`, make sure that path actually exists and contains the expected variant structure.
 
 ## `fluid: command not found`
 
@@ -40,7 +38,12 @@ task fluid:bootstrap:demo
 Or install the release directly in your GitLab workspace:
 
 ```bash
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ data-product-forge
+LATEST_TESTPYPI_VERSION="$(
+  python -m pip index versions --pre --index-url https://test.pypi.org/simple/ data-product-forge \
+    | sed -n 's/^data-product-forge (\([^)]*\)).*/\1/p' \
+    | head -n1
+)"
+pip install --index-url https://pypi.org/simple/ --extra-index-url https://test.pypi.org/simple/ "data-product-forge[snowflake]==${LATEST_TESTPYPI_VERSION}"
 ```
 
 ## TestPyPI Install Feels Flaky
@@ -48,7 +51,12 @@ pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://
 Use the same install shape the repo expects:
 
 ```bash
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ data-product-forge
+LATEST_TESTPYPI_VERSION="$(
+  python -m pip index versions --pre --index-url https://test.pypi.org/simple/ data-product-forge \
+    | sed -n 's/^data-product-forge (\([^)]*\)).*/\1/p' \
+    | head -n1
+)"
+pip install --index-url https://pypi.org/simple/ --extra-index-url https://test.pypi.org/simple/ "data-product-forge[snowflake]==${LATEST_TESTPYPI_VERSION}"
 ```
 
 If the venue network is unreliable, use the backup wheel path described in [fluid/demo/backup-demo.md](../fluid/demo/backup-demo.md).
@@ -80,6 +88,19 @@ Could not load model catalog ... llm_models.json
 In the latest TestPyPI `data-product-forge` release, that warning can appear even when the contract workflow still succeeds.
 
 If `validate`, `plan`, or `doctor` finishes successfully, you can continue with the demo. Treat it as a release quirk, not as an automatic stop signal.
+
+## Jenkins Publish Fails With DMM `403`
+
+Jenkins reads `runtime/generated/fluid.local.env` when the container starts.
+
+If you refreshed the local catalog with `task catalogs:bootstrap` after Jenkins was already running, reload Jenkins so it picks up the fresh `DMM_API_KEY`:
+
+```bash
+task catalogs:bootstrap
+task jenkins:up
+```
+
+In this lab, Jenkins reaches the local catalog through `http://host.docker.internal:8095`, not `http://localhost:8095`.
 
 ## `fluid apply` Fails On Snowflake Authentication
 

@@ -1,64 +1,55 @@
 # Jenkins SCM Handoff
 
-The current lab story for Jenkins is:
+The lab now creates Jenkins jobs on demand instead of seeding them at startup.
 
-1. Generate a `Jenkinsfile` from the contract with `fluid generate ci --system jenkins`.
-2. Commit that generated `Jenkinsfile` into the GitLab workspace repo on disk.
-3. Let Jenkins discover and run the generated pipeline from that local repo.
+## Supported Flow
 
-This is the supported demo path today.
+1. Generate a `Jenkinsfile` from the contract with `fluid generate ci --system jenkins --default-publish-target datamesh-manager`. The `--default-publish-target` flag bakes the catalog name into the Stage 10 `${PUBLISH_TARGETS:-datamesh-manager}` shell fallback so the very first Jenkins SCM build (which runs before the `parameters { }` block exports env vars) still publishes to DMM instead of failing with an empty target list.
+   For A1 only, flip `VERIFY_STRICT` to `false`, flip `RUN_STAGE_10_PUBLISH` to `true`, and remove the unsupported `fluid publish --env ...` argument before committing the file.
+2. Commit that `Jenkinsfile` in the local workspace repo.
+3. Run `task jenkins:sync SCENARIO=A1` or `task jenkins:sync SCENARIO=A2`.
+4. Run `task jenkins:build SCENARIO=A1` or `task jenkins:build SCENARIO=A2`.
 
-It is intentionally different from a future FLUID enhancement where `fluid apply` could trigger Jenkins directly.
+This keeps the generated CI artifact versioned in Git while making the first-run Jenkins dashboard truly empty.
 
-## Why This Model
+The Jenkins container also loads `runtime/generated/fluid.local.env` at startup so publish stages can use the live local `DMM_API_KEY`. If you rerun `task catalogs:bootstrap`, restart Jenkins before expecting publish stages to see the refreshed key.
 
-- It keeps the generated CI artifact versioned in Git.
-- It matches the GitLab-first workspace story in this lab.
-- It makes the demo reproducible because Jenkins reads the same repo state that the audience can inspect.
+## What `task jenkins:sync` Does
 
-## How Jobs Get Into Jenkins
+The task calls `scripts/sync_jenkins_job.py`, which:
 
-`task jenkins:up` auto-provisions the following pipelines via Jenkins Configuration-as-Code and the `job-dsl` plugin:
+- reads `.env` and `.env.jenkins`, with `.env.jenkins` taking precedence
+- validates that the local workspace repo and generated `Jenkinsfile` exist
+- prints the target Jenkins URL, job name, repo, and script path
+- creates or updates a single Pipeline-from-SCM job through the Jenkins HTTP API
+- does not trigger a build
 
-| Jenkins job                 | Workspace repo                                           | Script path                                                            |
-| --------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `A1-external-reference`     | `gitlab/path-a-telco-silver-product-demo`                       | `variants/A1-external-reference/Jenkinsfile`                              |
-| `A2-internal-reference`     | `gitlab/path-a-telco-silver-product-demo`                       | `variants/A2-internal-reference/Jenkinsfile`                              |
-| `B1-subscriber360-external` *(staged for future release)* | `gitlab/path-b-ai-telco-silver-import-demo`                        | `variants/B1-ai-reference-external/subscriber360-external/Jenkinsfile`    |
+## What `task jenkins:build` Does
 
-The gitlab workspaces are mounted read-only at `/workspace/gitlab/` inside the Jenkins container. The host path is configurable via `DEMO_WORKSPACES_DIR` and defaults to `./gitlab/` inside the lab repo (gitignored; bootstrapped from `fluid/fixtures/workspaces/` templates via `task workspaces:bootstrap`).
+The task calls `scripts/run_jenkins_build.py`, which:
 
-The JobDSL scripts live in `jenkins/casc/jenkins.yaml`. Adding a job is a one-file YAML edit + `task jenkins:up` restart.
+- reads `.env` and `.env.jenkins`, with `.env.jenkins` taking precedence
+- targets the synced A1 or A2 job and triggers Jenkins through `buildWithParameters`
+- carries the lab default `PUBLISH_TARGETS=datamesh-manager` unless you override it with `task jenkins:build SCENARIO=A1 -- --param KEY=VALUE`
+- waits for the queue item to start, then waits for the build result
+- prints the final build URL and the console tail, and exits non-zero on failure
 
-## Recommended Script Paths
+## Fixed Job Mapping
 
-For the ready-made workspace (A1 / A2):
+| Scenario | Jenkins job | SCM repo inside Jenkins | Script path |
+| --- | --- | --- | --- |
+| A1 | `A1-external-reference` | `/workspace/gitlab/path-a-telco-silver-product-demo/.git` | `variants/A1-external-reference/Jenkinsfile` |
+| A2 | `A2-internal-reference` | `/workspace/gitlab/path-a-telco-silver-product-demo/.git` | `variants/A2-internal-reference/Jenkinsfile` |
 
-- `variants/A1-external-reference/Jenkinsfile`
-- `variants/A2-internal-reference/Jenkinsfile`
+The Jenkins container reads the repo from the local bind mount. No `git push` is required for the lab flow.
 
-The AI workspace script paths (`variants/B1-ai-reference-external/subscriber360-external/Jenkinsfile` and `variants/B2-ai-generate-in-workspace/subscriber360-generated/Jenkinsfile`) are staged for the Coming Soon B1 / B2 release.
+## Scenario Defaults
 
-## Operator Flow
+- A1 is lab-tuned to keep `VERIFY_STRICT=false`, `RUN_STAGE_10_PUBLISH=true`, and a `fluid publish` command without the unsupported `--env` flag. The reference dbt assets build and publish successfully, but the live Snowflake tables still report nullable-vs-required mismatches that would fail a strict verify gate.
+- A2 keeps the generated strict default. Its Jenkins run is expected to stop at stage `9 · verify` on `fluid verify ... --strict`, which is part of the teaching flow rather than a broken lab.
 
-After `fluid generate ci`:
+## What Is Not Wired
 
-```bash
-git add .
-git commit -m "Update generated Jenkins pipeline"
-```
-
-Then in Jenkins at [http://localhost:8081](http://localhost:8081):
-
-- open the matching job (`A1-external-reference` or `A2-internal-reference`)
-- click **Build Now**
-- confirm Jenkins reads the generated `Jenkinsfile` from the expected script path
-
-A `git push` is not required — the SCM URL points at the local `file:///workspace/gitlab/<repo>/.git`, so Jenkins sees the committed state directly.
-
-## What Is Not Wired Yet
-
-- `fluid apply` does not directly trigger Jenkins in this lab.
-- Multibranch Pipeline auto-discovery is not configured; the jobs are single-branch Pipeline-from-SCM.
-
-That direct apply-to-Jenkins handoff remains a future FLUID enhancement and stays tracked in the FLUID gap register.
+- `fluid apply` does not trigger Jenkins directly
+- multibranch or repo auto-discovery is not configured
+- B1 and B2 are not part of the supported Jenkins flow in this lab

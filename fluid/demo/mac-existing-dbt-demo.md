@@ -84,7 +84,7 @@ See [Existing dbt Forge Prompt](existing-dbt-forge-prompt.md).
 
 ```bash
 fluid generate schedule contract.fluid.yaml --scheduler airflow -o generated/airflow --overwrite
-fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
+fluid generate ci contract.fluid.yaml --system jenkins --default-publish-target datamesh-manager --out Jenkinsfile
 ```
 
 ## Step 7: Validate And Plan

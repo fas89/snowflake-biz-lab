@@ -93,8 +93,8 @@ stages. Each `RUN_STAGE_N_*` toggle on the Jenkins job can skip one.
 ## Install tracks
 
 - **demo-release** — installs the latest `data-product-forge` release
-  from TestPyPI (`--index-url https://test.pypi.org/simple/`). Use this
-  when showing the demo in front of people.
+  from TestPyPI, resolved dynamically at bootstrap time. Use this when
+  showing the demo in front of people.
 - **dev-source** — installs `forge-cli` in editable mode from a local
   checkout (`pip install -e ../forge-cli`) so you can change FLUID
   behaviour and retest immediately. Use this when fixing forge-cli.

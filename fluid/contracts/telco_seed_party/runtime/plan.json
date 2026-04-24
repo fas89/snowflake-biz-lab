@@ -5,6 +5,7 @@
       "action_type": "provisionDataset",
       "depends_on": [],
       "description": "Provision dataset for account_source",
+      "op": "provisionDataset",
       "params": {
         "binding": {
           "format": "snowflake_table",
@@ -393,6 +394,7 @@
       "action_type": "provisionDataset",
       "depends_on": [],
       "description": "Provision dataset for party_source",
+      "op": "provisionDataset",
       "params": {
         "binding": {
           "format": "snowflake_table",
@@ -768,392 +770,11 @@
       "step": 2
     },
     {
-      "action_id": "provision_service_source",
-      "action_type": "provisionDataset",
-      "depends_on": [],
-      "description": "Provision dataset for service_source",
-      "params": {
-        "binding": {
-          "format": "snowflake_table",
-          "location": {
-            "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
-            "database": "{{ env.SNOWFLAKE_DATABASE }}",
-            "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
-            "table": "SERVICE"
-          },
-          "platform": "snowflake"
-        },
-        "contract": {
-          "description": "Bronze sources covering party identity and the subscriptions, services, and product offerings provisioned to them.",
-          "domain": "telco",
-          "exposes": [
-            {
-              "binding": {
-                "format": "snowflake_table",
-                "location": {
-                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
-                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
-                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
-                  "table": "PARTY"
-                },
-                "platform": "snowflake"
-              },
-              "contract": {
-                "dq": {
-                  "rules": [
-                    {
-                      "id": "party_id_not_null",
-                      "operator": ">=",
-                      "selector": "PARTY_ID",
-                      "severity": "error",
-                      "threshold": 1.0,
-                      "type": "completeness"
-                    }
-                  ]
-                },
-                "schema": [
-                  {
-                    "name": "PARTY_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "PARTY_TYPE",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "STATUS",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "CREATED_AT",
-                    "required": true,
-                    "type": "TIMESTAMP"
-                  },
-                  {
-                    "name": "UPDATED_AT",
-                    "required": true,
-                    "type": "TIMESTAMP"
-                  }
-                ]
-              },
-              "description": "Source-shaped party records loaded into the telco landing schema.",
-              "exposeId": "party_source",
-              "kind": "table",
-              "title": "Party Source"
-            },
-            {
-              "binding": {
-                "format": "snowflake_table",
-                "location": {
-                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
-                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
-                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
-                  "table": "ACCOUNT"
-                },
-                "platform": "snowflake"
-              },
-              "contract": {
-                "dq": {
-                  "rules": [
-                    {
-                      "id": "account_id_not_null",
-                      "operator": ">=",
-                      "selector": "ACCOUNT_ID",
-                      "severity": "error",
-                      "threshold": 1.0,
-                      "type": "completeness"
-                    }
-                  ]
-                },
-                "schema": [
-                  {
-                    "name": "ACCOUNT_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "PARTY_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "ACCOUNT_NUMBER",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "ACCOUNT_TYPE",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "STATUS",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "CREATED_AT",
-                    "required": true,
-                    "type": "TIMESTAMP"
-                  },
-                  {
-                    "name": "CLOSED_AT",
-                    "type": "TIMESTAMP"
-                  }
-                ]
-              },
-              "description": "Source-shaped account records loaded into the telco landing schema.",
-              "exposeId": "account_source",
-              "kind": "table",
-              "title": "Account Source"
-            },
-            {
-              "binding": {
-                "format": "snowflake_table",
-                "location": {
-                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
-                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
-                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
-                  "table": "SERVICE"
-                },
-                "platform": "snowflake"
-              },
-              "contract": {
-                "dq": {
-                  "rules": [
-                    {
-                      "id": "service_id_not_null",
-                      "operator": ">=",
-                      "selector": "SERVICE_ID",
-                      "severity": "error",
-                      "threshold": 1.0,
-                      "type": "completeness"
-                    }
-                  ]
-                },
-                "schema": [
-                  {
-                    "name": "SERVICE_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "ACCOUNT_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "SERVICE_TYPE",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "STATUS",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "ACTIVATED_AT",
-                    "type": "TIMESTAMP"
-                  },
-                  {
-                    "name": "TERMINATED_AT",
-                    "type": "TIMESTAMP"
-                  }
-                ]
-              },
-              "description": "Source-shaped service records loaded into the telco landing schema.",
-              "exposeId": "service_source",
-              "kind": "table",
-              "title": "Service Source"
-            },
-            {
-              "binding": {
-                "format": "snowflake_table",
-                "location": {
-                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
-                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
-                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
-                  "table": "SUBSCRIPTION"
-                },
-                "platform": "snowflake"
-              },
-              "contract": {
-                "dq": {
-                  "rules": [
-                    {
-                      "id": "subscription_id_not_null",
-                      "operator": ">=",
-                      "selector": "SUBSCRIPTION_ID",
-                      "severity": "error",
-                      "threshold": 1.0,
-                      "type": "completeness"
-                    }
-                  ]
-                },
-                "schema": [
-                  {
-                    "name": "SUBSCRIPTION_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "SERVICE_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "PRODUCT_OFFERING_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "STATUS",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "START_DATE",
-                    "type": "DATE"
-                  },
-                  {
-                    "name": "END_DATE",
-                    "type": "DATE"
-                  },
-                  {
-                    "name": "RENEWAL_DATE",
-                    "type": "DATE"
-                  }
-                ]
-              },
-              "description": "Source-shaped subscription records loaded into the telco landing schema.",
-              "exposeId": "subscription_source",
-              "kind": "table",
-              "title": "Subscription Source"
-            },
-            {
-              "binding": {
-                "format": "snowflake_table",
-                "location": {
-                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
-                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
-                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
-                  "table": "PRODUCT_OFFERING"
-                },
-                "platform": "snowflake"
-              },
-              "contract": {
-                "dq": {
-                  "rules": [
-                    {
-                      "id": "product_offering_id_not_null",
-                      "operator": ">=",
-                      "selector": "PRODUCT_OFFERING_ID",
-                      "severity": "error",
-                      "threshold": 1.0,
-                      "type": "completeness"
-                    }
-                  ]
-                },
-                "schema": [
-                  {
-                    "name": "PRODUCT_OFFERING_ID",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "NAME",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "CATEGORY",
-                    "required": true,
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "DATA_LIMIT_GB",
-                    "type": "NUMBER"
-                  },
-                  {
-                    "name": "VOICE_LIMIT_MIN",
-                    "type": "NUMBER"
-                  },
-                  {
-                    "name": "PRICE_CHF",
-                    "required": true,
-                    "type": "NUMBER"
-                  }
-                ]
-              },
-              "description": "Source-shaped product offering records loaded into the telco landing schema.",
-              "exposeId": "product_offering_source",
-              "kind": "table",
-              "title": "Product Offering Source"
-            }
-          ],
-          "fluidVersion": "0.7.2",
-          "id": "bronze.telco.party_v1",
-          "kind": "DataProduct",
-          "metadata": {
-            "layer": "Bronze",
-            "owner": {
-              "email": "data-platform@example.com",
-              "team": "telco-data-platform"
-            }
-          },
-          "name": "Telco Party Bronze"
-        },
-        "exposeId": "service_source",
-        "kind": "table",
-        "labels": {
-          "fluid_contract_id": "bronze_telco_party_v1",
-          "fluid_contract_name": "telco_party_bronze",
-          "fluid_layer": "bronze",
-          "fluid_team": "telco-data-platform"
-        },
-        "schema": [
-          {
-            "name": "SERVICE_ID",
-            "required": true,
-            "type": "STRING"
-          },
-          {
-            "name": "ACCOUNT_ID",
-            "required": true,
-            "type": "STRING"
-          },
-          {
-            "name": "SERVICE_TYPE",
-            "required": true,
-            "type": "STRING"
-          },
-          {
-            "name": "STATUS",
-            "required": true,
-            "type": "STRING"
-          },
-          {
-            "name": "ACTIVATED_AT",
-            "type": "TIMESTAMP"
-          },
-          {
-            "name": "TERMINATED_AT",
-            "type": "TIMESTAMP"
-          }
-        ]
-      },
-      "provider": "snowflake",
-      "step": 3
-    },
-    {
       "action_id": "provision_product_offering_source",
       "action_type": "provisionDataset",
       "depends_on": [],
       "description": "Provision dataset for product_offering_source",
+      "op": "provisionDataset",
       "params": {
         "binding": {
           "format": "snowflake_table",
@@ -1529,6 +1150,389 @@
         ]
       },
       "provider": "snowflake",
+      "step": 3
+    },
+    {
+      "action_id": "provision_service_source",
+      "action_type": "provisionDataset",
+      "depends_on": [],
+      "description": "Provision dataset for service_source",
+      "op": "provisionDataset",
+      "params": {
+        "binding": {
+          "format": "snowflake_table",
+          "location": {
+            "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+            "database": "{{ env.SNOWFLAKE_DATABASE }}",
+            "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+            "table": "SERVICE"
+          },
+          "platform": "snowflake"
+        },
+        "contract": {
+          "description": "Bronze sources covering party identity and the subscriptions, services, and product offerings provisioned to them.",
+          "domain": "telco",
+          "exposes": [
+            {
+              "binding": {
+                "format": "snowflake_table",
+                "location": {
+                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
+                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+                  "table": "PARTY"
+                },
+                "platform": "snowflake"
+              },
+              "contract": {
+                "dq": {
+                  "rules": [
+                    {
+                      "id": "party_id_not_null",
+                      "operator": ">=",
+                      "selector": "PARTY_ID",
+                      "severity": "error",
+                      "threshold": 1.0,
+                      "type": "completeness"
+                    }
+                  ]
+                },
+                "schema": [
+                  {
+                    "name": "PARTY_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "PARTY_TYPE",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "STATUS",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "CREATED_AT",
+                    "required": true,
+                    "type": "TIMESTAMP"
+                  },
+                  {
+                    "name": "UPDATED_AT",
+                    "required": true,
+                    "type": "TIMESTAMP"
+                  }
+                ]
+              },
+              "description": "Source-shaped party records loaded into the telco landing schema.",
+              "exposeId": "party_source",
+              "kind": "table",
+              "title": "Party Source"
+            },
+            {
+              "binding": {
+                "format": "snowflake_table",
+                "location": {
+                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
+                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+                  "table": "ACCOUNT"
+                },
+                "platform": "snowflake"
+              },
+              "contract": {
+                "dq": {
+                  "rules": [
+                    {
+                      "id": "account_id_not_null",
+                      "operator": ">=",
+                      "selector": "ACCOUNT_ID",
+                      "severity": "error",
+                      "threshold": 1.0,
+                      "type": "completeness"
+                    }
+                  ]
+                },
+                "schema": [
+                  {
+                    "name": "ACCOUNT_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "PARTY_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "ACCOUNT_NUMBER",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "ACCOUNT_TYPE",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "STATUS",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "CREATED_AT",
+                    "required": true,
+                    "type": "TIMESTAMP"
+                  },
+                  {
+                    "name": "CLOSED_AT",
+                    "type": "TIMESTAMP"
+                  }
+                ]
+              },
+              "description": "Source-shaped account records loaded into the telco landing schema.",
+              "exposeId": "account_source",
+              "kind": "table",
+              "title": "Account Source"
+            },
+            {
+              "binding": {
+                "format": "snowflake_table",
+                "location": {
+                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
+                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+                  "table": "SERVICE"
+                },
+                "platform": "snowflake"
+              },
+              "contract": {
+                "dq": {
+                  "rules": [
+                    {
+                      "id": "service_id_not_null",
+                      "operator": ">=",
+                      "selector": "SERVICE_ID",
+                      "severity": "error",
+                      "threshold": 1.0,
+                      "type": "completeness"
+                    }
+                  ]
+                },
+                "schema": [
+                  {
+                    "name": "SERVICE_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "ACCOUNT_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "SERVICE_TYPE",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "STATUS",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "ACTIVATED_AT",
+                    "type": "TIMESTAMP"
+                  },
+                  {
+                    "name": "TERMINATED_AT",
+                    "type": "TIMESTAMP"
+                  }
+                ]
+              },
+              "description": "Source-shaped service records loaded into the telco landing schema.",
+              "exposeId": "service_source",
+              "kind": "table",
+              "title": "Service Source"
+            },
+            {
+              "binding": {
+                "format": "snowflake_table",
+                "location": {
+                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
+                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+                  "table": "SUBSCRIPTION"
+                },
+                "platform": "snowflake"
+              },
+              "contract": {
+                "dq": {
+                  "rules": [
+                    {
+                      "id": "subscription_id_not_null",
+                      "operator": ">=",
+                      "selector": "SUBSCRIPTION_ID",
+                      "severity": "error",
+                      "threshold": 1.0,
+                      "type": "completeness"
+                    }
+                  ]
+                },
+                "schema": [
+                  {
+                    "name": "SUBSCRIPTION_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "SERVICE_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "PRODUCT_OFFERING_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "STATUS",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "START_DATE",
+                    "type": "DATE"
+                  },
+                  {
+                    "name": "END_DATE",
+                    "type": "DATE"
+                  },
+                  {
+                    "name": "RENEWAL_DATE",
+                    "type": "DATE"
+                  }
+                ]
+              },
+              "description": "Source-shaped subscription records loaded into the telco landing schema.",
+              "exposeId": "subscription_source",
+              "kind": "table",
+              "title": "Subscription Source"
+            },
+            {
+              "binding": {
+                "format": "snowflake_table",
+                "location": {
+                  "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+                  "database": "{{ env.SNOWFLAKE_DATABASE }}",
+                  "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+                  "table": "PRODUCT_OFFERING"
+                },
+                "platform": "snowflake"
+              },
+              "contract": {
+                "dq": {
+                  "rules": [
+                    {
+                      "id": "product_offering_id_not_null",
+                      "operator": ">=",
+                      "selector": "PRODUCT_OFFERING_ID",
+                      "severity": "error",
+                      "threshold": 1.0,
+                      "type": "completeness"
+                    }
+                  ]
+                },
+                "schema": [
+                  {
+                    "name": "PRODUCT_OFFERING_ID",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "NAME",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "CATEGORY",
+                    "required": true,
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "DATA_LIMIT_GB",
+                    "type": "NUMBER"
+                  },
+                  {
+                    "name": "VOICE_LIMIT_MIN",
+                    "type": "NUMBER"
+                  },
+                  {
+                    "name": "PRICE_CHF",
+                    "required": true,
+                    "type": "NUMBER"
+                  }
+                ]
+              },
+              "description": "Source-shaped product offering records loaded into the telco landing schema.",
+              "exposeId": "product_offering_source",
+              "kind": "table",
+              "title": "Product Offering Source"
+            }
+          ],
+          "fluidVersion": "0.7.2",
+          "id": "bronze.telco.party_v1",
+          "kind": "DataProduct",
+          "metadata": {
+            "layer": "Bronze",
+            "owner": {
+              "email": "data-platform@example.com",
+              "team": "telco-data-platform"
+            }
+          },
+          "name": "Telco Party Bronze"
+        },
+        "exposeId": "service_source",
+        "kind": "table",
+        "labels": {
+          "fluid_contract_id": "bronze_telco_party_v1",
+          "fluid_contract_name": "telco_party_bronze",
+          "fluid_layer": "bronze",
+          "fluid_team": "telco-data-platform"
+        },
+        "schema": [
+          {
+            "name": "SERVICE_ID",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "ACCOUNT_ID",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "SERVICE_TYPE",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "STATUS",
+            "required": true,
+            "type": "STRING"
+          },
+          {
+            "name": "ACTIVATED_AT",
+            "type": "TIMESTAMP"
+          },
+          {
+            "name": "TERMINATED_AT",
+            "type": "TIMESTAMP"
+          }
+        ]
+      },
+      "provider": "snowflake",
       "step": 4
     },
     {
@@ -1536,6 +1540,7 @@
       "action_type": "provisionDataset",
       "depends_on": [],
       "description": "Provision dataset for subscription_source",
+      "op": "provisionDataset",
       "params": {
         "binding": {
           "format": "snowflake_table",
@@ -1918,7 +1923,332 @@
       "step": 5
     }
   ],
+  "bundleDigest": "",
   "contract": {
+    "description": "Bronze sources covering party identity and the subscriptions, services, and product offerings provisioned to them.",
+    "domain": "telco",
+    "exposes": [
+      {
+        "binding": {
+          "format": "snowflake_table",
+          "location": {
+            "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+            "database": "{{ env.SNOWFLAKE_DATABASE }}",
+            "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+            "table": "PARTY"
+          },
+          "platform": "snowflake"
+        },
+        "contract": {
+          "dq": {
+            "rules": [
+              {
+                "id": "party_id_not_null",
+                "operator": ">=",
+                "selector": "PARTY_ID",
+                "severity": "error",
+                "threshold": 1.0,
+                "type": "completeness"
+              }
+            ]
+          },
+          "schema": [
+            {
+              "name": "PARTY_ID",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "PARTY_TYPE",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "STATUS",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "CREATED_AT",
+              "required": true,
+              "type": "TIMESTAMP"
+            },
+            {
+              "name": "UPDATED_AT",
+              "required": true,
+              "type": "TIMESTAMP"
+            }
+          ]
+        },
+        "description": "Source-shaped party records loaded into the telco landing schema.",
+        "exposeId": "party_source",
+        "kind": "table",
+        "title": "Party Source"
+      },
+      {
+        "binding": {
+          "format": "snowflake_table",
+          "location": {
+            "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+            "database": "{{ env.SNOWFLAKE_DATABASE }}",
+            "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+            "table": "ACCOUNT"
+          },
+          "platform": "snowflake"
+        },
+        "contract": {
+          "dq": {
+            "rules": [
+              {
+                "id": "account_id_not_null",
+                "operator": ">=",
+                "selector": "ACCOUNT_ID",
+                "severity": "error",
+                "threshold": 1.0,
+                "type": "completeness"
+              }
+            ]
+          },
+          "schema": [
+            {
+              "name": "ACCOUNT_ID",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "PARTY_ID",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "ACCOUNT_NUMBER",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "ACCOUNT_TYPE",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "STATUS",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "CREATED_AT",
+              "required": true,
+              "type": "TIMESTAMP"
+            },
+            {
+              "name": "CLOSED_AT",
+              "type": "TIMESTAMP"
+            }
+          ]
+        },
+        "description": "Source-shaped account records loaded into the telco landing schema.",
+        "exposeId": "account_source",
+        "kind": "table",
+        "title": "Account Source"
+      },
+      {
+        "binding": {
+          "format": "snowflake_table",
+          "location": {
+            "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+            "database": "{{ env.SNOWFLAKE_DATABASE }}",
+            "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+            "table": "SERVICE"
+          },
+          "platform": "snowflake"
+        },
+        "contract": {
+          "dq": {
+            "rules": [
+              {
+                "id": "service_id_not_null",
+                "operator": ">=",
+                "selector": "SERVICE_ID",
+                "severity": "error",
+                "threshold": 1.0,
+                "type": "completeness"
+              }
+            ]
+          },
+          "schema": [
+            {
+              "name": "SERVICE_ID",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "ACCOUNT_ID",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "SERVICE_TYPE",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "STATUS",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "ACTIVATED_AT",
+              "type": "TIMESTAMP"
+            },
+            {
+              "name": "TERMINATED_AT",
+              "type": "TIMESTAMP"
+            }
+          ]
+        },
+        "description": "Source-shaped service records loaded into the telco landing schema.",
+        "exposeId": "service_source",
+        "kind": "table",
+        "title": "Service Source"
+      },
+      {
+        "binding": {
+          "format": "snowflake_table",
+          "location": {
+            "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+            "database": "{{ env.SNOWFLAKE_DATABASE }}",
+            "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+            "table": "SUBSCRIPTION"
+          },
+          "platform": "snowflake"
+        },
+        "contract": {
+          "dq": {
+            "rules": [
+              {
+                "id": "subscription_id_not_null",
+                "operator": ">=",
+                "selector": "SUBSCRIPTION_ID",
+                "severity": "error",
+                "threshold": 1.0,
+                "type": "completeness"
+              }
+            ]
+          },
+          "schema": [
+            {
+              "name": "SUBSCRIPTION_ID",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "SERVICE_ID",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "PRODUCT_OFFERING_ID",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "STATUS",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "START_DATE",
+              "type": "DATE"
+            },
+            {
+              "name": "END_DATE",
+              "type": "DATE"
+            },
+            {
+              "name": "RENEWAL_DATE",
+              "type": "DATE"
+            }
+          ]
+        },
+        "description": "Source-shaped subscription records loaded into the telco landing schema.",
+        "exposeId": "subscription_source",
+        "kind": "table",
+        "title": "Subscription Source"
+      },
+      {
+        "binding": {
+          "format": "snowflake_table",
+          "location": {
+            "account": "{{ env.SNOWFLAKE_ACCOUNT }}",
+            "database": "{{ env.SNOWFLAKE_DATABASE }}",
+            "schema": "{{ env.SNOWFLAKE_STAGE_SCHEMA }}",
+            "table": "PRODUCT_OFFERING"
+          },
+          "platform": "snowflake"
+        },
+        "contract": {
+          "dq": {
+            "rules": [
+              {
+                "id": "product_offering_id_not_null",
+                "operator": ">=",
+                "selector": "PRODUCT_OFFERING_ID",
+                "severity": "error",
+                "threshold": 1.0,
+                "type": "completeness"
+              }
+            ]
+          },
+          "schema": [
+            {
+              "name": "PRODUCT_OFFERING_ID",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "NAME",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "CATEGORY",
+              "required": true,
+              "type": "STRING"
+            },
+            {
+              "name": "DATA_LIMIT_GB",
+              "type": "NUMBER"
+            },
+            {
+              "name": "VOICE_LIMIT_MIN",
+              "type": "NUMBER"
+            },
+            {
+              "name": "PRICE_CHF",
+              "required": true,
+              "type": "NUMBER"
+            }
+          ]
+        },
+        "description": "Source-shaped product offering records loaded into the telco landing schema.",
+        "exposeId": "product_offering_source",
+        "kind": "table",
+        "title": "Product Offering Source"
+      }
+    ],
+    "fluidVersion": "0.7.2",
+    "id": "bronze.telco.party_v1",
+    "kind": "DataProduct",
+    "metadata": {
+      "layer": "Bronze",
+      "owner": {
+        "email": "data-platform@example.com",
+        "team": "telco-data-platform"
+      }
+    },
+    "name": "Telco Party Bronze"
+  },
+  "contract_metadata": {
     "id": "bronze.telco.party_v1",
     "name": "Telco Party Bronze",
     "version": "0.7.2"
@@ -1928,13 +2258,14 @@
     "nodes": [
       "provision_account_source",
       "provision_party_source",
-      "provision_service_source",
       "provision_product_offering_source",
+      "provision_service_source",
       "provision_subscription_source"
     ]
   },
   "format_version": "0.7.2",
-  "generated_at": 1776707695.6040199,
+  "generated_at": 1777044455.926486,
   "has_dependencies": false,
+  "planDigest": "sha256:a8d72d3ecf2eb169a0d56c9d55d1faaee5c1355594408787e0eab63e9cfd7926",
   "total_actions": 5
 }
