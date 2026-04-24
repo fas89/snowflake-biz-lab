@@ -94,7 +94,7 @@ Then use one platform-specific launchpad:
 
 Each track launchpad is a thin launcher that bootstraps its FLUID runtime and then hands off to the shared variant playbook:
 
-- `docs/variant-playbook-mac.md` — shared Bronze / A1 / A2 / B1 / B2 commands for both tracks on Mac
+- `docs/variant-playbook-mac.md` — shared Bronze / A1 / A2 commands for both tracks on Mac (B1 / B2 are staged for a future release)
 - `docs/variant-playbook-windows.md` — same for Windows
 
 Shared recovery runbook:
@@ -109,12 +109,12 @@ Keep the repo's shared scenario vocabulary consistent across docs, code, and con
   Silver contract referencing shared dbt and Airflow assets outside the product folder
 - `A2 internal reference`
   Silver contract packaging dbt and Airflow assets inside the product folder
-- `B1 AI external reference`
+- `B1 AI external reference` *(staged for future release)*
   AI-created contract referencing dbt and Airflow assets elsewhere in Git
-- `B2 AI generated assets`
+- `B2 AI generated assets` *(staged for future release)*
   AI-created contract that generates dbt and Airflow assets in the workspace
 
-Do not rename these scenarios casually. The launchpads, validation matrix, and demo story rely on this shared language.
+Do not rename these scenarios casually. The launchpads, validation matrix, and demo story rely on this shared language. B1 / B2 are currently deferred — golden contracts and workspace scaffolds stay parked under `fluid/fixtures/forge-golden/` and `fluid/fixtures/workspaces/path-b-ai-telco-silver-import-demo/` for the Coming Soon release.
 
 ---
 

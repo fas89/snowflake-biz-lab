@@ -180,23 +180,20 @@ Important:
 
 Bring up the local Docker applications before opening any of the UI links below.
 
+`task launch` is the one-shot entrypoint — it runs `task up`, `task catalogs:up`, `task catalogs:bootstrap`, and a final `task preflight` health check (DMM API key validity, Docker bind-mount visibility, bronze catalog presence) with auto-heal where safe. Jenkins is a separate opt-in because not every scenario needs it.
+
 This block:
 
-- starts the core platform services
-- starts the local dbt docs UI
-- starts Jenkins (auto-provisions the `A1-external-reference`, `A2-internal-reference`, `B1-subscriber360-external` pipelines via CasC, each pointing at the matching Jenkinsfile in the `./gitlab/` workspaces inside the lab repo)
-- starts the catalog stack
-- completes the local Entropy bootstrap flow in the background
+- runs the one-shot `task launch` (core stack + catalog stack + Entropy bootstrap + preflight)
+- starts Jenkins (auto-provisions the `A1-external-reference` and `A2-internal-reference` pipelines via CasC, each pointing at the matching Jenkinsfile in the `./gitlab/` workspaces inside the lab repo; you may also see a `B1-subscriber360-external` pipeline auto-provisioned — it is staged for a future release)
 - shows the resulting container state
 
 ### Mac
 
 ```bash
 cd "$LAB_REPO"
-task up
+task launch
 task jenkins:up
-task catalogs:up
-task catalogs:bootstrap
 task ps
 ```
 
@@ -204,10 +201,21 @@ task ps
 
 ```powershell
 Set-Location $env:LAB_REPO
-task up
+task launch
 task jenkins:up
+task ps
+```
+
+If a launch step fails, rerun `task preflight` on its own — it reports which check (bind-mount / DMM key / bronze catalog) is still unhealthy and auto-heals the safe ones. See [Launchpad Recovery](launchpad-recovery.md) if preflight cannot self-heal.
+
+The legacy step-by-step form still works if you want to inspect each stage:
+
+```bash
+task up
 task catalogs:up
 task catalogs:bootstrap
+task preflight
+task jenkins:up
 task ps
 ```
 
@@ -215,7 +223,7 @@ task ps
 
 - Airflow: [http://localhost:8085](http://localhost:8085)
 - dbt docs: [http://localhost:8086](http://localhost:8086)
-- Jenkins: [http://localhost:8081](http://localhost:8081) — three pipelines are already listed on the dashboard; no manual job creation is needed
+- Jenkins: [http://localhost:8081](http://localhost:8081) — the `A1-external-reference` and `A2-internal-reference` pipelines are already listed on the dashboard; no manual job creation is needed. You may also see a `B1-subscriber360-external` pipeline — it is staged for a future release
 - Entropy / DMM: [http://localhost:8095](http://localhost:8095)
 - MailHog: [http://localhost:8026](http://localhost:8026)
 
@@ -246,7 +254,7 @@ Before you run this step, make sure `.env` already contains working Snowflake cr
 
 This block:
 
-- wipes `./gitlab/` and re-bootstraps the demo workspaces from tracked templates, so A1/A2/B1/B2 start from a clean state (no stale `Jenkinsfile`, forged contract, or generated dbt/airflow assets)
+- wipes `./gitlab/` and re-bootstraps the demo workspaces from tracked templates, so A1 and A2 start from a clean state (no stale `Jenkinsfile`, forged contract, or generated dbt/airflow assets). The staged B1/B2 workspace scaffolds are re-bootstrapped too so they stay ready for the Coming Soon release
 - drops the entire `SNOWFLAKE_DATABASE` so the rerun starts with no source tables or leftover demo schemas
 - regenerates the local telco seed files
 - loads the source-shaped telco data into `SNOWFLAKE_STAGE_SCHEMA`
@@ -302,8 +310,8 @@ After you finish the shared steps on this page, continue to exactly one of these
 
 Then use the matching workspace:
 
-- ready-made variants: `gitlab/path-a-telco-silver-product-demo/README.md`
-- AI variants: `gitlab/path-b-ai-telco-silver-import-demo/README.md`
+- ready-made variants (A1, A2): `gitlab/path-a-telco-silver-product-demo/README.md`
+- AI variants (B1, B2): `gitlab/path-b-ai-telco-silver-import-demo/README.md` *(staged for a future release — see Coming Soon in the launchpads)*
 
 ## Related Docs
 

@@ -72,35 +72,28 @@ cd variants/A1-external-reference
 fluid validate contract.fluid.yaml
 fluid plan contract.fluid.yaml --out runtime/plan.json --html
 open runtime/plan.html
-fluid apply contract.fluid.yaml --build dv2_subscriber360_reference_build --yes --report runtime/apply_report.html
+fluid apply contract.fluid.yaml --mode amend-and-build --build dv2_subscriber360_reference_build --yes --report runtime/apply_report.html
 fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
 git add .
 git commit -m "Refresh external-reference silver variant"
-fluid publish contract.fluid.yaml --catalog datamesh-manager
+fluid publish contract.fluid.yaml --target datamesh-manager
 ```
+
+`fluid apply --mode` is the stage-7 surface of the 11-stage pipeline; each
+variant that owns dbt assets uses `--mode amend-and-build --build <id>` so
+the schema evolves and the dbt build re-runs in one step. See
+[variant-playbook-mac.md — Apply Modes](variant-playbook-mac.md#apply-modes-11-stage-pipeline)
+for the full matrix, and
+[dev-source-launchpad-windows.md](dev-source-launchpad-windows.md) for the
+11-stage pipeline breakdown driven by `fluid generate ci --system jenkins`.
+`fluid publish --target <catalog>` replaces the older `--catalog` flag
+(still accepted one more release with a deprecation warning).
 
 Review the plan before apply with [Plan Verification Checklist](plan-verification-checklist.md).
 
 ## AI Workspace Flow
 
-```bash
-cd "$EXISTING_DBT_WORKSPACE"
-source .venv/bin/activate
-cd variants/B1-ai-reference-external
-cat ../../prompts/ai-reference-external.md
-fluid init subscriber360-external --provider snowflake --yes
-cd subscriber360-external
-fluid forge --provider snowflake --domain telco --target-dir .
-fluid validate contract.fluid.yaml
-fluid plan contract.fluid.yaml --out runtime/plan.json --html
-open runtime/plan.html
-BUILD_ID="$(python3 "$LAB_REPO/scripts/get_first_build_id.py" contract.fluid.yaml)"
-fluid apply contract.fluid.yaml --build "$BUILD_ID" --yes --report runtime/apply_report.html
-fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
-git add .
-git commit -m "Generate AI external-reference silver variant"
-fluid publish contract.fluid.yaml --catalog datamesh-manager
-```
+AI-forge scenarios **B1** and **B2** are staged for a future release. Golden contracts and workspace scaffolds already live under `fluid/fixtures/forge-golden/` and `fluid/fixtures/workspaces/path-b-ai-telco-silver-import-demo/`; the forge-cli gaps blocking them are tracked in [FLUID Gap Register](fluid-gap-register.md).
 
 ## Repo Runtime Checks
 
