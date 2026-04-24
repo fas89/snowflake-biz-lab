@@ -74,6 +74,7 @@ Validation:
 
 - Jenkins now lists `A1-external-reference`; it did not exist before `task jenkins:sync`
 - `task jenkins:build SCENARIO=A1` runs the controller build through Jenkins `buildWithParameters` and confirms the pipeline reads `variants/A1-external-reference/Jenkinsfile`
+- in the demo-release track, `task jenkins:sync` and `task jenkins:build` automatically carry the package resolved in `runtime/generated/demo-release.env`; do not add manual TestPyPI `--param` flags unless you are deliberately overriding the launchpad
 - the A1 Jenkins build should succeed and publish; generate the Jenkinsfile with `--no-verify-strict-default`, `--publish-stage-default`, and `--no-publish-include-env` so the file is emitted with the lab-tuned defaults directly
 - those A1 defaults are intentional because the shared Snowflake/dbt reference assets materialize nullable columns that `fluid verify --strict` would otherwise flag as constraint mismatches
 - Airflow now lists DAG `telco_subscriber360_reference`; it did not exist before the `schedule-sync` command
@@ -113,6 +114,7 @@ Validation:
 
 - Jenkins now lists `A2-internal-reference`; it did not exist before `task jenkins:sync`
 - `task jenkins:build SCENARIO=A2` runs the controller build through Jenkins `buildWithParameters` and confirms the pipeline reads `variants/A2-internal-reference/Jenkinsfile`
+- in the demo-release track, `task jenkins:sync` and `task jenkins:build` automatically carry the package resolved in `runtime/generated/demo-release.env`; do not add manual TestPyPI `--param` flags unless you are deliberately overriding the launchpad
 - the A2 Jenkins build should fail at stage `9 · verify` on `fluid verify ... --strict`; that failure is intentional in this lab and demonstrates the strict Snowflake contract gate on required vs nullable columns
 - Airflow now lists DAG `telco_subscriber360_internal`; it did not exist before the `schedule-sync` command
 - run `Set-Location $env:LAB_REPO; task dbt:docs:refresh SCENARIO=A2`, then confirm dbt docs shows `mart_subscriber360_core` and `mart_subscriber_health_scorecard`

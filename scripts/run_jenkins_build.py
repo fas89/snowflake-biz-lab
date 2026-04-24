@@ -13,6 +13,7 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
+from jenkins_param_defaults import has_install_overrides, jenkins_default_params
 from local_env_utils import parse_env_file
 from local_url_utils import validate_local_http_url
 
@@ -20,6 +21,7 @@ from local_url_utils import validate_local_http_url
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ENV_FILE = REPO_ROOT / ".env"
 JENKINS_ENV_FILE = REPO_ROOT / ".env.jenkins"
+DEMO_RELEASE_ENV_FILE = REPO_ROOT / "runtime/generated/demo-release.env"
 
 
 @dataclass(frozen=True)
@@ -45,6 +47,7 @@ SCENARIOS: dict[str, ScenarioConfig] = {
 
 def load_env() -> dict[str, str]:
     merged = parse_env_file(ENV_FILE)
+    merged.update(parse_env_file(DEMO_RELEASE_ENV_FILE))
     merged.update(parse_env_file(JENKINS_ENV_FILE))
     merged.update({key: value for key, value in os.environ.items() if value})
     return merged
@@ -204,8 +207,9 @@ def main() -> None:
             f"Jenkins job {scenario.job_name!r} does not exist yet. Run `task jenkins:sync SCENARIO={scenario.scenario}` first."
         )
 
-    params = dict(scenario.default_params)
-    params.update(parse_params(args.param))
+    user_params = parse_params(args.param)
+    params = jenkins_default_params(env, scenario.default_params)
+    params.update(user_params)
 
     print(f"Triggering parameterized Jenkins build for scenario {scenario.scenario}")
     print(f"Jenkins URL: {jenkins_url}")
@@ -258,6 +262,15 @@ def main() -> None:
     except urllib.error.HTTPError as exc:
         if not (bootstrap_fallback and exc.code == 400 and build_endpoint == "buildWithParameters"):
             raise
+        if user_params or has_install_overrides(params):
+            required = ", ".join(sorted(params))
+            raise RuntimeError(
+                "Jenkins rejected buildWithParameters before parameter metadata was visible, "
+                "and this build has required parameter overrides. Refusing to fall back to "
+                f"/build because that would drop: {required}. Run `task jenkins:sync "
+                f"SCENARIO={scenario.scenario}` again so the lab bootstrap parameters are "
+                "seeded, then rerun the build."
+            ) from exc
         print(
             "Jenkins rejected buildWithParameters before parameter metadata was visible; retrying the bootstrap controller run via /build."
         )

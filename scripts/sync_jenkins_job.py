@@ -11,7 +11,9 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from textwrap import dedent
+from xml.sax.saxutils import escape
 
+from jenkins_param_defaults import jenkins_default_params
 from local_env_utils import parse_env_file
 from local_url_utils import validate_local_http_url
 
@@ -19,6 +21,7 @@ from local_url_utils import validate_local_http_url
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ENV_FILE = REPO_ROOT / ".env"
 JENKINS_ENV_FILE = REPO_ROOT / ".env.jenkins"
+DEMO_RELEASE_ENV_FILE = REPO_ROOT / "runtime/generated/demo-release.env"
 
 
 @dataclass(frozen=True)
@@ -27,6 +30,7 @@ class ScenarioConfig:
     job_name: str
     script_path: str
     description: str
+    default_params: tuple[tuple[str, str], ...] = (("PUBLISH_TARGETS", "datamesh-manager"),)
 
 
 SCENARIOS: dict[str, ScenarioConfig] = {
@@ -49,6 +53,7 @@ CONTAINER_REPO_URL = "/workspace/gitlab/path-a-telco-silver-product-demo/.git"
 
 def load_env() -> dict[str, str]:
     merged = parse_env_file(ENV_FILE)
+    merged.update(parse_env_file(DEMO_RELEASE_ENV_FILE))
     merged.update(parse_env_file(JENKINS_ENV_FILE))
     merged.update({key: value for key, value in os.environ.items() if value})
     return merged
@@ -130,23 +135,72 @@ def job_exists(
         raise
 
 
-def build_job_config(scenario: ScenarioConfig) -> bytes:
+PARAMETER_DESCRIPTIONS = {
+    "PUBLISH_TARGETS": "Stage 10 publish targets. The lab defaults to datamesh-manager.",
+    "FLUID_PACKAGE_SPEC": "Package spec Jenkins installs in pypi mode.",
+    "FLUID_PIP_INDEX_URL": "Primary pip index used by the Jenkins setup stage.",
+    "FLUID_PIP_EXTRA_INDEX_URL": "Fallback pip index used by the Jenkins setup stage.",
+    "FLUID_ALLOW_PRERELEASE": "Whether Jenkins passes pip --pre in the setup stage.",
+}
+
+
+def render_parameter_definitions(params: dict[str, str]) -> str:
+    lines: list[str] = []
+    for name, value in params.items():
+        description = escape(PARAMETER_DESCRIPTIONS.get(name, name))
+        if name == "FLUID_ALLOW_PRERELEASE":
+            default = "true" if value.lower() in {"1", "true", "yes", "on"} else "false"
+            lines.append(
+                dedent(
+                    f"""\
+                    <hudson.model.BooleanParameterDefinition>
+                      <name>{escape(name)}</name>
+                      <description>{description}</description>
+                      <defaultValue>{default}</defaultValue>
+                    </hudson.model.BooleanParameterDefinition>
+                    """
+                ).rstrip()
+            )
+        else:
+            lines.append(
+                dedent(
+                    f"""\
+                    <hudson.model.StringParameterDefinition>
+                      <name>{escape(name)}</name>
+                      <description>{description}</description>
+                      <defaultValue>{escape(value)}</defaultValue>
+                      <trim>false</trim>
+                    </hudson.model.StringParameterDefinition>
+                    """
+                ).rstrip()
+            )
+    return "\n".join("        " + line for line in "\n".join(lines).splitlines())
+
+
+def build_job_config(scenario: ScenarioConfig, bootstrap_params: dict[str, str]) -> bytes:
+    parameter_definitions = render_parameter_definitions(bootstrap_params)
     xml = dedent(
         f"""\
         <?xml version="1.0" encoding="UTF-8"?>
         <flow-definition>
           <actions/>
-          <description>{scenario.description}</description>
+          <description>{escape(scenario.description)}</description>
           <keepDependencies>false</keepDependencies>
-          <properties/>
+          <properties>
+            <hudson.model.ParametersDefinitionProperty>
+              <parameterDefinitions>
+{parameter_definitions}
+              </parameterDefinitions>
+            </hudson.model.ParametersDefinitionProperty>
+          </properties>
           <triggers/>
           <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition">
-            <scriptPath>{scenario.script_path}</scriptPath>
+            <scriptPath>{escape(scenario.script_path)}</scriptPath>
             <lightweight>false</lightweight>
             <scm class="hudson.plugins.git.GitSCM">
               <userRemoteConfigs>
                 <hudson.plugins.git.UserRemoteConfig>
-                  <url>{CONTAINER_REPO_URL}</url>
+                  <url>{escape(CONTAINER_REPO_URL)}</url>
                 </hudson.plugins.git.UserRemoteConfig>
               </userRemoteConfigs>
               <branches>
@@ -230,8 +284,13 @@ def main() -> None:
     print(f"Validated host repo: {repo_root}")
     print(f"Validated host Jenkinsfile: {host_script_path}")
 
+    bootstrap_params = jenkins_default_params(env, scenario.default_params)
+    print("Bootstrap build parameters:")
+    for key, value in bootstrap_params.items():
+        print(f"  - {key}={value}")
+
     crumb_headers = fetch_crumb(opener, jenkins_url, jenkins_user, jenkins_password)
-    config_xml = build_job_config(scenario)
+    config_xml = build_job_config(scenario, bootstrap_params)
     exists = job_exists(opener, jenkins_url, jenkins_user, jenkins_password, scenario.job_name)
 
     if exists:

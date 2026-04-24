@@ -58,6 +58,8 @@ task jenkins:sync SCENARIO=A1
 task jenkins:build SCENARIO=A1
 ```
 
+In the demo-release track, `task jenkins:sync` and `task jenkins:build` read `runtime/generated/demo-release.env`, so Jenkins uses the same resolved TestPyPI package as your local `fluid` command without extra `--param` flags.
+
 ## Related Docs
 
 - [Launchpad Common](launchpad-common.md)
