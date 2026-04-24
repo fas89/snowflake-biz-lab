@@ -11,10 +11,10 @@ They are related, but they are not the same number.
 
 ## What This Repo Pins Today
 
-- Demo-release package: **latest** `data-product-forge` release from **TestPyPI**, **including pre-release alphas** (e.g. `0.8.0a1`). This is the source of truth the demo validates against.
+- Demo-release package: the **latest** `data-product-forge` release published on **TestPyPI**, resolved dynamically at install time. This is the source of truth the demo validates against.
 - Repo contract schema: `fluidVersion: 0.7.2`
 
-The launchpad install block passes `--pre` so `pip` picks up alpha/beta releases from TestPyPI. Drop `--pre` to stay on stable-only releases, or drop both `--pre` and `--index-url` to fall back to the stable PyPI release.
+The launchpad first queries TestPyPI for the newest `data-product-forge` version, then installs that exact version with PyPI as the primary index and TestPyPI as the extra index. That keeps the FLUID package on the newest TestPyPI release without pulling prerelease transitive dependencies like `httpx` or `dbt-core`.
 
 ## Why The Numbers Are Different
 

@@ -45,7 +45,7 @@ Run this from the selected variant folder:
 2. `fluid plan contract.fluid.yaml --out runtime/plan.json --html`
 3. verify the plan against [Plan Verification Checklist](docs/plan-verification-checklist.md)
 4. `fluid apply contract.fluid.yaml --build <build-id> --yes`
-5. `fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile`
+5. `fluid generate ci contract.fluid.yaml --system jenkins --default-publish-target datamesh-manager --out Jenkinsfile`
 6. commit and push the repo
 7. let Jenkins pick up the generated `Jenkinsfile` from SCM
 8. `fluid publish contract.fluid.yaml --catalog datamesh-manager`

@@ -53,8 +53,17 @@ def clean_lab_repo(lab_repo: Path) -> None:
 def rebootstrap_workspaces(lab_repo: Path) -> None:
     gitlab_dir = lab_repo / "gitlab"
     if gitlab_dir.exists():
-        shutil.rmtree(gitlab_dir)
-        print(f"Removed {gitlab_dir}")
+        try:
+            shutil.rmtree(gitlab_dir)
+            print(f"Removed {gitlab_dir}")
+        except PermissionError:
+            # Some local macOS setups keep the top-level gitlab/ directory
+            # entry locked down by extended attributes even though its contents
+            # are writable. Clearing the children is enough for a clean
+            # rebootstrap because bootstrap_workspaces.py recreates the
+            # expected repo directories underneath this root.
+            clear_directory(gitlab_dir)
+            print(f"Cleared contents under {gitlab_dir}")
     bootstrap = lab_repo / "scripts" / "bootstrap_workspaces.py"
     subprocess.run(
         [sys.executable, str(bootstrap), "--dest", str(gitlab_dir)],

@@ -124,7 +124,7 @@ Checkpoint:
 
 ```bash
 fluid generate schedule contract.fluid.yaml --scheduler airflow -o generated/airflow --overwrite
-fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
+fluid generate ci contract.fluid.yaml --system jenkins --default-publish-target datamesh-manager --out Jenkinsfile
 ```
 
 Checkpoint:

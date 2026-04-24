@@ -18,7 +18,7 @@ If the plan looks correct:
 
 ```bash
 fluid apply contract.fluid.yaml --build dv2_subscriber360_reference_build --yes
-fluid generate ci contract.fluid.yaml --system jenkins --out Jenkinsfile
+fluid generate ci contract.fluid.yaml --system jenkins --default-publish-target datamesh-manager --out Jenkinsfile
 git add .
 git commit -m "Update external-reference silver variant"
 git push

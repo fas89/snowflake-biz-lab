@@ -30,20 +30,28 @@ tasks:
     cmd: "{{.COMPOSE}} logs -f {{.SVC | default \"\"}}"
 
   fluid:bootstrap:demo:
-    # Installs the LATEST data-product-forge release from TestPyPI by design,
-    # including pre-release alphas (the `--pre` flag). TestPyPI carries release
-    # candidates (e.g. 0.8.0a1) before they're promoted to stable PyPI, so this
-    # task demos what is about to ship. PyPI is only a fallback for transitive
-    # deps.
+    # Installs the latest data-product-forge release published on TestPyPI by
+    # resolving the current top version first, then installing that exact
+    # package version with PyPI as the primary index. That keeps the FLUID
+    # package on the newest release candidate while avoiding prerelease drift in
+    # transitive dependencies like httpx / dbt-core.
     #
-    # To pin a version: `FLUID_DEMO_PACKAGE_SPEC='data-product-forge==X.Y.Z' task fluid:bootstrap:demo`
-    # To stay on stable-only releases: remove `--pre` from the install command below.
+    # To pin a version: `FLUID_DEMO_PACKAGE_SPEC='data-product-forge[snowflake]==X.Y.Z' task fluid:bootstrap:demo`
     # To swap to stable PyPI: `FLUID_TESTPYPI_SIMPLE_URL=https://pypi.org/simple/ task fluid:bootstrap:demo`
-    desc: Create the demo-release FLUID runtime from the latest TestPyPI release (includes pre-release alphas)
+    desc: Create the demo-release FLUID runtime from the latest TestPyPI release
     cmds:
       - python3 -m venv {{.FLUID_DEMO_VENV}}
       - "{{.FLUID_DEMO_VENV}}/bin/pip install --upgrade pip"
-      - "{{.FLUID_DEMO_VENV}}/bin/pip install --pre --index-url \"${FLUID_TESTPYPI_SIMPLE_URL:-https://test.pypi.org/simple/}\" --extra-index-url \"${FLUID_PYPI_FALLBACK_URL:-https://pypi.org/simple/}\" \"${FLUID_DEMO_PACKAGE_SPEC:-data-product-forge}\""
+      - |
+        DEMO_SPEC="${FLUID_DEMO_PACKAGE_SPEC:-data-product-forge[snowflake]}"
+        if printf '%s' "$DEMO_SPEC" | grep -Eq '(==|>=|<=|~=|>|<)'; then
+          INSTALL_SPEC="$DEMO_SPEC"
+        else
+          LATEST_TESTPYPI_VERSION="$("{{.FLUID_DEMO_VENV}}/bin/python" -m pip index versions --pre --index-url "${FLUID_TESTPYPI_SIMPLE_URL:-https://test.pypi.org/simple/}" data-product-forge | sed -n 's/^data-product-forge (\([^)]*\)).*/\1/p' | head -n1)"
+          INSTALL_SPEC="${DEMO_SPEC}==${LATEST_TESTPYPI_VERSION}"
+          printf 'Resolved latest TestPyPI data-product-forge release: %s\n' "$INSTALL_SPEC"
+        fi
+        "{{.FLUID_DEMO_VENV}}/bin/pip" install --index-url "${FLUID_PYPI_FALLBACK_URL:-https://pypi.org/simple/}" --extra-index-url "${FLUID_TESTPYPI_SIMPLE_URL:-https://test.pypi.org/simple/}" "$INSTALL_SPEC"
 
   fluid:bootstrap:dev:
     desc: Create the dev-source FLUID runtime from the sibling forge-cli checkout
@@ -127,6 +135,14 @@ tasks:
   jenkins:down:
     desc: Stop Jenkins only
     cmd: "{{.COMPOSE}} --profile jenkins stop jenkins"
+
+  jenkins:sync:
+    desc: Create or update the Jenkins Pipeline-from-SCM job for scenario A1 or A2
+    cmd: "python3 scripts/sync_jenkins_job.py --scenario \"{{.SCENARIO}}\""
+
+  jenkins:build:
+    desc: Trigger the Jenkins Pipeline build for scenario A1 or A2 via buildWithParameters
+    cmd: "python3 scripts/run_jenkins_build.py --scenario \"{{.SCENARIO}}\" {{.CLI_ARGS}}"
 
   catalogs:up:
     desc: Start the local Entropy Data CE stack

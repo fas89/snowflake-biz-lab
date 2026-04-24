@@ -1,46 +1,37 @@
 # Snowflake Telco Lab
 
-Snowflake-first telco lab for staged TM Forum SID-style seed data, Horizon metadata, local platform services, and a full FLUID demo you can run from your Mac.
+Snowflake-first telco lab for staged TM Forum SID-style seed data, local platform services, and a FLUID walkthrough that starts empty and becomes visible step by step.
 
 ## Start Here
 
-- Contributor and AI-agent guide: [AGENTS.md](AGENTS.md)
-- Shared setup and reset: [Launchpad Common](docs/launchpad-common.md)
-- First-time setup and repo orientation: [Getting Started](docs/getting-started.md)
-- Path A workspace (reference-mapped silver) lives in `./gitlab/path-a-telco-silver-product-demo` (gitignored; bootstrapped from `fluid/fixtures/workspaces/` via `task workspaces:bootstrap`)
-- Path B workspace (AI-forged silver) lives in `./gitlab/path-b-ai-telco-silver-import-demo` (same model)
-- FLUID work to implement later: [FLUID Gap Register](docs/fluid-gap-register.md)
-- Version explanation: [CLI Version vs `fluidVersion`](docs/fluid-versions.md)
-
-After `Launchpad Common`, choose one uninterrupted operator path:
-
-- Mac final demo: [docs/demo-release-launchpad-mac.md](docs/demo-release-launchpad-mac.md)
-- Windows final demo: [docs/demo-release-launchpad-windows.md](docs/demo-release-launchpad-windows.md)
-- Mac editable source: [docs/dev-source-launchpad-mac.md](docs/dev-source-launchpad-mac.md)
-- Windows editable source: [docs/dev-source-launchpad-windows.md](docs/dev-source-launchpad-windows.md)
+1. [Launchpad Common](docs/launchpad-common.md) for the first-run quickstart, clean-start commands, local logins, and platform bring-up.
+2. Pick one track:
+   - [Demo Release Launchpad (Mac)](docs/demo-release-launchpad-mac.md)
+   - [Demo Release Launchpad (Windows)](docs/demo-release-launchpad-windows.md)
+   - [Dev Source Launchpad (Mac)](docs/dev-source-launchpad-mac.md)
+   - [Dev Source Launchpad (Windows)](docs/dev-source-launchpad-windows.md)
+3. Run Bronze, A1, and A2 from the matching variant playbook:
+   - [Variant Playbook (Mac)](docs/variant-playbook-mac.md)
+   - [Variant Playbook (Windows)](docs/variant-playbook-windows.md)
 
 ## What This Repo Gives You
 
 - Deterministic telco seed data shaped around a practical TM Forum SID-style model
-- Snowflake landing-table loaders and Horizon metadata scaffolding
-- Dockerized Airflow, dbt-runner, dbt docs UI, Jenkins, and Entropy Data CE platform setup
-- FLUID prep for two tracks:
-  - `dev-source`: install from the sibling `../forge-cli` checkout for fast upstream fixes
-  - `demo-release`: install the latest `data-product-forge` release from TestPyPI
-- Friendly Markdown docs written for operators, presenters, and newcomers
+- Dockerized Airflow, dbt-runner, dbt docs UI, Jenkins, and local Entropy / DMM
+- FLUID-ready demo workspaces bootstrapped into `./gitlab/` from tracked templates
+- Two supported tracks:
+  - `demo-release` for the released `data-product-forge` package
+  - `dev-source` for an editable sibling `../forge-cli` checkout
 
-## The Main Operator Flow
+## First-Run Expectation
 
-1. Copy `.env` files and run `task workspaces:bootstrap` to materialize the demo GitLab workspaces under `./gitlab/` from the tracked templates.
-2. Start local apps from this repo: Airflow, dbt-runner, Jenkins, and Entropy Data CE, then run `task catalogs:bootstrap` so the local Entropy login and `DMM_API_KEY` are ready.
-3. Seed Snowflake staging and apply Horizon metadata from this repo.
-4. Move into a demo workspace under `./gitlab/` and install `data-product-forge`.
-5. Run the silver demo variants through `fluid validate`, `fluid plan`, explicit plan verification, `fluid apply --build`, `fluid generate ci`, local commit, Jenkins SCM pickup from the mounted workspace, and `fluid publish`.
+The quickstart now treats "from zero" literally:
 
-The quickest way to run that sequence is:
-
-1. [Launchpad Common](docs/launchpad-common.md)
-2. [Demo Release Launchpad (Mac)](docs/demo-release-launchpad-mac.md) or [Demo Release Launchpad (Windows)](docs/demo-release-launchpad-windows.md)
+- Jenkins starts with no scenario jobs
+- Airflow starts with no scenario DAGs
+- DMM is ready to log into
+- A1 and A2 only appear in Jenkins after `task jenkins:sync`
+- A1 and A2 only appear in Airflow after the native `fluid generate artifacts` and `fluid schedule-sync` commands
 
 ## Local URLs
 
@@ -53,32 +44,24 @@ The quickest way to run that sequence is:
 ## Repo Map
 
 ```text
-airflow/              Airflow scaffold plus a workspace-mounted DAG bridge
+airflow/              Repo-owned Airflow DAG tree plus the active DAG destination
 config/dbt/           Existing dbt profile configuration for Snowflake
-dbt/                  Existing staging-only dbt project, unchanged in this phase
+dbt/                  Existing staging-only dbt project
 deploy/docker/        Docker Compose stacks for Airflow, dbt-runner, Jenkins, and catalogs
-docs/                 Operator docs, setup guides, launchpad, and troubleshooting
-fluid/                FLUID contracts, demo runbooks, prompts, fixtures, runtime helpers, and reports
-fluid/fixtures/workspaces/  Tracked templates that `task workspaces:bootstrap` copies into ./gitlab/
-gitlab/               Bootstrapped demo workspaces (gitignored; created from the templates above)
-governance/           Horizon metadata manifest, SQL rendering, verification, and DMM mapping
-runtime/              Ignored local runtime assets like env files and demo wheels
+docs/                 Quickstarts, playbooks, recovery, and supporting references
+fluid/                FLUID contracts, fixtures, prompts, runtime helpers, and reports
+fluid/fixtures/workspaces/  Tracked templates copied into ./gitlab/ by task workspaces:bootstrap
+gitlab/               Bootstrapped demo workspaces (gitignored)
+governance/           Horizon metadata rendering, apply, and verification
+runtime/              Ignored local runtime assets like env files and docs output
 seed/                 Synthetic telco data generation plus Snowflake loading and verification
 ```
 
-## Important Boundaries
-
-- No FLUID coverage harness yet
-- No FLUID scenario matrix yet
-- No checked-in Airflow DAG Python files yet
-- No dbt project changes in this phase
-- No `forge-cli` changes are made in this repo; gaps are documented instead
-
 ## Need Help?
 
-- Shared setup and reset: [docs/launchpad-common.md](docs/launchpad-common.md)
-- Final demo paths: [docs/demo-release-launchpad-mac.md](docs/demo-release-launchpad-mac.md) and [docs/demo-release-launchpad-windows.md](docs/demo-release-launchpad-windows.md)
-- Source-backed paths: [docs/dev-source-launchpad-mac.md](docs/dev-source-launchpad-mac.md) and [docs/dev-source-launchpad-windows.md](docs/dev-source-launchpad-windows.md)
-- Exact commands this repo promotes: [docs/command-reference.md](docs/command-reference.md)
-- Credentials and runtime secret handling: [docs/credentials.md](docs/credentials.md)
-- Common setup issues: [docs/troubleshooting.md](docs/troubleshooting.md)
+- [Launchpad Common](docs/launchpad-common.md)
+- [Launchpad Recovery](docs/launchpad-recovery.md)
+- [Credentials](docs/credentials.md)
+- [Scenario Validation Matrix](docs/scenario-validation-matrix.md)
+- [Jenkins SCM Handoff](docs/jenkins-scm-handoff.md)
+- [FLUID Gap Register](docs/fluid-gap-register.md)
