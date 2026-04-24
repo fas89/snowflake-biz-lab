@@ -11,6 +11,11 @@ The fastest way into this repo is:
 
 This page is the short orientation tour.
 
+New to the jargon? Skim [Glossary](glossary.md) first — one page that defines
+FLUID, ODCS, OPDS, ODPS-Bitol, DMM, Horizon, the 11-stage pipeline, the
+Bronze / A1 / A2 / B1 / B2 scenarios, and the terms used throughout the
+launchpads (bundle, plan, apply, expose, umbrella, provider hint, …).
+
 If you are using an AI coding agent or copilot in this repo, read [../AGENTS.md](../AGENTS.md) before making changes. It captures the repo-wide rules for FLUID limitations, launchpads, scenario vocabulary, and safe mutation.
 
 ## What You Need

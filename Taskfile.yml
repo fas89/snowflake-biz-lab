@@ -136,6 +136,55 @@ tasks:
     desc: Complete the local Entropy signup flow and refresh DMM_API_KEY
     cmd: "python3 scripts/bootstrap_entropy_local.py --catalog-env-file .env.catalogs --fluid-secrets-file runtime/generated/fluid.local.env"
 
+  preflight:
+    desc: Health-check the lab stack (DMM key, bind-mounts, bronze contracts). Auto-heals where safe.
+    cmd: "python3 scripts/preflight.py"
+
+  launch:
+    desc: One-shot bring-up — core stack + catalogs + bootstrap + preflight
+    cmds:
+      - task: up
+      - task: catalogs:up
+      - task: catalogs:bootstrap
+      - task: preflight
+
+  publish:bronze:
+    # Self-contained: exports FLUID_SECRETS_FILE and sources the secrets inline
+    # so this task works whether or not the operator has sourced
+    # `runtime/generated/launchpad.local.sh` first.
+    #
+    # Why both? forge-cli's `hydrate_dotenv` loads project `.env` with
+    # override=True (see fluid_build/credentials/dotenv_store.py). The lab's
+    # `.env` carries empty `DMM_API_KEY=` as a placeholder, so without
+    # FLUID_SECRETS_FILE being set, the shell's sourced DMM_API_KEY gets
+    # clobbered to empty and publish fails with the misleading
+    # "Catalog health check failed - endpoint not accessible". Exporting
+    # FLUID_SECRETS_FILE lets hydrate_dotenv restore the correct value after
+    # the .env clobber. Tracked upstream: see docs/fluid-gap-register.md.
+    desc: Publish the three bronze contracts (party/usage/billing) to DMM so A1/A2 input-port lineage resolves
+    vars:
+      FLUID_BIN: '{{.FLUID_BIN | default "./.venv.fluid-dev/bin/fluid"}}'
+      SECRETS_FILE: runtime/generated/fluid.local.env
+    cmds:
+      - |
+        if [ ! -f "{{.SECRETS_FILE}}" ]; then
+          echo "{{.SECRETS_FILE}} not found — run \`task launch\` first" >&2
+          exit 1
+        fi
+        if [ ! -x "{{.FLUID_BIN}}" ]; then
+          echo "fluid CLI not found at {{.FLUID_BIN}} — run \`task fluid:bootstrap:dev\` (or pass FLUID_BIN=./.venv.fluid-demo/bin/fluid)" >&2
+          exit 1
+        fi
+        export FLUID_SECRETS_FILE="$(pwd)/{{.SECRETS_FILE}}"
+        set -a
+        . "{{.SECRETS_FILE}}"
+        set +a
+        for domain in billing party usage; do
+          contract="fluid/contracts/telco_seed_${domain}/contract.fluid.yaml"
+          echo "→ publishing bronze.telco.${domain}_v1"
+          "{{.FLUID_BIN}}" publish "$contract" --target datamesh-manager
+        done
+
   catalogs:down:
     desc: Stop the local Entropy Data CE stack without deleting local catalog data
     cmd: "{{.CATALOGS_COMPOSE}} down"

@@ -13,8 +13,7 @@ The goal is simple: confirm that each scenario ends with the expected assets vis
 | Bronze (usage) | Upstream lineage anchor only | `snowflake-biz-lab/fluid/contracts/telco_seed_usage/contract.fluid.yaml` | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | Source exposes only — published as `bronze.telco.usage_v1` |
 | A1 | External-reference silver contract | `gitlab/path-a-telco-silver-product-demo/variants/A1-external-reference/contract.fluid.yaml` | `dv2_subscriber360_reference_build` | `gitlab/path-a-telco-silver-product-demo/reference-assets/dbt_dv2_subscriber360` | `gitlab/path-a-telco-silver-product-demo/reference-assets/airflow_subscriber360/dags/telco_subscriber360_pipeline.py` | `telco_subscriber360_reference` | `gitlab/path-a-telco-silver-product-demo/variants/A1-external-reference/Jenkinsfile` | `subscriber360_core`, `subscriber_health_scorecard` |
 | A2 | Internal-reference silver contract | `gitlab/path-a-telco-silver-product-demo/variants/A2-internal-reference/contract.fluid.yaml` | `dv2_subscriber360_internal_build` | `gitlab/path-a-telco-silver-product-demo/variants/A2-internal-reference/dbt_dv2_subscriber360` | `gitlab/path-a-telco-silver-product-demo/variants/A2-internal-reference/airflow_subscriber360/dags/telco_subscriber360_pipeline.py` | `telco_subscriber360_internal` | `gitlab/path-a-telco-silver-product-demo/variants/A2-internal-reference/Jenkinsfile` | `subscriber360_core`, `subscriber_health_scorecard` |
-| B1 | AI forge with external references | `gitlab/path-b-ai-telco-silver-import-demo/variants/B1-ai-reference-external/subscriber360-external/contract.fluid.yaml` | Inspect generated `contract.fluid.yaml` under `builds:` | `gitlab/path-a-telco-silver-product-demo/reference-assets/dbt_dv2_subscriber360` | `gitlab/path-a-telco-silver-product-demo/reference-assets/airflow_subscriber360/dags/telco_subscriber360_pipeline.py` | `telco_subscriber360_reference` | `gitlab/path-b-ai-telco-silver-import-demo/variants/B1-ai-reference-external/subscriber360-external/Jenkinsfile` | `subscriber360_core`, `subscriber_health_scorecard` |
-| B2 | AI forge with generated assets | `gitlab/path-b-ai-telco-silver-import-demo/variants/B2-ai-generate-in-workspace/subscriber360-generated/contract.fluid.yaml` | Inspect generated `contract.fluid.yaml` under `builds:` | `gitlab/path-b-ai-telco-silver-import-demo/variants/B2-ai-generate-in-workspace/subscriber360-generated/generated/dbt` | `gitlab/path-b-ai-telco-silver-import-demo/variants/B2-ai-generate-in-workspace/subscriber360-generated/generated/airflow` | Derived from generated `contract.fluid.yaml` ID with non-alphanumeric characters normalized to `_` | `gitlab/path-b-ai-telco-silver-import-demo/variants/B2-ai-generate-in-workspace/subscriber360-generated/Jenkinsfile` | `subscriber360_core`, `subscriber_health_scorecard` |
+| B1 / B2 | *Staged for future release — AI-forge variants. See Coming Soon in the track launchpads.* | — | — | — | — | — | — | — |
 
 ## dbt UI Refresh
 
@@ -23,8 +22,6 @@ Refresh the local dbt docs site for the scenario you are validating:
 ```bash
 task dbt:docs:refresh SCENARIO=A1
 task dbt:docs:refresh SCENARIO=A2
-task dbt:docs:refresh SCENARIO=B1
-task dbt:docs:refresh SCENARIO=B2
 ```
 
 Then open:

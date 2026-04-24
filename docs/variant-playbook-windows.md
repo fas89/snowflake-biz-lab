@@ -1,16 +1,18 @@
 # Variant Playbook (Windows)
 
-Shared Bronze / A1 / A2 / B1 / B2 commands for both the demo-release and dev-source tracks on Windows. The track launchpad sets up the FLUID runtime and the `$env:FLUID_CLI` variable; this playbook runs the variants.
+Shared Bronze / A1 / A2 commands for both the demo-release and dev-source tracks on Windows. The track launchpad sets up the FLUID runtime and the `$env:FLUID_CLI` variable; this playbook runs the variants.
+
+AI-forge scenarios **B1** and **B2** are staged for a future release — see [Coming Soon](#coming-soon--ai-forge-variants-b1-b2).
 
 ## Before You Start
 
 Your track launchpad must have already:
 
-- bootstrapped a FLUID runtime (venv in each workspace for demo-release; a single lab-level venv for dev-source)
-- set `$env:FLUID_CLI` — either `"fluid"` (demo-release, with the active workspace venv on `PATH`) or `$env:FLUID_DEV_BIN` (dev-source)
-- loaded `$env:LAB_REPO`, `$env:GREENFIELD_WORKSPACE`, `$env:EXISTING_DBT_WORKSPACE`, `$env:FLUID_SECRETS_FILE`
+- bootstrapped a FLUID runtime (Workspace A venv for demo-release; a single lab-level venv for dev-source)
+- set `$env:FLUID_CLI` — either `"fluid"` (demo-release, with the Workspace A venv on `PATH`) or `$env:FLUID_DEV_BIN` (dev-source)
+- loaded `$env:LAB_REPO`, `$env:GREENFIELD_WORKSPACE`, `$env:FLUID_SECRETS_FILE`
 
-If you need to re-activate a demo-release workspace venv between variant groups, `. "$env:GREENFIELD_WORKSPACE\.venv\Scripts\Activate.ps1"` for A1/A2 or `. "$env:EXISTING_DBT_WORKSPACE\.venv\Scripts\Activate.ps1"` for B1/B2. Dev-source uses a single `$env:FLUID_DEV_BIN` across all variants.
+If a new shell loses the demo-release venv between runs, re-activate with `. "$env:GREENFIELD_WORKSPACE\.venv\Scripts\Activate.ps1"` before A1 or A2. Dev-source uses a single `$env:FLUID_DEV_BIN` across all variants.
 
 ## Mandatory Plan Verification Gate
 
@@ -46,23 +48,17 @@ Destructive modes (`replace*`) require `--allow-data-loss` when `FLUID_ENV != de
 - **Bronze** — upstream lineage anchor, three contracts: `telco_seed_billing`, `telco_seed_party`, `telco_seed_usage`
 - **A1** — external-reference silver contract
 - **A2** — internal-reference silver contract
-- **B1** — AI forge with external references
-- **B2** — AI forge with generated assets
 
 ### Install-Mode Partition (Jenkins CI surface)
 
-Each variant's generated `Jenkinsfile` is pinned to one of two install modes — chosen when you run `fluid generate ci`. This determines how the Jenkins container installs `fluid` at build time:
+Each variant's generated `Jenkinsfile` is pinned to one install mode — chosen when you run `fluid generate ci`. This determines how the Jenkins container installs `fluid` at build time:
 
 | Variant | `--install-mode` | Where Jenkins gets `fluid` | Demo track |
 |---|---|---|---|
 | **A1** | `dev-source` | Bind-mounted `/forge-cli-src` in the Jenkins container (see [dev-source-launchpad-windows.md](dev-source-launchpad-windows.md)) | lab iteration — contributors testing forge-cli changes against real A1 contract |
 | **A2** | `dev-source` | Same bind mount as A1 | lab iteration |
-| **B1** | `pypi` | `pip install data-product-forge` from **TestPyPI** via Jenkins build-params (`FLUID_PIP_INDEX_URL=https://test.pypi.org/simple/`, `FLUID_ALLOW_PRERELEASE=true`) | demo-release showcase — pre-release pilot track |
-| **B2** | `pypi` | `pip install data-product-forge` from stable PyPI. Zero overrides. | production — what a customer team actually ships |
 
 Bronze contracts (`telco_seed_*`) don't publish Jenkinsfiles today; they're published to the catalog directly via `fluid publish` without a CI step.
-
-The `pypi` vs `dev-source` choice is part of `fluid generate ci --install-mode` — it lives in the Jenkinsfile itself. TestPyPI is NOT a separate mode; it's a **build-time override** inside `pypi` mode, exposed as Jenkins UI parameters (`FLUID_PIP_INDEX_URL`, `FLUID_PIP_EXTRA_INDEX_URL`, `FLUID_ALLOW_PRERELEASE`, `FLUID_PACKAGE_SPEC`). B1 demos flip those; B2 leaves them at their production defaults.
 
 Use [Scenario Validation Matrix](scenario-validation-matrix.md) for the exact contract paths, dbt roots, DAG paths, DAG IDs, Jenkinsfile paths, and expose names.
 
@@ -156,122 +152,21 @@ Validation:
 - open Jenkins at [http://localhost:8081](http://localhost:8081), open the `A2-internal-reference` pipeline, click **Build Now**, and confirm the run reads `variants/A2-internal-reference/Jenkinsfile` and completes the generated stages
 - open the DMM marketplace at [http://localhost:8095](http://localhost:8095) and confirm the A2 silver data product with its `subscriber360_core` and `subscriber_health_scorecard` exposes appears under the telco domain
 
-## Workspace B: AI Variants
+## Coming Soon — AI Forge Variants (B1, B2)
 
-Demo-release only — activate Workspace B's venv before running B1 or B2:
+Two additional scenarios are staged for a future release of this lab:
 
-```powershell
-. "$env:EXISTING_DBT_WORKSPACE\.venv\Scripts\Activate.ps1"
-```
+- **B1** — AI forge with external references (references existing dbt/Airflow assets)
+- **B2** — AI forge with generated assets (generates dbt/Airflow assets in-workspace)
 
-The AI-created workspaces are expected to land here:
-
-```text
-%EXISTING_DBT_WORKSPACE%\variants\B1-ai-reference-external\subscriber360-external
-%EXISTING_DBT_WORKSPACE%\variants\B2-ai-generate-in-workspace\subscriber360-generated
-```
-
-### B1 AI Forge + External References
-
-Two ways to run B1 — pick one based on who is watching.
-
-**Demo mode (recommended for presentations):** copy the golden contract that `fluid forge` produced during an off-stage capture, so the on-stage flow is deterministic. See [`fluid/fixtures/forge-golden/README.md`](../fluid/fixtures/forge-golden/README.md) for how the golden is captured and refreshed.
-
-**Live mode (for forge-cli contributors):** call the real LLM so you can iterate on prompts, providers, or templates.
-
-```powershell
-Set-Location "$env:EXISTING_DBT_WORKSPACE\variants\B1-ai-reference-external"
-Get-Content $env:FLUID_SECRETS_FILE | ForEach-Object { if ($_ -match '^(?!#)([^=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2]) } }
-Get-Content ..\..\prompts\ai-reference-external.md
-# `fluid init NAME --yes` still blocks on an interactive mode prompt in
-# data-product-forge 0.8.0a1 — see FLUID Gap Register. `--blank` is the
-# documented workaround; the contract will be overwritten by the golden below.
-& $env:FLUID_CLI init subscriber360-external --blank --provider snowflake --yes
-Set-Location .\subscriber360-external
-
-# --- Demo mode: replay the captured golden contract (deterministic) ---
-Copy-Item "$env:LAB_REPO\fluid\fixtures\forge-golden\B1-ai-reference-external\contract.fluid.yaml" .\contract.fluid.yaml -Force
-
-# --- Live mode (alternative): uncomment to call the real LLM instead ---
-# & $env:FLUID_CLI forge --provider snowflake --domain telco --target-dir .
-
-& $env:FLUID_CLI validate contract.fluid.yaml
-& $env:FLUID_CLI plan contract.fluid.yaml --out runtime/plan.json --html
-Start-Process .\runtime\plan.html
-$buildId = (py -3 "$env:LAB_REPO\scripts\get_first_build_id.py" contract.fluid.yaml).Trim()
-& $env:FLUID_CLI apply contract.fluid.yaml --mode amend-and-build --build $buildId --yes --report runtime/apply_report.html
-# B1 is an AI-forge demo scenario — Jenkinsfile installs fluid from PyPI
-# (default --install-mode pypi). For the TestPyPI-backed demo track, set
-# the Jenkins Build-With-Parameters dialog's:
-#     FLUID_PIP_INDEX_URL        = https://test.pypi.org/simple/
-#     FLUID_PIP_EXTRA_INDEX_URL  = https://pypi.org/simple/
-#     FLUID_ALLOW_PRERELEASE     = true
-& $env:FLUID_CLI generate ci contract.fluid.yaml --system jenkins --install-mode pypi --out Jenkinsfile
-git add .
-git commit -m "Generate AI external-reference silver variant"
-& $env:FLUID_CLI publish contract.fluid.yaml --target datamesh-manager
-```
-
-Validation:
-
-- open Airflow at [http://localhost:8085](http://localhost:8085) and confirm DAG `telco_subscriber360_reference`
-- run `Set-Location $env:LAB_REPO; task dbt:docs:refresh SCENARIO=B1` then open [http://localhost:8086](http://localhost:8086) and confirm `mart_subscriber360_core` plus `mart_subscriber_health_scorecard`
-- open Jenkins at [http://localhost:8081](http://localhost:8081), open the `B1-subscriber360-external` pipeline, click **Build Now**, and confirm the run reads `variants/B1-ai-reference-external/subscriber360-external/Jenkinsfile` and completes the generated stages
-- open the DMM marketplace at [http://localhost:8095](http://localhost:8095) and confirm the `subscriber360_core` and `subscriber_health_scorecard` exposes appear under the silver data product
-
-### B2 AI Forge + Generated Assets
-
-Same two-mode pattern as B1. Demo mode copies the golden B2 contract; live mode calls the real LLM.
-
-```powershell
-Set-Location "$env:EXISTING_DBT_WORKSPACE\variants\B2-ai-generate-in-workspace"
-Get-Content $env:FLUID_SECRETS_FILE | ForEach-Object { if ($_ -match '^(?!#)([^=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2]) } }
-Get-Content ..\..\prompts\ai-generate-in-workspace.md
-# Same `--blank` workaround as B1 — see FLUID Gap Register entry for
-# `fluid init --yes` blocking on interactive mode selection in 0.8.0a1.
-& $env:FLUID_CLI init subscriber360-generated --blank --provider snowflake --yes
-Set-Location .\subscriber360-generated
-
-# --- Demo mode: replay the captured golden bundle (deterministic).
-#     The bundle ships contract.fluid.yaml plus pre-generated generated\dbt\
-#     and generated\airflow\, so the `generate transformation` / `generate
-#     schedule` lines below are no-ops against a fresh copy. ---
-Copy-Item "$env:LAB_REPO\fluid\fixtures\forge-golden\B2-ai-generate-in-workspace\*" . -Recurse -Force
-
-# --- Live mode (alternative): uncomment to call the real LLM instead ---
-# & $env:FLUID_CLI forge --provider snowflake --domain telco --target-dir .
-
-& $env:FLUID_CLI validate contract.fluid.yaml
-& $env:FLUID_CLI plan contract.fluid.yaml --out runtime/plan.json --html
-Start-Process .\runtime\plan.html
-# Generated assets already exist under generated\dbt and generated\airflow when
-# demo mode ran; these commands are the live-mode equivalents for that step.
-& $env:FLUID_CLI generate transformation contract.fluid.yaml --engine dbt -o generated/dbt --overwrite
-& $env:FLUID_CLI generate schedule contract.fluid.yaml --scheduler airflow -o generated/airflow --overwrite
-$buildId = (py -3 "$env:LAB_REPO\scripts\get_first_build_id.py" contract.fluid.yaml).Trim()
-& $env:FLUID_CLI apply contract.fluid.yaml --mode amend-and-build --build $buildId --yes --report runtime/apply_report.html
-# B2 is the production-facing AI-forge scenario — Jenkinsfile installs fluid
-# from stable PyPI with ZERO overrides. This is what a real customer team
-# gets after running `fluid forge` and committing the result.
-& $env:FLUID_CLI generate ci contract.fluid.yaml --system jenkins --install-mode pypi --out Jenkinsfile
-git add .
-git commit -m "Generate AI in-workspace silver variant"
-& $env:FLUID_CLI publish contract.fluid.yaml --target datamesh-manager
-```
-
-Validation:
-
-- open Airflow at [http://localhost:8085](http://localhost:8085) and confirm the generated DAG from `generated/airflow` appears with an ID derived from the generated contract ID
-- run `Set-Location $env:LAB_REPO; task dbt:docs:refresh SCENARIO=B2` then open [http://localhost:8086](http://localhost:8086) and confirm `mart_subscriber360_core` plus `mart_subscriber_health_scorecard`
-- open Jenkins at [http://localhost:8081](http://localhost:8081); B2 is not auto-provisioned (the Jenkinsfile only exists after `fluid generate ci`) — if you want the pipeline in the UI, add a JobDSL entry to `jenkins/casc/jenkins.yaml` pointing at `variants/B2-ai-generate-in-workspace/subscriber360-generated/Jenkinsfile` and rerun `task jenkins:up`
-- open the DMM marketplace at [http://localhost:8095](http://localhost:8095) and confirm the B2 silver data product with its `subscriber360_core` and `subscriber_health_scorecard` exposes appears under the telco domain
+Golden contracts and workspace scaffolds are already parked under `fluid/fixtures/forge-golden/` and `fluid/fixtures/workspaces/path-b-ai-telco-silver-import-demo/`, and the forge-cli gaps blocking them (`fluid init --yes`, `fluid forge --context`, fragment-first build IDs) are tracked in [FLUID Gap Register](fluid-gap-register.md). You may also see a `B1-subscriber360-external` pipeline auto-provisioned in Jenkins — it's staged for that future release.
 
 ## Jenkins SCM Handoff
 
 After each `fluid generate ci` step:
 
 1. commit the generated `Jenkinsfile` in the workspace repo on disk
-2. open the matching pipeline in Jenkins (`A1-external-reference`, `A2-internal-reference`, `B1-subscriber360-external`) and click **Build Now**
+2. open the matching pipeline in Jenkins (`A1-external-reference` or `A2-internal-reference`) and click **Build Now**
 
 The pipelines are auto-provisioned by `task jenkins:up` via CasC JobDSL. Their SCM source is the local workspace repo mounted read-only at `/workspace/gitlab/` — `git push` is not required.
 
