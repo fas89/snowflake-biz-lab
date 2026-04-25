@@ -34,6 +34,15 @@ The quickstart now treats "from zero" literally:
 - A1 and A2 only appear in Jenkins after `task jenkins:sync`
 - A1 and A2 only appear in Airflow after the native `fluid schedule-sync` command copies their existing DAG assets into `airflow/dags/active/current`
 
+## Local Security Boundary
+
+This lab is designed for laptop-local demos. The default service passwords are
+known demo values, and they rely on the default `LAB_BIND_ADDRESS=127.0.0.1` so
+Airflow, Jenkins, Entropy / DMM, Mailpit, dbt docs, and Postgres stay off your
+network. Before any shared, recorded, or network-exposed demo, rotate the local
+passwords and use separate Snowflake, catalog, and API credentials from your
+day-to-day accounts.
+
 ## Local URLs
 
 - Airflow: [http://localhost:8085](http://localhost:8085)
@@ -63,6 +72,8 @@ seed/                 Synthetic telco data generation plus Snowflake loading and
 - [Launchpad Common](docs/launchpad-common.md)
 - [Launchpad Recovery](docs/launchpad-recovery.md)
 - [Credentials](docs/credentials.md)
+- [Security Policy](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
 - [Scenario Validation Matrix](docs/scenario-validation-matrix.md)
 - [Jenkins SCM Handoff](docs/jenkins-scm-handoff.md)
 - [FLUID Gap Register](docs/fluid-gap-register.md)

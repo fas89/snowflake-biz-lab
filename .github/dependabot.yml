@@ -1,0 +1,64 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:15"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "docker"
+    directory: "/deploy/docker/airflow"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:30"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "docker"
+    directory: "/deploy/docker/dbt-runner"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:45"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "docker"
+    directory: "/deploy/docker/jenkins"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "docker-compose"
+    directory: "/deploy/docker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:15"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "docker-compose"
+    directory: "/deploy/docker/catalogs"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:30"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5

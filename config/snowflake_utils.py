@@ -24,8 +24,8 @@ def canonical_ident(identifier: str) -> str:
 
 
 def quote_ident(identifier: str) -> str:
-    canonical = canonical_ident(identifier)
-    return f'"{canonical.replace(chr(34), chr(34) * 2)}"'
+    raw = identifier.strip()
+    return f'"{raw.replace(chr(34), chr(34) * 2)}"'
 
 
 def fq_name(*parts: str) -> str:
