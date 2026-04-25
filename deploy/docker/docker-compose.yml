@@ -138,7 +138,7 @@ services:
       - ${FLUID_AI_GITLAB_WORKSPACE:-../../gitlab/path-b-ai-telco-silver-import-demo}:/workspace/import
 
   dbt-docs:
-    image: python:3.12-slim
+    image: python:3.14-slim
     container_name: snowflake-telco-dbt-docs
     working_dir: /site
     command: python -m http.server 8080 --bind 0.0.0.0 -d /site
