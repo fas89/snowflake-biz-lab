@@ -33,7 +33,8 @@ Security defaults:
 
 - local Docker ports bind to `127.0.0.1` by default
 - keep that default for normal laptop runs
-- set `LAB_BIND_ADDRESS=0.0.0.0` only for an intentional shared demo, and rotate the default local passwords first
+- treat the listed passwords as public demo passwords, not secrets
+- set `LAB_BIND_ADDRESS=0.0.0.0` only for an intentional shared demo, after rotating the default local passwords and using disposable Snowflake, catalog, and API credentials
 
 ## 1. Set Up Your Local Paths
 
