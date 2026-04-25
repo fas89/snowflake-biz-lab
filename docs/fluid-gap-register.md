@@ -145,7 +145,7 @@ The observations below should be rechecked against the latest `data-product-forg
 - Desired demo behavior:
   Every `fluid ...` command runs without spurious warnings when the package is installed from TestPyPI.
 - Current observed behavior:
-  Observed in `data-product-forge==0.8.0a1`: every invocation prints `Could not load model catalog .../fluid_build/cli/llm_models.json: [Errno 2] No such file or directory`. The file is referenced at runtime but not included in the wheel's `package_data`. Commands still work in demo mode; the warning clutters the terminal and can confuse presenters.
+  Observed in `data-product-forge==0.8.0` (and earlier in `0.8.0a1`): every invocation prints `Could not load model catalog .../fluid_build/cli/llm_models.json: [Errno 2] No such file or directory`. The file is referenced at runtime but not included in the wheel's `package_data`. Commands still work in demo mode; the warning clutters the terminal and can confuse presenters.
 - Why it matters in the demo:
   A warning on every command makes the release look broken mid-demo. The Jenkins console log is especially noisy because each pipeline stage shells out to `fluid`.
 - Likely `forge-cli` area to change later:
