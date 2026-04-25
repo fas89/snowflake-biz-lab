@@ -135,7 +135,7 @@ def check_dmm_key(
     configured_url = secrets.get("DMM_API_URL", dmm_url).strip() or dmm_url
 
     if _validate_dmm_key(configured_url, api_key):
-        _emit(True, f"DMM_API_KEY valid against {configured_url}")
+        _emit(True, "DMM_API_KEY valid against configured DMM endpoint")
         return True
 
     if api_key:
