@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>FLUID on Snowflake — Demo Reel</title>
+<!--
+  FLUID x Snowflake demo reel - 170s self-running pitch deck.
+
+  HOW TO RECORD (target: 1080p MP4 for Snowflake startup application)
+    1. Serve this folder:   python3 -m http.server 8765 --directory .
+    2. Open in Chrome:      http://localhost:8765/?record=1#once
+    3. Resize the window to 1920x1080 (or use Chrome devtools device toolbar).
+    4. Press F11 (or Ctrl+Cmd+F) for fullscreen.
+    5. Cmd+Shift+5 -> "Record Selected Portion" -> cover the browser.
+    6. Click record. A 3-second countdown plays, then the reel runs ~170s
+       and holds on the closing frame.
+    7. Stop, trim the leading countdown in QuickTime (Cmd+T), export 1080p.
+
+  URL MODES
+    /                  - autoplay, loop forever (default)
+    /#once             - autoplay, stop after final scene
+    /?record=1#once    - recording mode: 3-sec countdown, hides cursor, no loop
+    /?scene=N          - lock to a single scene (N=0..8) for previewing/debugging
+                         scene 0 title, 1 problem, 2 authoring, 3 plan,
+                         4 apply, 5 lineage, 6 ci, 7 marketplace, 8 closing
+
+  KEYBOARD (handy during preview, harmless during recording)
+    Space         pause / resume
+    Right arrow   next scene
+    Left arrow    previous scene
+    R             restart from scene 0
+
+  TUNING
+    Scene timings live in the data-duration="..." attribute on each <section>.
+    Captions are the .caption div inside each scene. Edit text in place.
+    All visuals are pure CSS/SVG - no external assets needed.
+-->
+<style>
+  /* ============================================================
+     Reset & base
+     ============================================================ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100vw; height: 100vh; overflow: hidden;
+    background: #05080f; color: #f0f4f8;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  }
+  body.recording { cursor: none; }
+  body.recording * { cursor: none !important; }
+
+  /* ============================================================
+     Reel container & scenes
+     ============================================================ */
+  #reel { position: relative; width: 100%; height: 100%; }
+  .scene {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.45s ease-in-out;
+    padding: 5vh 5vw 18vh;
+    overflow: hidden;
+  }
+  .scene.active { opacity: 1; z-index: 10; }
+
+  /* ============================================================
+     Caption bar
+     ============================================================ */
+  .caption {
+    position: absolute; left: 50%; bottom: 6vh; transform: translateX(-50%) translateY(8px);
+    max-width: 86vw; padding: 18px 32px;
+    background: rgba(8, 12, 24, 0.78);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(41, 181, 232, 0.25);
+    border-radius: 14px; text-align: center;
+    font-size: clamp(22px, 2.6vw, 44px); font-weight: 600; line-height: 1.25;
+    letter-spacing: -0.01em; color: #fff;
+    opacity: 0; transition: opacity 0.55s ease-out 0.25s, transform 0.55s ease-out 0.25s;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .scene.active .caption { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .caption .accent { color: #29B5E8; }
+
+  /* ============================================================
+     Visual stage (above caption)
+     ============================================================ */
+  .stage {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .ken-burns {
+    transform-origin: center center;
+  }
+  .scene.active .ken-burns {
+    animation: kenburns var(--scene-dur, 20s) linear forwards;
+  }
+  @keyframes kenburns {
+    from { transform: scale(1.0); }
+    to { transform: scale(1.06); }
+  }
+
+  /* Real-screenshot overlay (hidden by default; shown if image loads) */
+  .real {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: contain; display: none;
+  }
+  .real[src]:not([src=""]) { /* author opt-in: only render if src is set */ }
+
+  /* ============================================================
+     Brand atoms
+     ============================================================ */
+  .snowflake-icon {
+    width: 1em; height: 1em; display: inline-block; vertical-align: -0.12em;
+    fill: #29B5E8;
+  }
+  .fluid-mark {
+    font-weight: 800; letter-spacing: -0.04em;
+    background: linear-gradient(135deg, #29B5E8 0%, #00d4ff 50%, #79e2ff 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* ============================================================
+     Terminal block
+     ============================================================ */
+  .term {
+    background: #0d1117; border: 1px solid #30363d; border-radius: 10px;
+    padding: 22px 26px;
+    font-family: "SF Mono", Menlo, Monaco, "Courier New", monospace;
+    font-size: clamp(11px, 1.1vw, 18px); line-height: 1.5;
+    width: min(940px, 100%);
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    text-align: left;
+  }
+  .term-header { display: flex; gap: 8px; margin-bottom: 18px; align-items: center; }
+  .term-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .term-dot.r { background: #ff5f56; }
+  .term-dot.y { background: #ffbd2e; }
+  .term-dot.g { background: #27c93f; }
+  .term-title { margin-left: auto; color: #6e7681; font-size: 0.78em; }
+  .term-line {
+    opacity: 0; transform: translateY(3px);
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .scene.active .term-line {
+    animation: lineIn 0.35s ease-out forwards;
+    animation-delay: calc(var(--i, 0) * 0.45s + 0.3s);
+  }
+  @keyframes lineIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .term .prompt { color: #7ee787; }
+  .term .cmd    { color: #f0f6fc; }
+  .term .out    { color: #c9d1d9; }
+  .term .ok     { color: #7ee787; }
+  .term .info   { color: #79c0ff; }
+  .term .warn   { color: #ffa657; }
+  .term .dim    { color: #6e7681; }
+  .term .hl     { color: #29B5E8; font-weight: 600; }
+
+  /* ============================================================
+     YAML block
+     ============================================================ */
+  .yaml {
+    background: #0d1117; border: 1px solid #30363d; border-radius: 10px;
+    padding: 22px 26px;
+    font-family: "SF Mono", Menlo, Monaco, monospace;
+    font-size: clamp(11px, 1.05vw, 17px); line-height: 1.55;
+    width: min(640px, 100%);
+    max-width: 100%;
+    max-height: 70vh; overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+    text-align: left;
+    white-space: pre;
+  }
+  .yaml .key { color: #79c0ff; }
+  .yaml .str { color: #ce9178; }
+  .yaml .com { color: #6a737d; font-style: italic; }
+  .yaml .num { color: #b5cea8; }
+  .yaml .anchor { color: #d2a8ff; }
+  .yaml .punc { color: #8b949e; }
+
+  /* ============================================================
+     Countdown overlay
+     ============================================================ */
+  #countdown {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: #05080f; z-index: 9999;
+    font-size: 30vh; font-weight: 800; color: #29B5E8;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 60px rgba(41, 181, 232, 0.6);
+  }
+
+  /* ============================================================
+     Scene 1 — Title
+     ============================================================ */
+  .scene-title {
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(41, 181, 232, 0.35) 0%, transparent 55%),
+      radial-gradient(ellipse at 75% 80%, rgba(0, 212, 255, 0.25) 0%, transparent 50%),
+      linear-gradient(135deg, #0a1628 0%, #050810 100%);
+  }
+  .title-wrap { text-align: center; }
+  .title-mark {
+    font-size: clamp(80px, 14vw, 220px);
+    line-height: 0.95; letter-spacing: -0.05em;
+    margin-bottom: 0.2em;
+  }
+  .title-x {
+    color: #4a5568; font-size: 0.45em; vertical-align: 0.3em;
+    margin: 0 0.15em; font-weight: 400;
+  }
+  .title-snow {
+    color: #fff; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 0.2em;
+  }
+  .title-tag {
+    font-size: clamp(20px, 2vw, 36px);
+    color: #8b9cb1; font-weight: 400; letter-spacing: 0.02em;
+  }
+
+  /* Snowflake mark animation */
+  .snow-spin { animation: spin 18s linear infinite; transform-origin: center; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Background twinkle particles */
+  .particles {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(1px 1px at 60% 70%, rgba(41, 181, 232, 0.7), transparent),
+      radial-gradient(1.5px 1.5px at 40% 80%, rgba(255,255,255,0.4), transparent),
+      radial-gradient(1px 1px at 80% 20%, rgba(0, 212, 255, 0.5), transparent),
+      radial-gradient(2px 2px at 15% 75%, rgba(255,255,255,0.3), transparent),
+      radial-gradient(1px 1px at 90% 50%, rgba(41, 181, 232, 0.6), transparent);
+    background-size: 100% 100%;
+    animation: drift 30s linear infinite;
+  }
+  @keyframes drift {
+    from { transform: translate(0, 0); }
+    to { transform: translate(-30px, -30px); }
+  }
+
+  /* ============================================================
+     Scene 2 — Problem
+     ============================================================ */
+  .scene-problem {
+    background: linear-gradient(135deg, #1a0f1f 0%, #050810 100%);
+  }
+  .split {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: 30px;
+    align-items: center; width: 90vw; max-width: 1400px;
+  }
+  .split-side { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .split-arrow { font-size: 60px; color: #4a5568; }
+  .split-label {
+    font-size: clamp(16px, 1.5vw, 24px); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .split-label.bad { color: #ff6b6b; }
+  .split-label.good { color: #29B5E8; }
+
+  /* Messy code panel (left) */
+  .messy {
+    background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+    padding: 16px; width: 100%; max-width: 460px;
+    font-family: "SF Mono", monospace; font-size: clamp(10px, 0.85vw, 13px);
+    line-height: 1.4; color: #8b949e;
+    text-align: left; position: relative;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .messy-tabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+  .messy-tab {
+    padding: 4px 10px; background: #161b22; border-radius: 4px 4px 0 0;
+    font-size: 11px; color: #8b949e; border-bottom: 2px solid transparent;
+  }
+  .messy-tab.active { background: #0d1117; color: #f0f6fc; border-bottom-color: #ff6b6b; }
+  .messy-line { position: relative; padding-left: 0; }
+  .messy-line.err {
+    text-decoration: underline wavy #ff6b6b;
+    text-decoration-thickness: 1.5px;
+  }
+  .messy-num { color: #484f58; display: inline-block; width: 26px; text-align: right; margin-right: 12px; user-select: none; }
+
+  /* Clean YAML preview (right) — compact */
+  .clean-yaml {
+    width: 100%; max-width: 460px;
+    box-shadow: 0 0 0 2px rgba(41, 181, 232, 0.4), 0 12px 40px rgba(0,0,0,0.4);
+  }
+
+  /* ============================================================
+     Scene 3 — Authoring
+     ============================================================ */
+  .scene-authoring {
+    background: linear-gradient(135deg, #0a1628 0%, #050810 100%);
+  }
+  .author-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 30px;
+    width: 90vw; max-width: 1500px; align-items: stretch;
+    max-height: 70vh;
+  }
+  .author-grid > * { width: 100% !important; max-width: none !important; min-width: 0 !important; }
+  .author-side {
+    display: flex; flex-direction: column; gap: 14px;
+    min-width: 0; min-height: 0;
+    overflow: hidden;
+  }
+  /* Stack vertically on narrow viewports so neither column gets crushed. */
+  @media (max-aspect-ratio: 4/3), (max-width: 1100px) {
+    .author-grid { grid-template-columns: 1fr; max-height: none; gap: 16px; }
+    .author-grid .yaml, .author-grid .term { max-height: 28vh; }
+  }
+  .author-tag {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 8px 16px; border-radius: 999px;
+    font-size: clamp(13px, 1.1vw, 18px); font-weight: 600; letter-spacing: 0.02em;
+    align-self: flex-start;
+  }
+  .author-tag.manual { background: rgba(255,255,255,0.06); color: #c9d1d9; border: 1px solid rgba(255,255,255,0.12); }
+  .author-tag.ai { background: rgba(41, 181, 232, 0.15); color: #29B5E8; border: 1px solid rgba(41, 181, 232, 0.4); }
+
+  /* ============================================================
+     Scene 4 — Validate + Plan
+     ============================================================ */
+  .scene-plan {
+    background: linear-gradient(135deg, #0a1f1a 0%, #050810 100%);
+  }
+  .plan-grid {
+    display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.1fr); gap: 30px;
+    width: 90vw; max-width: 1500px; align-items: center;
+  }
+  .plan-html-mock {
+    background: #fff; color: #1a202c; border-radius: 10px;
+    padding: 24px 28px; font-family: -apple-system, sans-serif;
+    width: 100%; max-height: 65vh; overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    position: relative;
+  }
+  .plan-html-mock h1 { font-size: clamp(18px, 1.6vw, 26px); color: #0d1117; margin-bottom: 8px; }
+  .plan-html-mock .sub { font-size: clamp(11px, 0.95vw, 15px); color: #6b7280; margin-bottom: 16px; }
+  .plan-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-bottom: 1px solid #e5e7eb;
+    font-size: clamp(11px, 0.95vw, 15px);
+  }
+  .plan-row:last-child { border-bottom: none; }
+  .plan-badge {
+    padding: 3px 9px; border-radius: 4px; font-size: 0.78em;
+    font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .plan-badge.create { background: #d1fae5; color: #065f46; }
+  .plan-badge.alter  { background: #fef3c7; color: #92400e; }
+  .plan-badge.tag    { background: #dbeafe; color: #1e40af; }
+  .plan-name { font-family: "SF Mono", monospace; color: #0d1117; }
+  .plan-cols { color: #6b7280; margin-left: auto; font-size: 0.85em; }
+
+  /* ============================================================
+     Scene 5 — Apply to Snowflake
+     ============================================================ */
+  .scene-apply {
+    background: linear-gradient(135deg, #0a1628 0%, #04101c 100%);
+  }
+  .apply-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 30px;
+    width: 90vw; max-width: 1500px; align-items: center;
+  }
+  /* Snowflake worksheet mock */
+  .snow-worksheet {
+    background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px;
+    overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+    width: 100%; max-height: 70vh;
+    display: flex; flex-direction: column;
+  }
+  .snow-tab-bar {
+    display: flex; background: #0f1420; padding: 8px 14px; gap: 8px;
+    border-bottom: 1px solid #2d3748; align-items: center;
+  }
+  .snow-tab-bar .dot { width: 10px; height: 10px; border-radius: 50%; background: #29B5E8; }
+  .snow-tab-bar .name { color: #cbd5e0; font-size: 13px; font-weight: 500; }
+  .snow-tab-bar .role { margin-left: auto; color: #718096; font-size: 12px; }
+  .snow-sql {
+    background: #0f1420; padding: 16px 20px;
+    font-family: "SF Mono", monospace; font-size: clamp(11px, 0.95vw, 15px);
+    color: #cbd5e0; border-bottom: 1px solid #2d3748;
+  }
+  .snow-sql .kw { color: #f687b3; font-weight: 600; }
+  .snow-sql .id { color: #29B5E8; }
+  .snow-results {
+    flex: 1; overflow: hidden; padding: 12px 20px;
+    background: #1a1f2e;
+  }
+  .snow-row {
+    display: grid; grid-template-columns: 2fr 1fr 1.2fr 2fr;
+    gap: 8px; padding: 8px 0;
+    border-bottom: 1px solid #2d3748;
+    font-size: clamp(10px, 0.85vw, 13px);
+    color: #cbd5e0; font-family: "SF Mono", monospace;
+  }
+  .snow-row.head { color: #718096; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75em; }
+  .snow-tag {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    background: rgba(41, 181, 232, 0.15); color: #29B5E8;
+    font-size: 0.85em; font-family: -apple-system, sans-serif;
+  }
+
+  /* ============================================================
+     Scene 6 — Lineage
+     ============================================================ */
+  .scene-lineage {
+    background: linear-gradient(135deg, #0f0a1f 0%, #050810 100%);
+  }
+  .lineage-svg-wrap {
+    width: 90vw; max-width: 1400px; height: 70vh;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lineage-svg-wrap svg { width: 100%; height: 100%; }
+  .node-box {
+    fill: #161b22; stroke: #30363d; stroke-width: 1.5;
+  }
+  .node-box.silver {
+    stroke: #29B5E8; stroke-width: 2.5;
+    filter: drop-shadow(0 0 16px rgba(41, 181, 232, 0.4));
+  }
+  .node-title { fill: #f0f6fc; font-size: 14px; font-weight: 600; font-family: -apple-system, sans-serif; }
+  .node-sub { fill: #79c0ff; font-size: 11px; font-family: "SF Mono", monospace; }
+  .node-pill { fill: #21262d; }
+  .pill-text { fill: #8b949e; font-size: 10px; font-family: "SF Mono", monospace; }
+  .edge {
+    stroke: #29B5E8; stroke-width: 2; fill: none;
+    stroke-dasharray: 6 4;
+    opacity: 0.6;
+  }
+  .scene.active .edge {
+    animation: edgeFlow 1.6s linear infinite, edgeFade 0.8s ease-out forwards;
+  }
+  .scene.active .edge.e1 { animation-delay: 0s, 0.2s; }
+  .scene.active .edge.e2 { animation-delay: 0s, 0.5s; }
+  .scene.active .edge.e3 { animation-delay: 0s, 0.8s; }
+  .scene.active .edge.e4 { animation-delay: 0s, 1.1s; }
+  .scene.active .edge.e5 { animation-delay: 0s, 1.4s; }
+  .scene.active .edge.e6 { animation-delay: 0s, 1.7s; }
+  @keyframes edgeFlow { to { stroke-dashoffset: -20; } }
+  @keyframes edgeFade { from { opacity: 0; } to { opacity: 0.85; } }
+
+  /* ============================================================
+     Scene 7 — CI generated
+     ============================================================ */
+  .scene-ci {
+    background: linear-gradient(135deg, #1a0f0a 0%, #050810 100%);
+  }
+  .ci-grid {
+    display: grid; grid-template-rows: auto auto; gap: 30px;
+    width: 90vw; max-width: 1500px; align-items: stretch;
+  }
+  .pipeline {
+    display: grid; grid-template-columns: repeat(11, 1fr); gap: 6px;
+    width: 100%; padding: 24px;
+    background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  }
+  .pipe-stage {
+    background: #0f1420; border: 1px solid #2d3748; border-radius: 6px;
+    padding: 14px 8px 12px; text-align: center;
+    position: relative; overflow: hidden;
+    font-size: clamp(9px, 0.7vw, 12px); color: #cbd5e0;
+    min-height: 80px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .pipe-stage::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px;
+    background: #2d3748;
+  }
+  .scene.active .pipe-stage::before {
+    background: linear-gradient(90deg, #27c93f 0%, #27c93f 100%);
+    animation: pipeFill 0.5s ease-out forwards;
+    animation-delay: calc(var(--p, 0) * 0.18s + 0.6s);
+    transform: scaleX(0); transform-origin: left;
+  }
+  @keyframes pipeFill { to { transform: scaleX(1); } }
+  .pipe-num { color: #4a5568; font-size: 0.85em; font-weight: 700; font-family: "SF Mono", monospace; }
+  .pipe-name { font-weight: 600; line-height: 1.2; margin-top: 4px; }
+  .pipe-check {
+    color: #27c93f; font-size: 1.6em; font-weight: 700;
+    opacity: 0;
+  }
+  .scene.active .pipe-check {
+    animation: checkIn 0.3s ease-out forwards;
+    animation-delay: calc(var(--p, 0) * 0.18s + 1.0s);
+  }
+  @keyframes checkIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* ============================================================
+     Scene 8 — Marketplace (DMM)
+     ============================================================ */
+  .scene-marketplace {
+    background: linear-gradient(135deg, #0a1f1a 0%, #04101c 100%);
+  }
+  .dmm-grid {
+    display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px;
+    width: 90vw; max-width: 1500px; align-items: stretch;
+  }
+  .dmm-card {
+    background: #fff; color: #1a202c; border-radius: 12px;
+    padding: 24px 28px; font-family: -apple-system, sans-serif;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    max-height: 70vh; overflow: hidden;
+  }
+  .dmm-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .dmm-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: linear-gradient(135deg, #29B5E8, #00d4ff);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 18px;
+  }
+  .dmm-title { font-size: clamp(16px, 1.4vw, 22px); font-weight: 700; color: #0f172a; }
+  .dmm-id { font-family: "SF Mono", monospace; color: #6b7280; font-size: 0.78em; }
+  .dmm-status {
+    margin-left: auto;
+    padding: 4px 10px; border-radius: 999px; font-size: 0.7em; font-weight: 600;
+    background: #d1fae5; color: #065f46; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .dmm-section-title {
+    font-size: 0.78em; font-weight: 700; color: #6b7280;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin: 16px 0 8px;
+  }
+  .dmm-output {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 8px;
+    background: #f9fafb; border: 1px solid #e5e7eb;
+    margin-bottom: 6px; font-size: clamp(11px, 0.95vw, 14px);
+  }
+  .dmm-output-name { font-family: "SF Mono", monospace; color: #0f172a; font-weight: 600; }
+  .dmm-output-cols { color: #6b7280; margin-left: auto; font-size: 0.85em; }
+  .dmm-dq {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;
+  }
+  .dmm-dq-pill {
+    padding: 4px 10px; border-radius: 999px;
+    background: #dbeafe; color: #1e40af; font-size: 0.7em; font-weight: 600;
+    font-family: "SF Mono", monospace;
+  }
+  .dmm-access {
+    background: #fef3c7; color: #92400e;
+    padding: 10px 14px; border-radius: 8px; margin-top: 10px;
+    font-size: clamp(11px, 0.9vw, 14px);
+    border-left: 3px solid #f59e0b;
+  }
+
+  /* DMM lineage mini-graph (right column) */
+  .dmm-mini-lineage {
+    background: #0f1420; border-radius: 12px; padding: 18px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column;
+  }
+  .dmm-lineage-title {
+    color: #cbd5e0; font-size: clamp(12px, 1.1vw, 16px); font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .dmm-lineage-svg { flex: 1; min-height: 0; }
+  .dmm-lineage-svg svg { width: 100%; height: 100%; }
+
+  /* ============================================================
+     Scene 9 — Closing
+     ============================================================ */
+  .scene-closing {
+    background:
+      radial-gradient(ellipse at 50% 50%, rgba(41, 181, 232, 0.25) 0%, transparent 60%),
+      linear-gradient(180deg, #0a1628 0%, #050810 100%);
+  }
+  .closing-wrap { text-align: center; }
+  .closing-mark {
+    font-size: clamp(60px, 10vw, 160px); line-height: 1;
+    letter-spacing: -0.04em; margin-bottom: 0.3em;
+  }
+  .closing-tag {
+    font-size: clamp(20px, 2.2vw, 36px); color: #cbd5e0;
+    font-weight: 400; margin-bottom: 1.4em; letter-spacing: 0.01em;
+  }
+  .closing-install {
+    display: inline-block;
+    background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+    padding: 14px 22px; margin-bottom: 1.4em;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: clamp(14px, 1.4vw, 22px);
+    color: #f0f6fc;
+  }
+  .closing-install .prompt { color: #7ee787; }
+  .closing-contact {
+    color: #8b9cb1; font-size: clamp(14px, 1.3vw, 20px);
+    line-height: 1.7;
+  }
+  .closing-contact a { color: #29B5E8; text-decoration: none; }
+  .closing-built {
+    margin-top: 2em;
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 8px 18px; border-radius: 999px;
+    background: rgba(41, 181, 232, 0.1); color: #29B5E8;
+    font-size: clamp(12px, 1vw, 16px); font-weight: 600; letter-spacing: 0.02em;
+    border: 1px solid rgba(41, 181, 232, 0.3);
+  }
+
+  /* ============================================================
+     Reduced motion
+     ============================================================ */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Reusable inline SVG defs -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="snowflake" viewBox="0 0 24 24">
+      <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07M12 6l-2 2M12 6l2 2M12 18l-2-2M12 18l2-2M6 12l2-2M6 12l2 2M18 12l-2-2M18 12l-2 2"
+            stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#29B5E8" />
+    </marker>
+  </defs>
+</svg>
+
+<div id="countdown" aria-hidden="true"></div>
+
+<main id="reel" aria-label="FLUID on Snowflake demo reel">
+
+  <!-- ========================================================
+       Scene 1 — Title (12s)
+       ======================================================== -->
+  <section class="scene scene-title" data-duration="12000">
+    <div class="particles" aria-hidden="true"></div>
+    <div class="stage ken-burns">
+      <div class="title-wrap">
+        <div class="title-mark">
+          <span class="fluid-mark">FLUID</span>
+          <span class="title-x">×</span>
+          <span class="title-snow">
+            <svg class="snowflake-icon snow-spin" aria-hidden="true"><use href="#snowflake"/></svg>
+            Snowflake
+          </span>
+        </div>
+        <div class="title-tag">Contract-first data products. Native to Snowflake.</div>
+      </div>
+    </div>
+    <div class="caption">Ship governed Snowflake data products in <span class="accent">minutes</span>, not weeks.</div>
+  </section>
+
+  <!-- ========================================================
+       Scene 2 — Problem (16s)
+       ======================================================== -->
+  <section class="scene scene-problem" data-duration="16000">
+    <div class="stage ken-burns">
+      <div class="split">
+        <div class="split-side">
+          <div class="split-label bad">Today</div>
+          <div class="messy">
+            <div class="messy-tabs">
+              <span class="messy-tab active">stage_subscriber.sql</span>
+              <span class="messy-tab">mart.sql</span>
+              <span class="messy-tab">tags.py</span>
+              <span class="messy-tab">dag.py</span>
+              <span class="messy-tab">Jenkinsfile</span>
+              <span class="messy-tab">access.json</span>
+            </div>
+            <div class="messy-line"><span class="messy-num">12</span>SELECT a.account_id, b.party_id,</div>
+            <div class="messy-line err"><span class="messy-num">13</span>  SUM(c.amount) AS revenue_chf  -- TODO: nullable?</div>
+            <div class="messy-line"><span class="messy-num">14</span>FROM TELCO_LAB.STG.ACCOUNT a</div>
+            <div class="messy-line err"><span class="messy-num">15</span>JOIN STG.PARTY b ON a.party_id = b.id</div>
+            <div class="messy-line"><span class="messy-num">16</span>LEFT JOIN STG.INVOICE c ON c.acct = a.id</div>
+            <div class="messy-line err"><span class="messy-num">17</span>WHERE c.dt &gt; CURRENT_DATE - 30 -- FIXME tz</div>
+            <div class="messy-line"><span class="messy-num">18</span>GROUP BY 1, 2;</div>
+            <div class="messy-line"><span class="messy-num">19</span></div>
+            <div class="messy-line"><span class="messy-num">20</span>-- 14 more files like this...</div>
+          </div>
+        </div>
+        <div class="split-arrow">→</div>
+        <div class="split-side">
+          <div class="split-label good">With FLUID</div>
+          <div class="yaml clean-yaml" id="clean-yaml-mini"><span class="key">id</span>: <span class="str">silver.telco.subscriber360_v1</span>
+<span class="key">domain</span>: <span class="str">telco</span>
+<span class="key">consumes</span>:
+  - <span class="key">productId</span>: <span class="str">bronze.telco.party_v1</span>
+  - <span class="key">productId</span>: <span class="str">bronze.telco.usage_v1</span>
+  - <span class="key">productId</span>: <span class="str">bronze.telco.billing_v1</span>
+<span class="key">exposes</span>:
+  - <span class="key">exposeId</span>: <span class="str">subscriber360_core</span>
+    <span class="key">contract</span>:
+      <span class="key">schema</span>:
+        - <span class="key">name</span>: <span class="str">ACCOUNT_ID</span>
+          <span class="key">type</span>: <span class="str">STRING</span>
+          <span class="key">required</span>: <span class="num">true</span>
+      <span class="key">dq</span>:
+        <span class="key">rules</span>:
+          - <span class="key">id</span>: <span class="str">unique_account</span>
+            <span class="key">type</span>: <span class="str">uniqueness</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">Today: <span class="accent">14 files</span> per data product. No governance. No lineage. Tomorrow: one contract.</div>
+  </section>
+
+  <!-- ========================================================
+       Scene 3 — Authoring (20s)
+       ======================================================== -->
+  <section class="scene scene-authoring" data-duration="20000">
+    <div class="stage ken-burns">
+      <div class="author-grid">
+        <div class="author-side">
+          <div class="author-tag manual">📝 Author by hand</div>
+          <div class="yaml"><span class="key">fluidVersion</span>: <span class="str">"0.7.2"</span>
+<span class="key">kind</span>: <span class="str">DataProduct</span>
+<span class="key">id</span>: <span class="str">silver.telco.subscriber360_v1</span>
+<span class="key">name</span>: <span class="str">Telco Subscriber 360</span>
+<span class="key">domain</span>: <span class="str">telco</span>
+
+<span class="key">metadata</span>:
+  <span class="key">layer</span>: <span class="str">Silver</span>
+  <span class="key">owner</span>:
+    <span class="key">team</span>: <span class="str">customer-intelligence</span>
+
+<span class="key">consumes</span>:
+  - <span class="key">productId</span>: <span class="str">bronze.telco.party_v1</span>
+    <span class="key">exposeId</span>: <span class="str">account_source</span>
+  - <span class="key">productId</span>: <span class="str">bronze.telco.usage_v1</span>
+    <span class="key">exposeId</span>: <span class="str">usage_event_source</span>
+  - <span class="key">productId</span>: <span class="str">bronze.telco.billing_v1</span>
+    <span class="key">exposeId</span>: <span class="str">invoice_charge_source</span>
+
+<span class="key">exposes</span>:
+  - <span class="key">exposeId</span>: <span class="str">subscriber360_core</span>
+    <span class="key">binding</span>:
+      <span class="key">platform</span>: <span class="str">snowflake</span>
+      <span class="key">format</span>: <span class="str">snowflake_table</span></div>
+        </div>
+        <div class="author-side">
+          <div class="author-tag ai">✨ Or let AI forge it</div>
+          <div class="term">
+            <div class="term-header">
+              <span class="term-dot r"></span><span class="term-dot y"></span><span class="term-dot g"></span>
+              <span class="term-title">~/telco-silver-product</span>
+            </div>
+            <div class="term-line" style="--i:0"><span class="prompt">$</span> <span class="cmd">fluid forge --provider snowflake --domain telco</span></div>
+            <div class="term-line" style="--i:1"><span class="dim">Inspecting Snowflake metadata...</span></div>
+            <div class="term-line" style="--i:2"><span class="info">→</span> Found <span class="hl">3</span> bronze sources in <span class="hl">TELCO_LAB.BRONZE</span></div>
+            <div class="term-line" style="--i:3"><span class="info">→</span> Discovered Horizon tags: <span class="hl">PII</span>, <span class="hl">FINANCIAL</span></div>
+            <div class="term-line" style="--i:4"><span class="dim">▸ Calling Claude with discovered context...</span></div>
+            <div class="term-line" style="--i:5"><span class="info">▸</span> Drafting 17-column subscriber360 schema</div>
+            <div class="term-line" style="--i:6"><span class="info">▸</span> Generating field-level lineage (9 mappings)</div>
+            <div class="term-line" style="--i:7"><span class="info">▸</span> Adding 4 data quality rules</div>
+            <div class="term-line" style="--i:8"><span class="info">▸</span> Building semantic model with 2 metrics</div>
+            <div class="term-line" style="--i:9"><span class="ok">✓</span> Wrote <span class="hl">contract.fluid.yaml</span> <span class="dim">(312 lines)</span></div>
+            <div class="term-line" style="--i:10"><span class="ok">✓</span> Wrote <span class="hl">dbt/models/</span> <span class="dim">(4 files)</span></div>
+            <div class="term-line" style="--i:11"><span class="dim">Time: 18.3s · 1 contract · 0 errors</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">Author by hand — or let AI forge from your <span class="accent">Snowflake metadata</span>.</div>
+  </section>
+
+  <!-- ========================================================
+       Scene 4 — Validate + Plan (20s)
+       ======================================================== -->
+  <section class="scene scene-plan" data-duration="20000">
+    <div class="stage ken-burns">
+      <div class="plan-grid">
+        <div class="term">
+          <div class="term-header">
+            <span class="term-dot r"></span><span class="term-dot y"></span><span class="term-dot g"></span>
+            <span class="term-title">~/telco-silver-product</span>
+          </div>
+          <div class="term-line" style="--i:0"><span class="prompt">$</span> <span class="cmd">fluid validate contract.fluid.yaml</span></div>
+          <div class="term-line" style="--i:1"><span class="ok">✓</span> Schema valid <span class="dim">(fluidVersion 0.7.2)</span></div>
+          <div class="term-line" style="--i:2"><span class="ok">✓</span> All 9 upstream products resolved</div>
+          <div class="term-line" style="--i:3"><span class="ok">✓</span> Field-level lineage complete</div>
+          <div class="term-line" style="--i:4"><span class="ok">✓</span> Semantic model consistent</div>
+          <div class="term-line" style="--i:5">&nbsp;</div>
+          <div class="term-line" style="--i:6"><span class="prompt">$</span> <span class="cmd">fluid plan contract.fluid.yaml --html</span></div>
+          <div class="term-line" style="--i:7"><span class="info">▸</span> Resolving Snowflake catalog state...</div>
+          <div class="term-line" style="--i:8"><span class="info">▸</span> Computing diff against current schema</div>
+          <div class="term-line" style="--i:9"><span class="ok">✓</span> Plan written to <span class="hl">runtime/plan.json</span></div>
+          <div class="term-line" style="--i:10"><span class="ok">✓</span> Plan HTML at <span class="hl">runtime/plan.html</span></div>
+        </div>
+        <div class="plan-html-mock">
+          <h1>FLUID Plan — silver.telco.subscriber360_v1</h1>
+          <div class="sub">2 tables · 28 columns · 4 DQ rules · 9 lineage edges · 6 Horizon tags</div>
+          <div class="plan-row">
+            <span class="plan-badge create">Create</span>
+            <span class="plan-name">SUBSCRIBER360_CORE_V1</span>
+            <span class="plan-cols">17 cols</span>
+          </div>
+          <div class="plan-row">
+            <span class="plan-badge create">Create</span>
+            <span class="plan-name">SUBSCRIBER_HEALTH_SCORECARD_V1</span>
+            <span class="plan-cols">11 cols</span>
+          </div>
+          <div class="plan-row">
+            <span class="plan-badge tag">Tag</span>
+            <span class="plan-name">ACCOUNT_ID — PII</span>
+            <span class="plan-cols">classification</span>
+          </div>
+          <div class="plan-row">
+            <span class="plan-badge tag">Tag</span>
+            <span class="plan-name">MONTHLY_RECURRING_CHARGE — FINANCIAL</span>
+            <span class="plan-cols">classification</span>
+          </div>
+          <div class="plan-row">
+            <span class="plan-badge alter">Grant</span>
+            <span class="plan-name">USAGE on SCHEMA → telco-customer-intelligence</span>
+            <span class="plan-cols">access agreement</span>
+          </div>
+          <div class="plan-row">
+            <span class="plan-badge create">Create</span>
+            <span class="plan-name">DMF: account_id_not_null</span>
+            <span class="plan-cols">data quality</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">One CLI: <span class="accent">validate · plan · preview the DDL</span> — before you touch Snowflake.</div>
+  </section>
+
+  <!-- ========================================================
+       Scene 5 — Apply to Snowflake (20s)
+       ======================================================== -->
+  <section class="scene scene-apply" data-duration="20000">
+    <div class="stage ken-burns">
+      <div class="apply-grid">
+        <div class="term">
+          <div class="term-header">
+            <span class="term-dot r"></span><span class="term-dot y"></span><span class="term-dot g"></span>
+            <span class="term-title">~/telco-silver-product</span>
+          </div>
+          <div class="term-line" style="--i:0"><span class="prompt">$</span> <span class="cmd">fluid apply contract.fluid.yaml --build $BUILD_ID --yes</span></div>
+          <div class="term-line" style="--i:1"><span class="info">▸</span> Connecting to <span class="hl">TELCO_LAB</span> on Snowflake...</div>
+          <div class="term-line" style="--i:2"><span class="ok">✓</span> Created table <span class="hl">SUBSCRIBER360_CORE_V1</span> <span class="dim">(17 cols)</span></div>
+          <div class="term-line" style="--i:3"><span class="ok">✓</span> Created table <span class="hl">SUBSCRIBER_HEALTH_SCORECARD_V1</span> <span class="dim">(11 cols)</span></div>
+          <div class="term-line" style="--i:4"><span class="ok">✓</span> Applied <span class="hl">6</span> Horizon tags <span class="dim">(PII, FINANCIAL)</span></div>
+          <div class="term-line" style="--i:5"><span class="ok">✓</span> Registered <span class="hl">4</span> data metric functions (DMFs)</div>
+          <div class="term-line" style="--i:6"><span class="ok">✓</span> Granted access to <span class="hl">telco-customer-intelligence</span></div>
+          <div class="term-line" style="--i:7"><span class="ok">✓</span> Wrote semantic model <span class="dim">(2 metrics)</span></div>
+          <div class="term-line" style="--i:8">&nbsp;</div>
+          <div class="term-line" style="--i:9"><span class="ok">✓</span> Apply complete · <span class="dim">42.1s</span> · report → <span class="hl">runtime/apply_report.html</span></div>
+        </div>
+        <div class="snow-worksheet">
+          <div class="snow-tab-bar">
+            <span class="dot"></span>
+            <span class="name">subscriber360_core_v1.sql</span>
+            <span class="role">TELCO_LAB · SILVER · ACCOUNTADMIN</span>
+          </div>
+          <div class="snow-sql"><span class="kw">DESCRIBE</span> <span class="kw">TABLE</span> <span class="id">SUBSCRIBER360_CORE_V1</span>;</div>
+          <div class="snow-results">
+            <div class="snow-row head">
+              <span>name</span><span>type</span><span>nullable</span><span>tags</span>
+            </div>
+            <div class="snow-row">
+              <span>PARTY_ID</span><span>STRING</span><span>NOT NULL</span><span><span class="snow-tag">PII</span></span>
+            </div>
+            <div class="snow-row">
+              <span>ACCOUNT_ID</span><span>STRING</span><span>NOT NULL</span><span><span class="snow-tag">PII</span></span>
+            </div>
+            <div class="snow-row">
+              <span>SERVICE_ID</span><span>STRING</span><span>NOT NULL</span><span></span>
+            </div>
+            <div class="snow-row">
+              <span>MONTHLY_RECURRING_CHARGE</span><span>NUMBER</span><span>NOT NULL</span><span><span class="snow-tag">FINANCIAL</span></span>
+            </div>
+            <div class="snow-row">
+              <span>DATA_MB_30D</span><span>NUMBER</span><span>NOT NULL</span><span></span>
+            </div>
+            <div class="snow-row">
+              <span>SUPPORT_HEALTH_SCORE</span><span>NUMBER</span><span>NOT NULL</span><span></span>
+            </div>
+            <div class="snow-row">
+              <span>SUPPORT_RISK_BAND</span><span>STRING</span><span>NOT NULL</span><span></span>
+            </div>
+            <div class="snow-row">
+              <span>SNAPSHOT_AT</span><span>TIMESTAMP</span><span>NOT NULL</span><span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">Deploy silver marts. <span class="accent">Governance applied automatically.</span></div>
+  </section>
+
+  <!-- ========================================================
+       Scene 6 — Lineage (20s)
+       ======================================================== -->
+  <section class="scene scene-lineage" data-duration="20000">
+    <div class="stage ken-burns">
+      <div class="lineage-svg-wrap">
+        <svg viewBox="0 0 1400 700" preserveAspectRatio="xMidYMid meet">
+          <!-- Bronze layer (left) -->
+          <g transform="translate(40, 80)">
+            <rect class="node-box" x="0" y="0" width="220" height="100" rx="10"/>
+            <text class="node-title" x="20" y="32">Party</text>
+            <text class="node-sub" x="20" y="56">bronze.telco.party_v1</text>
+            <rect class="node-pill" x="20" y="68" width="90" height="20" rx="10"/>
+            <text class="pill-text" x="32" y="82">200 rows</text>
+          </g>
+          <g transform="translate(40, 240)">
+            <rect class="node-box" x="0" y="0" width="220" height="100" rx="10"/>
+            <text class="node-title" x="20" y="32">Usage</text>
+            <text class="node-sub" x="20" y="56">bronze.telco.usage_v1</text>
+            <rect class="node-pill" x="20" y="68" width="100" height="20" rx="10"/>
+            <text class="pill-text" x="32" y="82">10,000 rows</text>
+          </g>
+          <g transform="translate(40, 400)">
+            <rect class="node-box" x="0" y="0" width="220" height="100" rx="10"/>
+            <text class="node-title" x="20" y="32">Billing</text>
+            <text class="node-sub" x="20" y="56">bronze.telco.billing_v1</text>
+            <rect class="node-pill" x="20" y="68" width="90" height="20" rx="10"/>
+            <text class="pill-text" x="32" y="82">3,200 rows</text>
+          </g>
+
+          <!-- Stage / DV2 (middle) -->
+          <g transform="translate(550, 60)">
+            <rect class="node-box" x="0" y="0" width="200" height="80" rx="8"/>
+            <text class="node-title" x="16" y="30">stg__account</text>
+            <text class="node-sub" x="16" y="54">Data Vault 2</text>
+          </g>
+          <g transform="translate(550, 170)">
+            <rect class="node-box" x="0" y="0" width="200" height="80" rx="8"/>
+            <text class="node-title" x="16" y="30">stg__service</text>
+            <text class="node-sub" x="16" y="54">Data Vault 2</text>
+          </g>
+          <g transform="translate(550, 280)">
+            <rect class="node-box" x="0" y="0" width="200" height="80" rx="8"/>
+            <text class="node-title" x="16" y="30">stg__usage</text>
+            <text class="node-sub" x="16" y="54">Data Vault 2</text>
+          </g>
+          <g transform="translate(550, 390)">
+            <rect class="node-box" x="0" y="0" width="200" height="80" rx="8"/>
+            <text class="node-title" x="16" y="30">stg__interactions</text>
+            <text class="node-sub" x="16" y="54">Data Vault 2</text>
+          </g>
+          <g transform="translate(550, 500)">
+            <rect class="node-box" x="0" y="0" width="200" height="80" rx="8"/>
+            <text class="node-title" x="16" y="30">stg__invoice</text>
+            <text class="node-sub" x="16" y="54">Data Vault 2</text>
+          </g>
+
+          <!-- Silver marts (right) -->
+          <g transform="translate(1040, 140)">
+            <rect class="node-box silver" x="0" y="0" width="320" height="120" rx="12"/>
+            <text class="node-title" x="20" y="34">SUBSCRIBER360_CORE_V1</text>
+            <text class="node-sub" x="20" y="60">silver.telco.subscriber360</text>
+            <rect class="node-pill" x="20" y="76" width="80" height="22" rx="11"/>
+            <text class="pill-text" x="32" y="91">17 cols</text>
+            <rect class="node-pill" x="108" y="76" width="80" height="22" rx="11"/>
+            <text class="pill-text" x="120" y="91">2 metrics</text>
+          </g>
+          <g transform="translate(1040, 380)">
+            <rect class="node-box silver" x="0" y="0" width="320" height="120" rx="12"/>
+            <text class="node-title" x="20" y="34">SUBSCRIBER_HEALTH_</text>
+            <text class="node-title" x="20" y="56">SCORECARD_V1</text>
+            <text class="node-sub" x="20" y="80">silver.telco.scorecard</text>
+            <rect class="node-pill" x="20" y="92" width="80" height="22" rx="11"/>
+            <text class="pill-text" x="32" y="107">11 cols</text>
+          </g>
+
+          <!-- Edges (bronze → stage) -->
+          <path class="edge e1" d="M 260 130 C 380 130, 430 100, 550 100" marker-end="url(#arrowhead)"/>
+          <path class="edge e2" d="M 260 130 C 380 130, 430 210, 550 210" marker-end="url(#arrowhead)"/>
+          <path class="edge e3" d="M 260 290 C 380 290, 430 320, 550 320" marker-end="url(#arrowhead)"/>
+          <path class="edge e4" d="M 260 290 C 380 290, 430 430, 550 430" marker-end="url(#arrowhead)"/>
+          <path class="edge e5" d="M 260 450 C 380 450, 430 540, 550 540" marker-end="url(#arrowhead)"/>
+
+          <!-- Edges (stage → silver core) -->
+          <path class="edge e6" d="M 750 100 C 870 100, 920 200, 1040 200" marker-end="url(#arrowhead)"/>
+          <path class="edge e6" d="M 750 210 C 870 210, 920 200, 1040 200" marker-end="url(#arrowhead)"/>
+          <path class="edge e6" d="M 750 320 C 870 320, 920 200, 1040 200" marker-end="url(#arrowhead)"/>
+
+          <!-- Edges (stage → scorecard) -->
+          <path class="edge e6" d="M 750 320 C 870 320, 920 440, 1040 440" marker-end="url(#arrowhead)"/>
+          <path class="edge e6" d="M 750 430 C 870 430, 920 440, 1040 440" marker-end="url(#arrowhead)"/>
+          <path class="edge e6" d="M 750 540 C 870 540, 920 440, 1040 440" marker-end="url(#arrowhead)"/>
+        </svg>
+      </div>
+    </div>
+    <div class="caption"><span class="accent">Field-level lineage.</span> Every transformation tracked. End to end.</div>
+  </section>
+
+  <!-- ========================================================
+       Scene 7 — CI generated (20s)
+       ======================================================== -->
+  <section class="scene scene-ci" data-duration="20000">
+    <div class="stage ken-burns">
+      <div class="ci-grid">
+        <div class="term">
+          <div class="term-header">
+            <span class="term-dot r"></span><span class="term-dot y"></span><span class="term-dot g"></span>
+            <span class="term-title">~/telco-silver-product</span>
+          </div>
+          <div class="term-line" style="--i:0"><span class="prompt">$</span> <span class="cmd">fluid generate ci contract.fluid.yaml --system jenkins \</span></div>
+          <div class="term-line" style="--i:1"><span class="cmd">    --default-publish-target datamesh-manager --out Jenkinsfile</span></div>
+          <div class="term-line" style="--i:2"><span class="ok">✓</span> Wrote <span class="hl">Jenkinsfile</span> · <span class="dim">11 stages, 312 lines</span></div>
+          <div class="term-line" style="--i:3">&nbsp;</div>
+          <div class="term-line" style="--i:4"><span class="prompt">$</span> <span class="cmd">fluid generate schedule contract.fluid.yaml --scheduler airflow</span></div>
+          <div class="term-line" style="--i:5"><span class="ok">✓</span> Wrote <span class="hl">generated/airflow/dags/subscriber360_dag.py</span></div>
+          <div class="term-line" style="--i:6"><span class="dim">Cron: 0 6 * * * · 2 retries · exponential backoff</span></div>
+        </div>
+        <div class="pipeline">
+          <div class="pipe-stage" style="--p:0"><span class="pipe-num">01</span><span class="pipe-name">Bundle</span><span class="pipe-check">✓</span></div>
+          <div class="pipe-stage" style="--p:1"><span class="pipe-num">02</span><span class="pipe-name">Validate</span><span class="pipe-check">✓</span></div>
+          <div class="pipe-stage" style="--p:2"><span class="pipe-num">03</span><span class="pipe-name">Generate</span><span class="pipe-check">✓</span></div>
+          <div class="pipe-stage" style="--p:3"><span class="pipe-num">04</span><span class="pipe-name">Plan</span><span class="pipe-check">✓</span></div>
+          <div class="pipe-stage" style="--p:4"><span class="pipe-num">05</span><span class="pipe-name">Apply</span><span class="pipe-check">✓</span></div>
+          <div class="pipe-stage" style="--p:5"><span class="pipe-num">06</span><span class="pipe-name">Verify</span><span class="pipe-check">✓</span></div>
+          <div class="pipe-stage" style="--p:6"><span class="pipe-num">07</span><span class="pipe-name">DQ Run</span><span class="pipe-check">✓</span></div>
+          <div class="pipe-stage" style="--p:7"><span class="pipe-num">08</span><span class="pipe-name">Tag</span><span class="pipe-check">✓</span></div>
+          <div class="pipe-stage" style="--p:8"><span class="pipe-num">09</span><span class="pipe-name">Publish</span><span class="pipe-check">✓</span></div>
+          <div class="pipe-stage" style="--p:9"><span class="pipe-num">10</span><span class="pipe-name">Schedule Sync</span><span class="pipe-check">✓</span></div>
+          <div class="pipe-stage" style="--p:10"><span class="pipe-num">11</span><span class="pipe-name">Notify</span><span class="pipe-check">✓</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">An <span class="accent">11-stage CI pipeline</span> — emitted from your contract. Plus an Airflow DAG.</div>
+  </section>
+
+  <!-- ========================================================
+       Scene 8 — Marketplace (27s)
+       ======================================================== -->
+  <section class="scene scene-marketplace" data-duration="27000">
+    <div class="stage ken-burns">
+      <div class="dmm-grid">
+        <div class="dmm-card">
+          <div class="dmm-header">
+            <div class="dmm-icon">S</div>
+            <div>
+              <div class="dmm-title">Telco Subscriber 360</div>
+              <div class="dmm-id">silver.telco.subscriber360_v1 · v1.0.0</div>
+            </div>
+            <div class="dmm-status">Published</div>
+          </div>
+          <div class="dmm-section-title">Output ports</div>
+          <div class="dmm-output">
+            <span>📊</span>
+            <span class="dmm-output-name">SUBSCRIBER360_CORE_V1</span>
+            <span class="dmm-output-cols">17 cols · snowflake_table</span>
+          </div>
+          <div class="dmm-output">
+            <span>📈</span>
+            <span class="dmm-output-name">SUBSCRIBER_HEALTH_SCORECARD_V1</span>
+            <span class="dmm-output-cols">11 cols · snowflake_table</span>
+          </div>
+          <div class="dmm-section-title">Data quality (4 rules)</div>
+          <div class="dmm-dq">
+            <span class="dmm-dq-pill">account_id_not_null</span>
+            <span class="dmm-dq-pill">service_id_unique</span>
+            <span class="dmm-dq-pill">support_risk_band_valid</span>
+            <span class="dmm-dq-pill">recurring_charge_non_negative</span>
+          </div>
+          <div class="dmm-section-title">Access agreements</div>
+          <div class="dmm-access">
+            <strong>care-and-retention-team</strong> auto-approved · USAGE on subscriber_health_scorecard
+          </div>
+          <div class="dmm-access">
+            <strong>finance-analytics</strong> requested · USAGE on subscriber360_core
+          </div>
+        </div>
+        <div class="dmm-mini-lineage">
+          <div class="dmm-lineage-title">Upstream lineage</div>
+          <div class="dmm-lineage-svg">
+            <svg viewBox="0 0 500 500" preserveAspectRatio="xMidYMid meet">
+              <!-- Bronze inputs (left column) -->
+              <g transform="translate(20, 70)">
+                <rect class="node-box" x="0" y="0" width="170" height="60" rx="8"/>
+                <text class="node-title" x="14" y="24" style="font-size: 12px;">party_v1</text>
+                <text class="node-sub" x="14" y="44" style="font-size: 10px;">bronze.telco</text>
+              </g>
+              <g transform="translate(20, 220)">
+                <rect class="node-box" x="0" y="0" width="170" height="60" rx="8"/>
+                <text class="node-title" x="14" y="24" style="font-size: 12px;">usage_v1</text>
+                <text class="node-sub" x="14" y="44" style="font-size: 10px;">bronze.telco</text>
+              </g>
+              <g transform="translate(20, 370)">
+                <rect class="node-box" x="0" y="0" width="170" height="60" rx="8"/>
+                <text class="node-title" x="14" y="24" style="font-size: 12px;">billing_v1</text>
+                <text class="node-sub" x="14" y="44" style="font-size: 10px;">bronze.telco</text>
+              </g>
+              <!-- Silver (right) -->
+              <g transform="translate(290, 220)">
+                <rect class="node-box silver" x="0" y="0" width="190" height="60" rx="8"/>
+                <text class="node-title" x="14" y="24" style="font-size: 12px;">subscriber360</text>
+                <text class="node-sub" x="14" y="44" style="font-size: 10px;">silver · published</text>
+              </g>
+              <!-- Edges -->
+              <path class="edge e1" d="M 190 100 C 240 100, 260 240, 290 240" marker-end="url(#arrowhead)"/>
+              <path class="edge e2" d="M 190 250 C 240 250, 260 250, 290 250" marker-end="url(#arrowhead)"/>
+              <path class="edge e3" d="M 190 400 C 240 400, 260 260, 290 260" marker-end="url(#arrowhead)"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">Publish to your <span class="accent">data marketplace</span>. Discoverable. Governed. Consumable.</div>
+  </section>
+
+  <!-- ========================================================
+       Scene 9 — Closing (15s)
+       ======================================================== -->
+  <section class="scene scene-closing" data-duration="15000">
+    <div class="particles" aria-hidden="true"></div>
+    <div class="stage">
+      <div class="closing-wrap">
+        <div class="closing-mark">
+          <span class="fluid-mark">FLUID</span>
+        </div>
+        <div class="closing-tag">Contract-first data products. Native to Snowflake.</div>
+        <div class="closing-install">
+          <span class="prompt">$</span> pip install data-product-forge
+        </div>
+        <div class="closing-contact">
+          Fahed Saleh · <a href="mailto:change@agenticstransformation.com">change@agenticstransformation.com</a><br/>
+          <span style="opacity:0.7">Open lab repo: snowflake-biz-lab</span>
+        </div>
+        <div class="closing-built">
+          <svg class="snowflake-icon" aria-hidden="true"><use href="#snowflake"/></svg>
+          Built on Snowflake
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // ============================================================
+  // Reel scheduler
+  // ============================================================
+  (function () {
+    const scenes = Array.from(document.querySelectorAll('.scene'));
+    const params = new URLSearchParams(location.search);
+    const recording = params.get('record') === '1';
+    const onceMode = location.hash === '#once';
+    const lockSceneRaw = params.get('scene');
+    const lockScene = lockSceneRaw !== null ? Math.max(0, Math.min(scenes.length - 1, parseInt(lockSceneRaw, 10))) : null;
+    let i = 0;
+    let timer = null;
+
+    function showScene(idx) {
+      scenes.forEach(s => s.classList.remove('active'));
+      const cur = scenes[idx];
+      if (!cur) return;
+      // Set the Ken Burns duration to match the scene length.
+      const dur = parseInt(cur.dataset.duration, 10) || 15000;
+      cur.style.setProperty('--scene-dur', (dur / 1000) + 's');
+      cur.classList.add('active');
+      return dur;
+    }
+
+    function advance() {
+      const dur = showScene(i);
+      i++;
+      if (i >= scenes.length) {
+        if (onceMode) {
+          // Hold final frame; don't loop.
+          return;
+        }
+        i = 0;
+      }
+      timer = setTimeout(advance, dur);
+    }
+
+    function startCountdown(then) {
+      const cd = document.getElementById('countdown');
+      let n = 3;
+      cd.style.display = 'flex';
+      cd.textContent = n;
+      const tick = setInterval(() => {
+        n--;
+        if (n > 0) {
+          cd.textContent = n;
+        } else {
+          clearInterval(tick);
+          cd.style.display = 'none';
+          then();
+        }
+      }, 1000);
+    }
+
+    function start() {
+      if (recording) document.body.classList.add('recording');
+      if (lockScene !== null) {
+        // Single-scene lock for previewing/iterating on one scene.
+        showScene(lockScene);
+        return;
+      }
+      if (recording) {
+        startCountdown(advance);
+      } else {
+        advance();
+      }
+    }
+
+    // Keyboard controls (handy during dev, harmless during recording):
+    //   Space  — pause/resume
+    //   →      — next scene
+    //   ←      — previous scene
+    //   R      — restart
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (timer) { clearTimeout(timer); timer = null; }
+        else { advance(); }
+      } else if (e.code === 'ArrowRight') {
+        clearTimeout(timer); advance();
+      } else if (e.code === 'ArrowLeft') {
+        clearTimeout(timer);
+        i = Math.max(0, i - 2);
+        advance();
+      } else if (e.key === 'r' || e.key === 'R') {
+        clearTimeout(timer); i = 0; advance();
+      }
+    });
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', start);
+    } else {
+      start();
+    }
+  })();
+</script>
+</body>
+</html>
