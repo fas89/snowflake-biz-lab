@@ -170,9 +170,9 @@ task ps
 What you should see now:
 
 - Airflow opens at [http://localhost:8085](http://localhost:8085) and shows no scenario DAGs yet
-- Jenkins opens at [http://localhost:8081](http://localhost:8081) and shows no A1 or A2 jobs yet
+- Jenkins opens at [http://localhost:8081](http://localhost:8081) and shows no A1, A2, B1, or B2 jobs yet
 - DMM opens at [http://localhost:8095](http://localhost:8095) and accepts the bootstrap login above
-- dbt docs opens at [http://localhost:8086](http://localhost:8086), but the silver docs are not meaningful until you refresh them for A1 or A2
+- dbt docs opens at [http://localhost:8086](http://localhost:8086), but the silver docs are not meaningful until you refresh them for A1, A2, B1, or B2
 - Mailpit opens at [http://localhost:8026](http://localhost:8026) if you want to inspect local catalog signup email
 
 Useful local URLs:
@@ -225,7 +225,7 @@ Choose exactly one:
 - [Dev Source Launchpad (Mac)](dev-source-launchpad-mac.md)
 - [Dev Source Launchpad (Windows)](dev-source-launchpad-windows.md)
 
-Then run Bronze, A1, and A2 from the matching playbook:
+Then run Bronze, A1, A2, B1, and B2 from the matching playbook:
 
 - [Variant Playbook (Mac)](variant-playbook-mac.md)
 - [Variant Playbook (Windows)](variant-playbook-windows.md)

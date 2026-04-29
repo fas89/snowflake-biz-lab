@@ -42,6 +42,24 @@ SCENARIOS: dict[str, ScenarioConfig] = {
         job_name="A2-internal-reference",
         default_params=(("PUBLISH_TARGETS", "datamesh-manager"),),
     ),
+    "B1": ScenarioConfig(
+        scenario="B1",
+        job_name="B1-ai-reference-external",
+        default_params=(
+            ("PUBLISH_TARGETS", "datamesh-manager"),
+            ("APPLY_MODE", "amend-and-build"),
+            ("APPLY_BUILD_ID", "ai_subscriber360_external_build"),
+        ),
+    ),
+    "B2": ScenarioConfig(
+        scenario="B2",
+        job_name="B2-ai-generate-in-workspace",
+        default_params=(
+            ("PUBLISH_TARGETS", "datamesh-manager"),
+            ("APPLY_MODE", "amend-and-build"),
+            ("APPLY_BUILD_ID", "ai_subscriber360_generated_build"),
+        ),
+    ),
 }
 
 

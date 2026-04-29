@@ -4,6 +4,13 @@ variants/**/dbt_project/logs/
 variants/**/dbt_project/dbt_packages/
 variants/**/dbt_project/compiled/
 variants/**/dbt_project/run/
+variants/**/generated/dbt/**/target/
+variants/**/generated/dbt/**/logs/
+variants/**/generated/dbt/**/dbt_packages/
+variants/**/generated/dbt/**/compiled/
+variants/**/generated/dbt/**/run/
+variants/**/generated/dbt/**/.user.yml
+variants/**/generated/airflow/**/__pycache__/
 variants/**/runtime/
 
 # dbt profiles can carry secrets when env_var() defaults are overridden

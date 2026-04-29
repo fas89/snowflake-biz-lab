@@ -1,9 +1,11 @@
-# B2 Golden: AI Forge + Generated Assets
+# B2 MCP Marker
 
-Drop the captured `contract.fluid.yaml` into this folder. The launchpad's B2 demo-mode block copies it verbatim over the contract file inside `$EXISTING_DBT_WORKSPACE/variants/B2-ai-generate-in-workspace/subscriber360-generated/`.
+This folder intentionally does not contain a `contract.fluid.yaml` or generated
+asset tree.
 
-If B2's demo-mode flow also depends on pre-generated `generated/dbt/` and `generated/airflow/` artifacts that `fluid generate transformation`/`fluid generate schedule` would normally build, check those in alongside this contract so the single demo-mode `cp`/`cp -R` step mirrors the full forge + generate output.
-
-Until this folder contains a `contract.fluid.yaml`, the launchpad's B2 demo-mode block will fail with "No such file" — that is intentional so you don't ship a demo without capturing the golden first.
+B2 is now generated at run time by `task b2:forge:mcp`. That command starts the
+forge-cli MCP server, reads the lab's seeded Snowflake schema, writes the raw
+MCP model under the scenario runtime directory, and generates the B2 dbt,
+Airflow, and Jenkins assets inside the Path B workspace.
 
 See [../README.md](../README.md) for the full refresh workflow.

@@ -85,11 +85,12 @@ stages. Each `RUN_STAGE_N_*` toggle on the Jenkins job can skip one.
     `reference-assets/`.
   - **A2 internal-reference** — the same idea but the dbt project lives
     inside the workspace.
-- **Path B (AI-forge)** — AI-authored silver variants. Iterative/demo-only
-  in this lab; **not** published to the synthetic demo git, not wired as a
-  Jenkins job:
-  - **B1 ai-reference-external** — AI-forged from a curated prompt.
-  - **B2 ai-generate-in-workspace** — AI-forged directly in the workspace.
+- **Path B (AI-forge)** — AI-authored silver variants:
+  - **B1 ai-reference-external** — live-forged with Gemini or OpenAI from the
+    seeded telco context, then hardened with stable lab guardrails so the
+    external dbt/Jenkins/Airflow flow can run consistently.
+  - **B2 ai-generate-in-workspace** — MCP-forged from the seeded Snowflake
+    schema, then generated directly in the workspace.
 
 ## Install tracks
 
@@ -105,8 +106,8 @@ stages. Each `RUN_STAGE_N_*` toggle on the Jenkins job can skip one.
 - **Workspace A (`path-a-telco-silver-product-demo`)** — the synthetic
   GitLab demo repo under `gitlab/`, hosts A1 + A2 variants + their
   `Jenkinsfile` checked out by the Jenkins SCM pipelines.
-- **Workspace B (`path-b-ai-telco-silver-import-demo`)** — the AI-forge
-  equivalent for B1 / B2. Not pushed to the lab's Jenkins instance.
+- **Workspace B (`path-b-ai-telco-silver-import-demo`)** — the AI/MCP forge
+  equivalent for B1 / B2. Both variants are wired to the lab's Jenkins instance.
 
 Both workspaces live under `./gitlab/` (gitignored) and are bootstrapped
 from templates at `fluid/fixtures/workspaces/` via

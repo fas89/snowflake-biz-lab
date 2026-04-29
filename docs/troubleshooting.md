@@ -77,7 +77,7 @@ task fluid:check:dev
 
 That is expected in this repo. Read [CLI Version vs `fluidVersion`](fluid-versions.md).
 
-## The CLI Mentions `llm_models.json`
+## Older CLI Builds Mention `llm_models.json`
 
 You may see a warning like this during `validate` or `plan`:
 
@@ -85,7 +85,7 @@ You may see a warning like this during `validate` or `plan`:
 Could not load model catalog ... llm_models.json
 ```
 
-In the latest TestPyPI `data-product-forge` release, that warning can appear even when the contract workflow still succeeds.
+Older TestPyPI `data-product-forge` builds could print that warning even when the contract workflow still succeeded. The current local `forge-cli` source includes the model catalog as package data, so this should not appear when you run against the dev checkout.
 
 If `validate`, `plan`, or `doctor` finishes successfully, you can continue with the demo. Treat it as a release quirk, not as an automatic stop signal.
 

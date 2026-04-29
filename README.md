@@ -2,6 +2,8 @@
 
 Snowflake-first telco lab for staged TM Forum SID-style seed data, local platform services, and a FLUID walkthrough that starts empty and becomes visible step by step.
 
+> **▶ [Watch the 3-minute demo reel](https://fas89.github.io/snowflake-biz-lab/demo-reel/)** — FLUID on Snowflake, end to end. _(Goes live once GitHub Pages is enabled in repo Settings → Pages → Source: `main` branch, folder `/docs`.)_
+
 ## Start Here
 
 1. [Launchpad Common](docs/launchpad-common.md) for the first-run quickstart, clean-start commands, local logins, and platform bring-up.
@@ -10,7 +12,7 @@ Snowflake-first telco lab for staged TM Forum SID-style seed data, local platfor
    - [Demo Release Launchpad (Windows)](docs/demo-release-launchpad-windows.md)
    - [Dev Source Launchpad (Mac)](docs/dev-source-launchpad-mac.md)
    - [Dev Source Launchpad (Windows)](docs/dev-source-launchpad-windows.md)
-3. Run Bronze, A1, and A2 from the matching variant playbook:
+3. Run Bronze, A1, A2, B1, and B2 from the matching variant playbook:
    - [Variant Playbook (Mac)](docs/variant-playbook-mac.md)
    - [Variant Playbook (Windows)](docs/variant-playbook-windows.md)
 
@@ -31,8 +33,8 @@ The quickstart now treats "from zero" literally:
 - Airflow starts with no scenario DAGs
 - DMM is ready to log into
 - local Docker ports bind to `127.0.0.1` by default, so the default demo passwords are not exposed to your network
-- A1 and A2 only appear in Jenkins after `task jenkins:sync`
-- A1 and A2 only appear in Airflow after the native `fluid schedule-sync` command copies their existing DAG assets into `airflow/dags/active/current`
+- A1, A2, B1, and B2 only appear in Jenkins after `task jenkins:sync`
+- A1, A2, B1, and B2 only appear in Airflow after the native `fluid schedule-sync` command copies their DAG assets into `airflow/dags/active/current`
 
 ## Local Security Boundary
 

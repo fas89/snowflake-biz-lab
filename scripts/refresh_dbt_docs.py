@@ -87,10 +87,10 @@ def resolve_scenario(scenario: str, env: dict[str, str]) -> ScenarioProject:
         ),
         "b2": ScenarioProject(
             key="B2",
-            host_project_dir=f"{existing}/variants/B2-ai-generate-in-workspace/subscriber360-generated/generated/dbt",
-            container_project_dir="/workspace/import/variants/B2-ai-generate-in-workspace/subscriber360-generated/generated/dbt",
+            host_project_dir=f"{existing}/variants/B2-ai-generate-in-workspace/subscriber360-generated/generated/dbt/dbt_dv2_subscriber360",
+            container_project_dir="/workspace/import/variants/B2-ai-generate-in-workspace/subscriber360-generated/generated/dbt/dbt_dv2_subscriber360",
             summary="AI generated-assets flow uses the generated DV2 project in Workspace B.",
-            expected_models=("mart_subscriber360_core", "mart_subscriber_health_scorecard"),
+            expected_models=("subscriber360_core", "subscriber_health_scorecard"),
         ),
     }
     return projects[scenario]
