@@ -138,12 +138,24 @@ tasks:
     cmd: "{{.COMPOSE}} --profile jenkins stop jenkins"
 
   jenkins:sync:
-    desc: Create or update the Jenkins Pipeline-from-SCM job for scenario A1 or A2
+    desc: Create or update the Jenkins Pipeline-from-SCM job for scenario A1, A2, B1, or B2
     cmd: "python3 scripts/sync_jenkins_job.py --scenario \"{{.SCENARIO}}\""
 
   jenkins:build:
-    desc: Trigger the Jenkins Pipeline build for scenario A1 or A2 via buildWithParameters
+    desc: Trigger the Jenkins Pipeline build for scenario A1, A2, B1, or B2 via buildWithParameters
     cmd: "python3 scripts/run_jenkins_build.py --scenario \"{{.SCENARIO}}\" {{.CLI_ARGS}}"
+
+  b1:forge:ai:
+    desc: Live-forge the B1 AI external-reference contract with Gemini/OpenAI and lab guardrails
+    vars:
+      FLUID_BIN: '{{.FLUID_BIN | default "./.venv.fluid-dev/bin/fluid"}}'
+    cmd: "python3 scripts/forge_b1_live_ai.py --fluid \"{{.FLUID_BIN}}\" {{.CLI_ARGS}}"
+
+  b2:forge:mcp:
+    desc: MCP-forge the B2 generated-assets contract from seeded Snowflake metadata
+    vars:
+      FLUID_BIN: '{{.FLUID_BIN | default "./.venv.fluid-dev/bin/fluid"}}'
+    cmd: "python3 scripts/forge_b2_mcp.py --fluid \"{{.FLUID_BIN}}\" {{.CLI_ARGS}}"
 
   catalogs:up:
     desc: Start the local Entropy Data CE stack
@@ -275,7 +287,7 @@ tasks:
             --mode enforce --env {{.FLUID_ENV}}
         fi
       # Stage 9 — verify
-      - '{{.FLUID}} verify {{.CONTRACT}} --strict --env {{.FLUID_ENV}} --report runtime/verify.json'
+      - '{{.FLUID}} verify {{.CONTRACT}} --strict --env {{.FLUID_ENV}} --out runtime/verify.json'
       # Stage 10 — publish (TARGETS expands to --target X --target Y ...)
       - |
         TARGET_FLAGS=""
