@@ -1,7 +1,10 @@
-# B1 Golden: AI Forge + External References
+# B1 Live AI Marker
 
-Drop the captured `contract.fluid.yaml` into this folder. The launchpad's B1 demo-mode block copies it verbatim over the contract file inside `$EXISTING_DBT_WORKSPACE/variants/B1-ai-reference-external/subscriber360-external/`.
+This folder intentionally does not contain a `contract.fluid.yaml`.
 
-Until this folder contains a `contract.fluid.yaml`, the launchpad's B1 demo-mode block will fail with "No such file" — that is intentional so you don't ship a demo without capturing the golden first.
+B1 is no longer a replay/golden scenario. The active playbook calls
+`task b1:forge:ai`, which uses Gemini/OpenAI at run time, writes the live
+contract into the Path B workspace, and keeps the raw provider output under the
+scenario runtime directory.
 
 See [../README.md](../README.md) for the full refresh workflow.

@@ -1,10 +1,11 @@
 # B1 — AI Forge With External References
 
-The operator runs `fluid init subscriber360-external --provider snowflake --yes` from this directory, then either:
+The B1 path starts by running `task b1:forge:ai` from the lab repo. That command calls a live LLM provider, writes the generated `subscriber360-external/contract.fluid.yaml`, and preserves the raw forge result under `subscriber360-external/runtime/generated/ai-forge/`. From there the operator regenerates:
 
-- **Demo mode:** copies the captured golden contract from `fluid/fixtures/forge-golden/B1-ai-reference-external/contract.fluid.yaml` over `subscriber360-external/contract.fluid.yaml`
-- **Live mode:** runs `fluid forge --provider snowflake --domain telco --target-dir .` which calls the real LLM
+- transformation preview assets with `fluid generate transformation`
+- Airflow schedule assets with `fluid generate schedule`
+- the Jenkins Pipeline-from-SCM file with `fluid generate ci`
 
-The resulting silver contract **references** external dbt and Airflow assets rather than generating them. Source-of-truth scripts for those external assets are in `path-a-telco-silver-product-demo/reference-assets/`.
+The resulting silver contract **references** external dbt assets rather than owning them inside the product folder. Source-of-truth dbt scripts are in `path-a-telco-silver-product-demo/reference-assets/`; B1's generated schedule assets live under `subscriber360-external/runtime/generated/airflow` after the playbook step.
 
 See the variant playbook for the full command sequence.
