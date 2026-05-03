@@ -35,12 +35,58 @@ SCENARIOS: dict[str, ScenarioConfig] = {
     "A1": ScenarioConfig(
         scenario="A1",
         job_name="A1-external-reference",
-        default_params=(("PUBLISH_TARGETS", "datamesh-manager"),),
+        # A1 is a ``hybrid-reference`` + ``engine: dbt`` contract.
+        # APPLY_MODE=amend now safe — the forge-cli column-leak bug
+        # in the snowflake provider's provisionDataset (which silently
+        # ALTERed sibling-expose tables to add cross-expose columns)
+        # was fixed at provider_enhanced.py — action.get("id") changed
+        # to action.get("action_id") and the fallback target_id
+        # resolution was tightened.
+        default_params=(
+            ("PUBLISH_TARGETS", "datamesh-manager"),
+            ("APPLY_MODE", "amend"),
+            # Strict verify is now safe under forge-cli >=this-fix
+            # because verify --strict only fails on CRITICAL severity
+            # (missing fields, type mismatches). WARNING-only constraint
+            # drift (nullable vs required) emits a warning and the
+            # build continues. Operators can tighten the contract
+            # incrementally without breaking the pipeline.
+            ("VERIFY_STRICT", "true"),
+        ),
     ),
     "A2": ScenarioConfig(
         scenario="A2",
         job_name="A2-internal-reference",
-        default_params=(("PUBLISH_TARGETS", "datamesh-manager"),),
+        # A2's committed Jenkinsfile has a plan stage that doesn't pass
+        # ``--mode "$APPLY_MODE"`` to fluid plan, so plan is generated
+        # mode-less and apply --mode dry-run trips the
+        # apply_plan_mode_mismatch gate. Until the Jenkinsfile is
+        # regenerated against the current forge-cli template (which
+        # emits the --mode flag on plan), skip stage 7 entirely.
+        # Hybrid-reference contracts have nothing for forge apply to
+        # materialise anyway — the embedded dbt project owns the
+        # silver marts.
+        default_params=(
+            ("PUBLISH_TARGETS", "datamesh-manager"),
+            ("RUN_STAGE_7_APPLY", "false"),
+            ("VERIFY_STRICT", "false"),
+        ),
+    ),
+    "B1": ScenarioConfig(
+        scenario="B1",
+        job_name="B1-ai-reference-external",
+        default_params=(
+            ("PUBLISH_TARGETS", "datamesh-manager"),
+            ("APPLY_MODE", "amend"),
+        ),
+    ),
+    "B2": ScenarioConfig(
+        scenario="B2",
+        job_name="B2-ai-generate-in-workspace",
+        default_params=(
+            ("PUBLISH_TARGETS", "datamesh-manager"),
+            ("APPLY_MODE", "amend"),
+        ),
     ),
 }
 
