@@ -54,24 +54,21 @@ SCENARIOS: dict[str, ScenarioConfig] = {
             ("VERIFY_STRICT", "true"),
         ),
     ),
-    "A2": ScenarioConfig(
-        scenario="A2",
-        job_name="A2-internal-reference",
-        # A2's committed Jenkinsfile has a plan stage that doesn't pass
-        # ``--mode "$APPLY_MODE"`` to fluid plan, so plan is generated
-        # mode-less and apply --mode dry-run trips the
-        # apply_plan_mode_mismatch gate. Until the Jenkinsfile is
-        # regenerated against the current forge-cli template (which
-        # emits the --mode flag on plan), skip stage 7 entirely.
-        # Hybrid-reference contracts have nothing for forge apply to
-        # materialise anyway — the embedded dbt project owns the
-        # silver marts.
-        default_params=(
-            ("PUBLISH_TARGETS", "datamesh-manager"),
-            ("RUN_STAGE_7_APPLY", "false"),
-            ("VERIFY_STRICT", "false"),
-        ),
-    ),
+    # A2 — DROPPED from the active demo set (2026-05-03). A2 is a
+    # "internal-reference dbt" variant of A1, but it produces the same
+    # silver tables in the same Snowflake schema, so running A1 + A2
+    # back-to-back makes them clobber each other. The "internal vs
+    # external dbt project location" distinction is a deployment-
+    # topology choice, not a product-mesh story. The variant tree at
+    # gitlab/path-a/.../variants/A2-internal-reference/ stays as a
+    # reference for operators who want to see the embedded-dbt
+    # layout, but it's no longer in the SCENARIOS rotation. To
+    # re-activate, restore the ScenarioConfig here and in
+    # sync_jenkins_job.py and add `A2` back to choices.
+    #     "A2": ScenarioConfig(scenario="A2",
+    #         job_name="A2-internal-reference",
+    #         default_params=(("PUBLISH_TARGETS", "datamesh-manager"), ...),
+    #     ),
     "B1": ScenarioConfig(
         scenario="B1",
         job_name="B1-ai-reference-external",
@@ -86,6 +83,19 @@ SCENARIOS: dict[str, ScenarioConfig] = {
         default_params=(
             ("PUBLISH_TARGETS", "datamesh-manager"),
             ("APPLY_MODE", "amend"),
+        ),
+    ),
+    "C1": ScenarioConfig(
+        scenario="C1",
+        job_name="C1-compose-cdp",
+        # C1 is a CDP composed from B1+B2 silver products via
+        # `fluid forge --from-product`. Default params mirror the B1+B2
+        # post-fix pattern (amend + strict; safe under the column-leak
+        # + verify-strict severity fixes).
+        default_params=(
+            ("PUBLISH_TARGETS", "datamesh-manager"),
+            ("APPLY_MODE", "amend"),
+            ("VERIFY_STRICT", "true"),
         ),
     ),
 }

@@ -299,3 +299,72 @@ tasks:
           CONTRACT: '{{.CONTRACT}}'
           FLUID_ENV: '{{.FLUID_ENV}}'
           APPLY_MODE: dry-run
+
+  # ---------------------------------------------------------------------------
+  # AI forge demos (B1, B2, C1)
+  #
+  # Each ``X:forge`` task drives forge-cli's staged copilot pipeline
+  # against the corresponding scenario. Default is live LLM (Gemini
+  # 2.5 Flash via litellm) with golden-fixture fallback when
+  # FLUID_LIVE_AI=0 or no API key is set. ``X:demo`` chains the forge
+  # step with publish + Jenkins trigger so a single command runs the
+  # whole demo.
+  #
+  # Provider override (Gemini default, OpenAI alternate; Anthropic
+  # excluded by design):
+  #   LITELLM_PROVIDER=openai task b1:forge
+  # ---------------------------------------------------------------------------
+
+  b1:forge:
+    desc: AI-forge B1 (silver Subscriber 360 — external dbt reference)
+    vars:
+      FLUID_BIN: '{{.FLUID_BIN | default ".venv.fluid-dev/bin/fluid"}}'
+    cmds:
+      - "{{.FLUID_DEV_VENV}}/bin/python scripts/run_ai_forge_b1.py --fluid-bin {{.FLUID_BIN}}"
+
+  b1:demo:
+    desc: B1 end-to-end — forge + publish bronze + sync + trigger Jenkins
+    cmds:
+      - task: publish:bronze
+      - task: b1:forge
+      - "python3 scripts/sync_jenkins_job.py --scenario B1"
+      - "python3 scripts/run_jenkins_build.py --scenario B1"
+
+  b2:forge:
+    desc: AI-forge B2 (silver Subscriber 360 — in-workspace dbt + Airflow + Jenkinsfile)
+    vars:
+      FLUID_BIN: '{{.FLUID_BIN | default ".venv.fluid-dev/bin/fluid"}}'
+    cmds:
+      - "{{.FLUID_DEV_VENV}}/bin/python scripts/run_mcp_forge_b2.py --fluid-bin {{.FLUID_BIN}}"
+
+  b2:demo:
+    desc: B2 end-to-end — forge + publish bronze + sync + trigger Jenkins
+    cmds:
+      - task: publish:bronze
+      - task: b2:forge
+      - "python3 scripts/sync_jenkins_job.py --scenario B2"
+      - "python3 scripts/run_jenkins_build.py --scenario B2"
+
+  c1:forge:
+    desc: AI-compose C1 — Customer 360 CDP from B1+B2 silver products
+    vars:
+      FLUID_BIN: '{{.FLUID_BIN | default ".venv.fluid-dev/bin/fluid"}}'
+    cmds:
+      - "{{.FLUID_DEV_VENV}}/bin/python scripts/run_compose_forge_c1.py --fluid-bin {{.FLUID_BIN}}"
+
+  c1:demo:
+    desc: C1 end-to-end — compose + publish + sync + trigger Jenkins
+    cmds:
+      - task: publish:bronze
+      - task: b1:forge
+      - task: b2:forge
+      - task: c1:forge
+      - "python3 scripts/sync_jenkins_job.py --scenario C1"
+      - "python3 scripts/run_jenkins_build.py --scenario C1"
+
+  path-b:demo:all:
+    desc: Run all Path B + C scenarios (B1 + B2 + C1) end-to-end
+    cmds:
+      - task: b1:demo
+      - task: b2:demo
+      - task: c1:demo
