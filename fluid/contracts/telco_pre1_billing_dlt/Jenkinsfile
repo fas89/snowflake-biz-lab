@@ -44,6 +44,14 @@ pipeline {
     // pin host-only Python paths in their shebangs and won't run inside
     // the container — don't use it.
     FLUID = '/opt/fluid-venv/bin/fluid'
+    // Container-runtime loopback host override: inside the Jenkins
+    // container, ``localhost`` points at the container itself, not the
+    // operator's Postgres at 5433. ``host.docker.internal`` is Docker
+    // Desktop's host-gateway DNS entry; the FLUID acquisition runner's
+    // ``apply_loopback_host_override`` rewrites contract-author
+    // ``host: localhost`` to this value. (Same env var the host's
+    // Taskfile uses for `task pre1:demo` runs.)
+    FLUID_RUNNER_HOST_OVERRIDE = 'host.docker.internal'
   }
 
   stages {
