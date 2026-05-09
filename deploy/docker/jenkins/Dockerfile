@@ -20,7 +20,7 @@ RUN apt-get update && \
 # uv is a single static binary, no system-Python dependency.
 RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh && \
     uv python install 3.12 && \
-    uv venv --python 3.12 /opt/fluid-venv && \
+    uv venv --seed --python 3.12 /opt/fluid-venv && \
     /opt/fluid-venv/bin/python --version
 
 # Debian 13 enforces PEP 668: ``pip install`` against the system Python is
