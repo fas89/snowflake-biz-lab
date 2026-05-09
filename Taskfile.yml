@@ -147,11 +147,11 @@ tasks:
     cmd: "{{.COMPOSE}} --profile jenkins stop jenkins"
 
   jenkins:sync:
-    desc: Create or update the Jenkins Pipeline-from-SCM job for scenario A1, A2, B1, or B2
+    desc: Create or update the Jenkins Pipeline-from-SCM job for scenario pre1, pre2, pre3, A1, A2, B1, or B2
     cmd: "python3 scripts/sync_jenkins_job.py --scenario \"{{.SCENARIO}}\""
 
   jenkins:build:
-    desc: Trigger the Jenkins Pipeline build for scenario A1, A2, B1, or B2 via buildWithParameters
+    desc: Trigger the Jenkins Pipeline build for scenario pre1, pre2, pre3, A1, A2, B1, or B2 via buildWithParameters
     cmd: "python3 scripts/run_jenkins_build.py --scenario \"{{.SCENARIO}}\" {{.CLI_ARGS}}"
 
   # ---------------------------------------------------------------------------

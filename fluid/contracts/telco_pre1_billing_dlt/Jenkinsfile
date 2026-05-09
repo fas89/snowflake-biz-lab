@@ -1,0 +1,142 @@
+// pre-1 (telco_pre1_billing_dlt) — runs the FLUID 11-stage pipeline against
+// the dlt-acquisition contract. fluid apply (stage 7) invokes the forge-cli
+// dlt build runner natively, which moves data from the telco_source Postgres
+// database into the Snowflake bronze stage schema.
+//
+// Pre-condition: telco_source.telco.{invoice, invoice_charge} must be loaded
+// before triggering this job. Run `task seed:postgres:load` on the host first.
+
+pipeline {
+  agent any
+
+  options {
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '20'))
+  }
+
+  parameters {
+    string(
+      name: 'FLUID_ENV',
+      defaultValue: 'dev',
+      description: 'Environment overlay (dev / staging / prod). Destructive apply modes require --allow-data-loss in non-dev.'
+    )
+    string(
+      name: 'APPLY_MODE',
+      defaultValue: 'amend',
+      description: 'fluid apply mode: dry-run | create-only | amend | amend-and-build | replace | replace-and-build.'
+    )
+    string(
+      name: 'PUBLISH_TARGETS',
+      defaultValue: 'datamesh-manager',
+      description: 'Space-separated stage-10 publish targets.'
+    )
+  }
+
+  environment {
+    CONTRACT = 'fluid/contracts/telco_pre1_billing_dlt/contract.fluid.yaml'
+    PRE_SCENARIO = 'pre-1'
+    PRE_ENGINE = 'dlt'
+    FLUID = '.venv.fluid-dev/bin/fluid'
+  }
+
+  stages {
+    stage('0 — Bootstrap FLUID') {
+      steps {
+        sh '''
+          set -eu
+          cd /workspace
+          test -x "$FLUID" && "$FLUID" version || {
+            echo "FLUID dev venv not bootstrapped — run \\`task fluid:bootstrap:dev\\` on the host first" >&2
+            exit 1
+          }
+        '''
+      }
+    }
+
+    stage('1-4 — bundle / validate / generate artifacts / validate-artifacts') {
+      steps {
+        sh '''
+          set -eu
+          cd /workspace
+          mkdir -p runtime/artifacts
+          "$FLUID" bundle "$CONTRACT" --format tgz --out runtime/bundle.tgz
+          "$FLUID" validate runtime/bundle.tgz
+          "$FLUID" generate artifacts "$CONTRACT" --out runtime/artifacts/
+          "$FLUID" validate-artifacts runtime/artifacts/
+        '''
+      }
+    }
+
+    stage('5-6 — diff / plan') {
+      steps {
+        sh '''
+          set -eu
+          cd /workspace
+          "$FLUID" diff "$CONTRACT" --exit-on-drift --env "$FLUID_ENV"
+          "$FLUID" plan "$CONTRACT" --out runtime/plan.json --html
+        '''
+      }
+    }
+
+    stage('7 — apply (acquisition: dlt → Postgres → Snowflake)') {
+      steps {
+        sh '''
+          set -eu
+          cd /workspace
+          "$FLUID" apply runtime/plan.json \
+            --mode "$APPLY_MODE" --env "$FLUID_ENV" --yes \
+            --report runtime/apply_report.html
+        '''
+      }
+    }
+
+    stage('8 — policy-apply (self-gated)') {
+      steps {
+        sh '''
+          set -eu
+          cd /workspace
+          if [ -f runtime/artifacts/policy/bindings.json ]; then
+            "$FLUID" policy-apply runtime/artifacts/policy/bindings.json \
+              --mode enforce --env "$FLUID_ENV"
+          else
+            echo "no policy bindings.json — skipping"
+          fi
+        '''
+      }
+    }
+
+    stage('9 — verify (DQ rules against the rows dlt just landed)') {
+      steps {
+        sh '''
+          set -eu
+          cd /workspace
+          "$FLUID" verify "$CONTRACT" --strict --env "$FLUID_ENV" --out runtime/verify.json
+        '''
+      }
+    }
+
+    stage('10 — publish (DMM)') {
+      steps {
+        sh '''
+          set -eu
+          cd /workspace
+          TARGET_FLAGS=""
+          for t in $PUBLISH_TARGETS; do TARGET_FLAGS="$TARGET_FLAGS --target $t"; done
+          "$FLUID" publish "$CONTRACT" $TARGET_FLAGS --env "$FLUID_ENV"
+        '''
+      }
+    }
+
+    stage('11 — schedule-sync (no-op for SDP)') {
+      steps {
+        echo 'schedule-sync skipped — SDP contracts have no DAG to register'
+      }
+    }
+  }
+
+  post {
+    always {
+      archiveArtifacts artifacts: 'runtime/**/*,fluid/contracts/telco_pre1_billing_dlt/runtime/**/*', allowEmptyArchive: true
+    }
+  }
+}
