@@ -54,12 +54,16 @@ pipeline {
           cd /workspace
           # Overlay the bind-mounted dev-source forge-cli onto the
           # container venv so unreleased changes flow through Jenkins
-          # builds. Idempotent (pip detects already-installed). When the
-          # bind-mount is missing (e.g. Jenkins running outside the lab
-          # container), fall back to the PyPI-installed forge-cli.
+          # builds. Non-editable install (``pip install`` not ``pip
+          # install -e``) because /forge-cli-src is bind-mounted READ-ONLY
+          # and editable installs need to write ``*.egg-info`` next to
+          # setup.py. The non-editable path copies the source into the
+          # venv site-packages each build — slightly slower but correct
+          # for a read-only mount. When the bind-mount is missing
+          # (Jenkins outside the lab container), fall back to PyPI.
           if [ -d /forge-cli-src ]; then
-            /opt/fluid-venv/bin/pip install --quiet -e /forge-cli-src \
-              || echo "warn: editable install of /forge-cli-src failed; using PyPI forge-cli" >&2
+            /opt/fluid-venv/bin/pip install --quiet --force-reinstall --no-deps /forge-cli-src \
+              || echo "warn: dev-source install of /forge-cli-src failed; using PyPI forge-cli" >&2
           fi
           test -x "$FLUID" && "$FLUID" version || {
             echo "FLUID venv at $FLUID not bootstrapped" >&2

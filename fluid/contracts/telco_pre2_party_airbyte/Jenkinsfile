@@ -51,9 +51,11 @@ pipeline {
         sh '''
           set -eu
           cd /workspace
+          # Non-editable dev-source install (read-only mount, see pre-1
+          # Jenkinsfile rationale).
           if [ -d /forge-cli-src ]; then
-            /opt/fluid-venv/bin/pip install --quiet -e /forge-cli-src \
-              || echo "warn: editable install of /forge-cli-src failed; using PyPI forge-cli" >&2
+            /opt/fluid-venv/bin/pip install --quiet --force-reinstall --no-deps /forge-cli-src \
+              || echo "warn: dev-source install of /forge-cli-src failed; using PyPI forge-cli" >&2
           fi
           test -x "$FLUID" && "$FLUID" version || {
             echo "FLUID venv at $FLUID not bootstrapped" >&2
