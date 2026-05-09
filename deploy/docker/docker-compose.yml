@@ -1,5 +1,20 @@
 name: snowflake-telco-lab
 
+# Postgres source connection env. Lab demos pre-1/2/3 ingest from a
+# host-side Postgres at localhost:5433 via dlt / Airbyte / Meltano.
+# Containers can't reach the host's localhost, so the runner reads
+# FLUID_RUNNER_HOST_OVERRIDE (set per-Jenkinsfile to host.docker.internal).
+# These vars carry the rest of the connection so the dlt SQLAlchemy URL,
+# the PyAirbyte SourceConfig, and the Singer tap config all resolve
+# without the contract author having to hard-code values.
+x-pg-source-env: &pg-source-env
+  PG_SOURCE_HOST: ${PG_SOURCE_HOST:-localhost}
+  PG_SOURCE_PORT: ${PG_SOURCE_PORT:-5433}
+  PG_SOURCE_DATABASE: ${PG_SOURCE_DATABASE:-telco_source}
+  PG_SOURCE_SCHEMA: ${PG_SOURCE_SCHEMA:-telco}
+  PG_SOURCE_USER: ${PG_SOURCE_USER:-airflow}
+  PG_SOURCE_PASSWORD: ${PG_SOURCE_PASSWORD:-airflow}
+
 x-snowflake-env: &snowflake-env
   SNOWFLAKE_ACCOUNT: ${SNOWFLAKE_ACCOUNT}
   SNOWFLAKE_USER: ${SNOWFLAKE_USER}
@@ -167,7 +182,7 @@ services:
     env_file:
       - ../../runtime/generated/fluid.local.env
     environment:
-      <<: *snowflake-env
+      <<: [*snowflake-env, *pg-source-env]
       CASC_JENKINS_CONFIG: /var/jenkins_home/casc_configs/jenkins.yaml
       JENKINS_ADMIN_ID: ${JENKINS_ADMIN_ID:-admin}
       JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:-change_me}
