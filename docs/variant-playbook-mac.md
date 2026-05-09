@@ -23,7 +23,7 @@ open runtime/plan.html
 
 Review [Plan Verification Checklist](plan-verification-checklist.md) before you continue to `apply`.
 
-## Bronze
+## Pre-1 / Pre-2 / Pre-3 (acquisition pattern, replaces legacy Bronze)
 
 ```bash
 cd "$LAB_REPO"
@@ -31,19 +31,30 @@ set -a
 source "$FLUID_SECRETS_FILE"
 set +a
 
-for domain in billing party usage; do
-  contract="fluid/contracts/telco_seed_${domain}/contract.fluid.yaml"
+# 1. Seed the Postgres source database the acquisition runners read from.
+task seed:postgres:load
+
+# 2. Run the FLUID 11-stage pipeline per pre-* contract. Stage 7 (apply) is
+#    where the acquisition runner moves data from Postgres → Snowflake.
+for spec in pre1_billing_dlt pre2_party_airbyte pre3_usage_meltano; do
+  contract="fluid/contracts/telco_${spec}/contract.fluid.yaml"
   "$FLUID_CLI" validate "$contract"
-  "$FLUID_CLI" plan "$contract" --out "fluid/contracts/telco_seed_${domain}/runtime/plan.json" --html
-  "$FLUID_CLI" publish "$contract" --target datamesh-manager
+  "$FLUID_CLI" plan "$contract" --out "fluid/contracts/telco_${spec}/runtime/plan.json" --html
+  task fluid:11-stage CONTRACT="$contract"
 done
+# Or, equivalently, one task per scenario:
+#   task pre1:demo
+#   task pre2:demo
+#   task pre3:demo
 ```
 
 Validation:
 
-- all three bronze plans review cleanly
-- DMM shows `bronze.telco.billing_v1`, `bronze.telco.party_v1`, and `bronze.telco.usage_v1`
-- no Jenkins jobs or Airflow DAGs are expected from Bronze
+- all three pre-* contracts validate against schema 0.7.3 and plan cleanly
+- DMM shows `bronze.telco.billing_v1`, `bronze.telco.party_v1`, and `bronze.telco.usage_v1` with `metadata.productType: SDP`
+- the Snowflake `TELCO_STAGE_LOAD.{INVOICE, PARTY, USAGE_EVENT, ...}` tables match the contract schemas exactly (no engine-added metadata columns — `schemaPolicy: strict` enforced)
+- no Airflow DAGs are expected from pre-* (SDP)
+- after `task jenkins:sync SCENARIO=pre{1,2,3}` the matching Jenkins job appears and runs the same 11 stages
 
 ## A1 External Reference
 

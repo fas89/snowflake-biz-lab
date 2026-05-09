@@ -77,8 +77,14 @@ stages. Each `RUN_STAGE_N_*` toggle on the Jenkins job can skip one.
 
 ## Scenarios in this lab
 
-- **Bronze** — three seed-backed bronze products (`telco_seed_billing`,
-  `telco_seed_party`, `telco_seed_usage`) that feed every silver variant.
+- **Pre-1 / Pre-2 / Pre-3** — three Source-Aligned Data Products (`telco_pre1_billing_dlt`,
+  `telco_pre2_party_airbyte`, `telco_pre3_usage_meltano`) that ingest data
+  from the `telco_source` Postgres database into the Snowflake bronze stage
+  schema. Each uses a different acquisition engine (dlt / Airbyte / Meltano)
+  wired through FLUID 0.7.3's `builds[].pattern: acquisition` block. They
+  publish the same `bronze.telco.{billing,party,usage}_v1` product IDs the
+  legacy passive Bronze contracts used to, so every silver variant
+  continues to consume them unchanged.
 - **Path A (ready-made)** — two silver variants derived from curated dbt
   assets:
   - **A1 external-reference** — references a dbt project sitting in
@@ -91,6 +97,29 @@ stages. Each `RUN_STAGE_N_*` toggle on the Jenkins job can skip one.
     external dbt/Jenkins/Airflow flow can run consistently.
   - **B2 ai-generate-in-workspace** — MCP-forged from the seeded Snowflake
     schema, then generated directly in the workspace.
+
+## FLUID 0.7.3 vocabulary
+
+- **acquisition build pattern** — `builds[].pattern: acquisition` declares a
+  source-aligned ingestion pipeline. `fluid apply` (stage 7) invokes the
+  matching forge-cli build runner under `fluid_build/build_runners/<engine>/`
+  to move data from an external system into the contract's exposes. The
+  pre-* scenarios in this lab all use this pattern.
+- **acquisition engine** — one of `dlt`, `airbyte`, `meltano`, `duckdb`,
+  `kafka-connect`, `debezium`. Each is implemented as a forge-cli runner
+  with declared capabilities (`full_refresh`, `incremental_append`,
+  `incremental_dedup`, `cdc`, `streaming`, `schema_discovery`, `dlp_scan`,
+  `exactly_once`). Validation enforces `capabilities ⊆ runner.declared`.
+- **schemaPolicy** — controls how the engine handles schema differences
+  between source and target: `strict` (the contract is the source of truth;
+  any drift fails), `discover_and_freeze` (engine discovers once, then
+  locks), `evolve_safe` (additive changes allowed), `evolve_all` (anything
+  goes). Pre-* contracts use `strict` so engines cannot mutate the
+  FLUID-applied DDL.
+- **SDP / ADP / CDP** — the Data Mesh data-product taxonomy added in 0.7.3:
+  Source-Aligned (Bronze, e.g. pre-1/2/3), Aggregated (Silver, e.g. A1/A2),
+  Consumption-Aligned (Gold). Set via `metadata.productType`; the validator
+  infers the missing one when only `metadata.layer` is set.
 
 ## Install tracks
 

@@ -14,13 +14,20 @@ See [snowflake_smoke/README.md](snowflake_smoke/README.md).
 
 ## Pre-* ingestion contracts (`telco_pre1_billing_dlt`, `telco_pre2_party_airbyte`, `telco_pre3_usage_meltano`)
 
-These three contracts replace the former passive Bronze contracts (`telco_seed_billing`, `telco_seed_party`, `telco_seed_usage`). Each pre-* contract describes the same Snowflake-landing data product (same `id`, `exposes`, schemas) but is now driven by an explicit Postgres → Snowflake acquisition pipeline using a different ingestion engine. Generate the source data into the `telco_source` Postgres database with `task seed:postgres:load`, then run the per-engine forge script to land it in Snowflake.
+These three contracts replace the former passive Bronze contracts (`telco_seed_billing`, `telco_seed_party`, `telco_seed_usage`). Each pre-* contract uses **FLUID 0.7.3's `builds[].pattern: acquisition` block** with a different ingestion engine. `fluid apply` (stage 7) natively invokes the matching forge-cli runner under `forge-cli/fluid_build/build_runners/<engine>/` — there are no per-engine shim scripts to maintain. The contract's `schemaEvolution.policy: strict` prevents the engine from mutating the FLUID-applied DDL. Same `id`, `exposes`, and Snowflake bindings as the legacy contracts, so every silver variant downstream consumes them unchanged.
 
-- `telco_pre1_billing_dlt` — invoice and invoice-charge tables ingested via **dlt** → published as `bronze.telco.billing_v1`
-- `telco_pre2_party_airbyte` — party, account, service, subscription, and product-offering tables ingested via **PyAirbyte** (`source-postgres` + `destination-snowflake`) → published as `bronze.telco.party_v1`
-- `telco_pre3_usage_meltano` — usage event, customer interaction, and trouble ticket tables ingested via **Meltano** (`tap-postgres` → `target-snowflake`) → published as `bronze.telco.usage_v1`
+| Contract | Engine | Source tables (Postgres `telco_source.telco.*`) | Published as |
+| --- | --- | --- | --- |
+| `telco_pre1_billing_dlt` | `dlt` | `invoice`, `invoice_charge` | `bronze.telco.billing_v1` |
+| `telco_pre2_party_airbyte` | `airbyte` (embedded deployment) | `party`, `account`, `service`, `subscription`, `product_offering` | `bronze.telco.party_v1` |
+| `telco_pre3_usage_meltano` | `meltano` (`tap-postgres` → `target-snowflake`) | `usage_event`, `customer_interaction`, `trouble_ticket` | `bronze.telco.usage_v1` |
 
-Each contract still acts as an upstream lineage anchor for the A1/A2/B1/B2 silver demo variants. Publish all three together via `task publish:pre`, then run the FLUID 11-stage pipeline per contract via `task fluid:11-stage CONTRACT=...` or via Jenkins (default `FLUID_CONTRACTS` parameter).
+Pre-condition: the source Postgres tables must be populated first — run `task seed:postgres:load` to load the generator's CSVs into `telco_source.telco.*`. Then run the lifecycle per scenario:
+
+- `task pre1:demo` / `pre2:demo` / `pre3:demo` — chains `seed:postgres:load` + `fluid:11-stage CONTRACT=...` for one scenario
+- `task pre:all:demo` — runs all three sequentially so the bronze landing schema is fully populated for downstream silver scenarios
+- `task publish:pre` — publishes only the `fluid publish` step for all three contracts (used when you only need DMM registration after data is already loaded)
+- `task jenkins:sync SCENARIO={pre1|pre2|pre3}` — registers the per-pre Jenkins job pointing at the co-located Jenkinsfile (`fluid/contracts/telco_pre*_*/Jenkinsfile`)
 
 ## `telco_stage_seed`
 

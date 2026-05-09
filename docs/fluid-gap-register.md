@@ -2,13 +2,22 @@
 
 This register tracks only source-verified `forge-cli` gaps that still affect the
 Snowflake biz lab. It was rechecked against the local `forge-cli` working branch
-on 2026-04-26.
+on 2026-05-09 (after the lab's pre-* contracts adopted the FLUID 0.7.3
+acquisition pattern).
 
 Stale notes were removed during this audit. In the current source, native dbt
 build dispatch exists, dbt adapter execution has local/container escape hatches,
 `llm_models.json` is included as package data, MCP source-catalog tools exist,
 and the lab's existing dbt/Airflow/publish paths are working demo composition
 rather than standalone `forge-cli` defects.
+
+## Resolved (kept here for history)
+
+### Source-aligned ingestion needed first-class FLUID support
+
+- **Was:** the lab originally wrapped each ingestion engine (dlt / PyAirbyte / Meltano) in lab-side shim scripts (`scripts/forge_pre*.py`) that ran outside `fluid apply`. FLUID was unaware of the data movement and the engines were free to mutate the FLUID-applied DDL by adding metadata columns (`_dlt_id`, `_airbyte_emitted_at`, `_sdc_*`), creating drift on the next `fluid diff`.
+- **Resolved by:** FLUID 0.7.3 ships a first-class `builds[].pattern: acquisition` block with `engine ∈ {dlt, airbyte, meltano, duckdb, kafka-connect, debezium}`. forge-cli implements the runners under `fluid_build/build_runners/<engine>/`. The lab's pre-* contracts now declare the engine + source + `schemaEvolution.policy: strict` directly in the contract; `fluid apply` invokes the runner natively.
+- **Lab impact:** the shim scripts (`scripts/forge_pre1_dlt.py`, `scripts/forge_pre2_airbyte.py`) and their `pre*:bootstrap`/`pre*:forge` Taskfile entries were removed (~470 lines). The pipeline order is now `seed:postgres:load → fluid:11-stage CONTRACT=…` for each pre-N scenario. Engines cannot mutate FLUID DDL because the contract's `schemaPolicy: strict` is enforced by the runner.
 
 ## Confirmed Current Gaps
 
