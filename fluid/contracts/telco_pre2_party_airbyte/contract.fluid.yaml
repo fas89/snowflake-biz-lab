@@ -1,37 +1,71 @@
-fluidVersion: "0.7.2"
+fluidVersion: "0.7.3"
 kind: DataProduct
 id: bronze.telco.party_v1
-name: Telco Party Bronze (pre-2 / Airbyte)
-description: Bronze party, account, service, subscription, and product-offering sources ingested from the telco_source Postgres database via PyAirbyte's source-postgres + destination-snowflake connectors.
+name: Telco Party Bronze (pre-2 / Airbyte acquisition)
+description: |
+  Bronze party, account, service, subscription, and product-offering sources,
+  ingested from the telco_source Postgres database via FLUID's acquisition
+  build pattern with engine `airbyte`. fluid apply invokes the forge-cli
+  airbyte runner (embedded deployment mode) which moves data into the
+  contract-defined Snowflake bronze tables under `schemaEvolution.policy: strict`.
 domain: telco
 
 metadata:
   layer: Bronze
+  productType: SDP
+  experimental:
+    - acquisition
   owner:
     team: telco-data-platform
     email: data-platform@example.com
-  ingestion:
-    scenario: pre-2
+
+builds:
+  - id: ingest
+    pattern: acquisition
     engine: airbyte
-    source:
-      kind: postgres
-      database: "{{ env.PG_SOURCE_DATABASE }}"
-      schema: "{{ env.PG_SOURCE_SCHEMA }}"
-      tables:
-        - party
-        - account
-        - service
-        - subscription
-        - product_offering
-    target:
-      kind: snowflake
-      database: "{{ env.SNOWFLAKE_DATABASE }}"
-      schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
+    capabilities:
+      - full_refresh
+      - schema_discovery
+    properties:
+      source:
+        kind: postgres
+        connection:
+          host: "{{ env.PG_SOURCE_HOST }}"
+          port: "{{ env.PG_SOURCE_PORT }}"
+          database: "{{ env.PG_SOURCE_DATABASE }}"
+          secretRef: env://PG_SOURCE_PASSWORD
+        mode: full_refresh
+        streams:
+          - party
+          - account
+          - service
+          - subscription
+          - product_offering
+      sink:
+        format: snowflake_table
+      delivery:
+        guarantee: at_least_once
+      schemaEvolution:
+        policy: strict
+        onAddedColumn: fail
+        onRemovedColumn: fail
+        onTypeChange: fail
+      airbyte:
+        deployment:
+          mode: embedded
+        source_connector: source-postgres
+        destination_connector: destination-snowflake
+    outputs:
+      - party_source
+      - account_source
+      - service_source
+      - subscription_source
+      - product_offering_source
 
 exposes:
   - exposeId: party_source
     title: Party Source
-    description: Source-shaped party records ingested by the PyAirbyte pre-2 pipeline.
+    description: Source-shaped party records, landed by the Airbyte acquisition runner.
     kind: table
     binding:
       platform: snowflake
@@ -42,6 +76,7 @@ exposes:
         schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
         table: PARTY
     contract:
+      schemaPolicy: strict
       schema:
         - name: PARTY_ID
           type: STRING
@@ -69,7 +104,7 @@ exposes:
 
   - exposeId: account_source
     title: Account Source
-    description: Source-shaped account records ingested by the PyAirbyte pre-2 pipeline.
+    description: Source-shaped account records, landed by the Airbyte acquisition runner.
     kind: table
     binding:
       platform: snowflake
@@ -80,6 +115,7 @@ exposes:
         schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
         table: ACCOUNT
     contract:
+      schemaPolicy: strict
       schema:
         - name: ACCOUNT_ID
           type: STRING
@@ -112,7 +148,7 @@ exposes:
 
   - exposeId: service_source
     title: Service Source
-    description: Source-shaped service records ingested by the PyAirbyte pre-2 pipeline.
+    description: Source-shaped service records, landed by the Airbyte acquisition runner.
     kind: table
     binding:
       platform: snowflake
@@ -123,6 +159,7 @@ exposes:
         schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
         table: SERVICE
     contract:
+      schemaPolicy: strict
       schema:
         - name: SERVICE_ID
           type: STRING
@@ -151,7 +188,7 @@ exposes:
 
   - exposeId: subscription_source
     title: Subscription Source
-    description: Source-shaped subscription records ingested by the PyAirbyte pre-2 pipeline.
+    description: Source-shaped subscription records, landed by the Airbyte acquisition runner.
     kind: table
     binding:
       platform: snowflake
@@ -162,6 +199,7 @@ exposes:
         schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
         table: SUBSCRIPTION
     contract:
+      schemaPolicy: strict
       schema:
         - name: SUBSCRIPTION_ID
           type: STRING
@@ -192,7 +230,7 @@ exposes:
 
   - exposeId: product_offering_source
     title: Product Offering Source
-    description: Source-shaped product offering records ingested by the PyAirbyte pre-2 pipeline.
+    description: Source-shaped product offering records, landed by the Airbyte acquisition runner.
     kind: table
     binding:
       platform: snowflake
@@ -203,6 +241,7 @@ exposes:
         schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
         table: PRODUCT_OFFERING
     contract:
+      schemaPolicy: strict
       schema:
         - name: PRODUCT_OFFERING_ID
           type: STRING
