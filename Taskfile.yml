@@ -110,8 +110,12 @@ tasks:
     cmd: "{{.DBT_RUNNER}} python /opt/project/seed/reset_seed_state.py --yes"
 
   seed:load:
-    desc: Create Snowflake source landing objects and load generated CSV seeds
+    desc: Create Snowflake source landing objects and load generated CSV seeds (legacy direct path; use seed:postgres:load for pre-1/2/3 flow)
     cmd: "{{.DBT_RUNNER}} python /opt/project/seed/load_to_snowflake.py"
+
+  seed:postgres:load:
+    desc: Create Postgres source schema and load generated CSV seeds into telco_source.telco.* (feeds pre-1/2/3)
+    cmd: "{{.DBT_RUNNER}} python /opt/project/seed/load_to_postgres.py"
 
   seed:verify:
     desc: Verify generated seed artifacts and Snowflake row counts
