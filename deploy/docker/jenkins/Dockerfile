@@ -29,7 +29,7 @@ ENV PATH="/opt/fluid-venv/bin:${PATH}"
 # Without this, `fluid test` trips on "snowflake-connector-python not
 # installed" even for a Snowflake-bound contract.
 RUN python3 -m venv /opt/fluid-venv && \
-    /opt/fluid-venv/bin/pip install --no-cache-dir --quiet --upgrade pip && \
+    /opt/fluid-venv/bin/pip install --no-cache-dir --quiet --upgrade pip setuptools wheel && \
     /opt/fluid-venv/bin/pip install --no-cache-dir --quiet 'data-product-forge[snowflake]' && \
     chown -R jenkins:jenkins /opt/fluid-venv
 
