@@ -184,7 +184,7 @@ tasks:
       - task: catalogs:bootstrap
       - task: preflight
 
-  publish:bronze:
+  publish:pre:
     # Self-contained: exports FLUID_SECRETS_FILE and sources the secrets inline
     # so this task works whether or not the operator has sourced
     # `runtime/generated/launchpad.local.sh` first.
@@ -197,7 +197,7 @@ tasks:
     # "Catalog health check failed - endpoint not accessible". Exporting
     # FLUID_SECRETS_FILE lets hydrate_dotenv restore the correct value after
     # the .env clobber. Tracked upstream: see docs/fluid-gap-register.md.
-    desc: Publish the three bronze contracts (party/usage/billing) to DMM so A1/A2 input-port lineage resolves
+    desc: Publish the three pre-* contracts (pre-1/dlt billing, pre-2/Airbyte party, pre-3/Meltano usage) to DMM so A1/A2/B1/B2 input-port lineage resolves
     vars:
       FLUID_BIN: '{{.FLUID_BIN | default "./.venv.fluid-dev/bin/fluid"}}'
       SECRETS_FILE: runtime/generated/fluid.local.env
@@ -215,9 +215,9 @@ tasks:
         set -a
         . "{{.SECRETS_FILE}}"
         set +a
-        for domain in billing party usage; do
-          contract="fluid/contracts/telco_seed_${domain}/contract.fluid.yaml"
-          echo "→ publishing bronze.telco.${domain}_v1"
+        for spec in pre1_billing_dlt pre2_party_airbyte pre3_usage_meltano; do
+          contract="fluid/contracts/telco_${spec}/contract.fluid.yaml"
+          echo "→ publishing $contract"
           "{{.FLUID_BIN}}" publish "$contract" --target datamesh-manager
         done
 

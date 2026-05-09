@@ -1,8 +1,8 @@
 fluidVersion: "0.7.2"
 kind: DataProduct
 id: bronze.telco.party_v1
-name: Telco Party Bronze
-description: Bronze sources covering party identity and the subscriptions, services, and product offerings provisioned to them.
+name: Telco Party Bronze (pre-2 / Airbyte)
+description: Bronze party, account, service, subscription, and product-offering sources ingested from the telco_source Postgres database via PyAirbyte's source-postgres + destination-snowflake connectors.
 domain: telco
 
 metadata:
@@ -10,11 +10,28 @@ metadata:
   owner:
     team: telco-data-platform
     email: data-platform@example.com
+  ingestion:
+    scenario: pre-2
+    engine: airbyte
+    source:
+      kind: postgres
+      database: "{{ env.PG_SOURCE_DATABASE }}"
+      schema: "{{ env.PG_SOURCE_SCHEMA }}"
+      tables:
+        - party
+        - account
+        - service
+        - subscription
+        - product_offering
+    target:
+      kind: snowflake
+      database: "{{ env.SNOWFLAKE_DATABASE }}"
+      schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
 
 exposes:
   - exposeId: party_source
     title: Party Source
-    description: Source-shaped party records loaded into the telco landing schema.
+    description: Source-shaped party records ingested by the PyAirbyte pre-2 pipeline.
     kind: table
     binding:
       platform: snowflake
@@ -52,7 +69,7 @@ exposes:
 
   - exposeId: account_source
     title: Account Source
-    description: Source-shaped account records loaded into the telco landing schema.
+    description: Source-shaped account records ingested by the PyAirbyte pre-2 pipeline.
     kind: table
     binding:
       platform: snowflake
@@ -95,7 +112,7 @@ exposes:
 
   - exposeId: service_source
     title: Service Source
-    description: Source-shaped service records loaded into the telco landing schema.
+    description: Source-shaped service records ingested by the PyAirbyte pre-2 pipeline.
     kind: table
     binding:
       platform: snowflake
@@ -134,7 +151,7 @@ exposes:
 
   - exposeId: subscription_source
     title: Subscription Source
-    description: Source-shaped subscription records loaded into the telco landing schema.
+    description: Source-shaped subscription records ingested by the PyAirbyte pre-2 pipeline.
     kind: table
     binding:
       platform: snowflake
@@ -175,7 +192,7 @@ exposes:
 
   - exposeId: product_offering_source
     title: Product Offering Source
-    description: Source-shaped product offering records loaded into the telco landing schema.
+    description: Source-shaped product offering records ingested by the PyAirbyte pre-2 pipeline.
     kind: table
     binding:
       platform: snowflake

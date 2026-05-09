@@ -1,6 +1,6 @@
 # FLUID Contracts
 
-This repo currently carries five prepared Snowflake-facing contracts: one smoke test, three bronze source contracts split by subject area, and one staged-seed contract.
+This repo currently carries five prepared Snowflake-facing contracts: one smoke test, three pre-* ingestion contracts that replace the legacy Bronze anchors, and one staged-seed contract.
 
 ## `snowflake_smoke`
 
@@ -12,15 +12,15 @@ Use this first when you want the smallest possible Snowflake success.
 
 See [snowflake_smoke/README.md](snowflake_smoke/README.md).
 
-## Bronze source contracts (`telco_seed_billing`, `telco_seed_party`, `telco_seed_usage`)
+## Pre-* ingestion contracts (`telco_pre1_billing_dlt`, `telco_pre2_party_airbyte`, `telco_pre3_usage_meltano`)
 
-These three contracts are the canonical bronze source anchors for the seeded telco landing tables. They split the former single `telco_seed_sources` contract into one contract per subject area, which lines up with the TM Forum SID domains and makes each bronze product independently ownable in the marketplace.
+These three contracts replace the former passive Bronze contracts (`telco_seed_billing`, `telco_seed_party`, `telco_seed_usage`). Each pre-* contract describes the same Snowflake-landing data product (same `id`, `exposes`, schemas) but is now driven by an explicit Postgres → Snowflake acquisition pipeline using a different ingestion engine. Generate the source data into the `telco_source` Postgres database with `task seed:postgres:load`, then run the per-engine forge script to land it in Snowflake.
 
-- `telco_seed_billing` — invoice and invoice-charge sources → published as `bronze.telco.billing_v1`
-- `telco_seed_party` — party, account, service, subscription, and product-offering sources → published as `bronze.telco.party_v1`
-- `telco_seed_usage` — usage event, customer interaction, and trouble ticket sources → published as `bronze.telco.usage_v1`
+- `telco_pre1_billing_dlt` — invoice and invoice-charge tables ingested via **dlt** → published as `bronze.telco.billing_v1`
+- `telco_pre2_party_airbyte` — party, account, service, subscription, and product-offering tables ingested via **PyAirbyte** (`source-postgres` + `destination-snowflake`) → published as `bronze.telco.party_v1`
+- `telco_pre3_usage_meltano` — usage event, customer interaction, and trouble ticket tables ingested via **Meltano** (`tap-postgres` → `target-snowflake`) → published as `bronze.telco.usage_v1`
 
-Each contract points at the existing source tables in `SNOWFLAKE_STAGE_SCHEMA` and acts as an upstream lineage anchor for the silver demo variants. Publish all three together during the Bronze Anchor scenario — see the bronze section in [Dev Source Launchpad (Mac)](../../docs/dev-source-launchpad-mac.md) or [Dev Source Launchpad (Windows)](../../docs/dev-source-launchpad-windows.md).
+Each contract still acts as an upstream lineage anchor for the A1/A2/B1/B2 silver demo variants. Publish all three together via `task publish:pre`, then run the FLUID 11-stage pipeline per contract via `task fluid:11-stage CONTRACT=...` or via Jenkins (default `FLUID_CONTRACTS` parameter).
 
 ## `telco_stage_seed`
 
