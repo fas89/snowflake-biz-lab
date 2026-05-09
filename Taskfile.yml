@@ -161,27 +161,51 @@ tasks:
   # forge-cli runner, so there are no separate forge_pre* shim scripts.
   # The only out-of-band step is seeding the Postgres source database.
   # ---------------------------------------------------------------------------
+  # Acquisition build runner: invokes the FLUID acquisition runner
+  # (dlt / airbyte / meltano) directly against the contract YAML. The 11-stage
+  # `apply` (mode=amend) only runs the Snowflake DDL — provisionDataset,
+  # ensure_schema, etc. — because forge-cli's amend-and-build path requires
+  # a contract YAML (not the plan.json the 11-stage feeds it). This task
+  # closes that gap by re-invoking apply against the YAML in build-aware mode.
+  fluid:acquisition:run:
+    desc: Run the contract's acquisition build (dlt/airbyte/meltano) — Postgres → Snowflake data movement
+    vars:
+      CONTRACT: '{{.CONTRACT}}'
+      FLUID_ENV: '{{.FLUID_ENV | default "dev"}}'
+      FLUID: '{{.FLUID_DEV_VENV}}/bin/fluid'
+    cmds:
+      - '{{.FLUID}} apply {{.CONTRACT}} --mode amend-and-build --env {{.FLUID_ENV}} --yes'
+
   pre1:demo:
-    desc: End-to-end pre-1 demo (dlt billing) — load Postgres seed → run 11-stage FLUID pipeline (acquisition runs inside apply)
+    desc: End-to-end pre-1 demo (dlt billing) — load Postgres seed → run 11-stage FLUID pipeline → invoke dlt acquisition runner
     cmds:
       - task: seed:postgres:load
       - task: fluid:11-stage
         vars:
           CONTRACT: fluid/contracts/telco_pre1_billing_dlt/contract.fluid.yaml
+      - task: fluid:acquisition:run
+        vars:
+          CONTRACT: fluid/contracts/telco_pre1_billing_dlt/contract.fluid.yaml
 
   pre2:demo:
-    desc: End-to-end pre-2 demo (Airbyte party) — load Postgres seed → run 11-stage FLUID pipeline (acquisition runs inside apply)
+    desc: End-to-end pre-2 demo (Airbyte party) — load Postgres seed → run 11-stage FLUID pipeline → invoke Airbyte acquisition runner
     cmds:
       - task: seed:postgres:load
       - task: fluid:11-stage
         vars:
           CONTRACT: fluid/contracts/telco_pre2_party_airbyte/contract.fluid.yaml
+      - task: fluid:acquisition:run
+        vars:
+          CONTRACT: fluid/contracts/telco_pre2_party_airbyte/contract.fluid.yaml
 
   pre3:demo:
-    desc: End-to-end pre-3 demo (Meltano usage) — load Postgres seed → run 11-stage FLUID pipeline (acquisition runs inside apply)
+    desc: End-to-end pre-3 demo (Meltano usage) — load Postgres seed → run 11-stage FLUID pipeline → invoke Meltano acquisition runner
     cmds:
       - task: seed:postgres:load
       - task: fluid:11-stage
+        vars:
+          CONTRACT: fluid/contracts/telco_pre3_usage_meltano/contract.fluid.yaml
+      - task: fluid:acquisition:run
         vars:
           CONTRACT: fluid/contracts/telco_pre3_usage_meltano/contract.fluid.yaml
 
@@ -328,18 +352,28 @@ tasks:
             --env {{.FLUID_ENV}} --yes --report runtime/apply_report.html
         fi
       # Stage 8 — policy apply (self-gated)
+      # policy-apply takes BINDINGS positional + --mode; --provider is a
+      # top-level fluid flag (policy-apply needs it explicit because policy
+      # bindings don't carry per-binding provider info).
       - |
         if [ -f runtime/artifacts/policy/bindings.json ]; then
-          {{.FLUID}} policy-apply runtime/artifacts/policy/bindings.json \
-            --mode enforce --env {{.FLUID_ENV}}
+          {{.FLUID}} --provider snowflake policy-apply runtime/artifacts/policy/bindings.json \
+            --mode enforce
         fi
       # Stage 9 — verify
       - '{{.FLUID}} verify {{.CONTRACT}} --strict --env {{.FLUID_ENV}} --out runtime/verify.json'
       # Stage 10 — publish (TARGETS expands to --target X --target Y ...)
+      # Self-gated on DMM_API_KEY so the demo runs cleanly when the operator
+      # hasn't wired a DMM marketplace endpoint. publish does not accept --env;
+      # FLUID_ENV is consumed by the contract loader at parse time.
       - |
-        TARGET_FLAGS=""
-        for t in {{.TARGETS}}; do TARGET_FLAGS="$TARGET_FLAGS --target $t"; done
-        {{.FLUID}} publish {{.CONTRACT}} $TARGET_FLAGS --env {{.FLUID_ENV}}
+        if [ -n "$DMM_API_KEY" ]; then
+          TARGET_FLAGS=""
+          for t in {{.TARGETS}}; do TARGET_FLAGS="$TARGET_FLAGS --target $t"; done
+          {{.FLUID}} publish {{.CONTRACT}} $TARGET_FLAGS
+        else
+          echo "↪ stage 10 publish skipped (DMM_API_KEY not set)"
+        fi
       # Stage 11 — schedule sync (Path A only; self-gated on SCHEDULER)
       - |
         if [ -n "{{.SCHEDULER}}" ] && [ -d runtime/artifacts/schedule ]; then

@@ -36,7 +36,14 @@ pipeline {
     CONTRACT = 'fluid/contracts/telco_pre1_billing_dlt/contract.fluid.yaml'
     PRE_SCENARIO = 'pre-1'
     PRE_ENGINE = 'dlt'
-    FLUID = '.venv.fluid-dev/bin/fluid'
+    // Inside the lab Jenkins container (deploy/docker/jenkins/Dockerfile),
+    // /opt/fluid-venv is the canonical Python venv. The dev-source
+    // forge-cli is bind-mounted read-only at /forge-cli-src so we can
+    // ``pip install -e`` it as an overlay. The host's .venv.fluid-dev is
+    // also visible at /workspace/.venv.fluid-dev but its bin/ scripts
+    // pin host-only Python paths in their shebangs and won't run inside
+    // the container — don't use it.
+    FLUID = '/opt/fluid-venv/bin/fluid'
   }
 
   stages {
@@ -45,8 +52,17 @@ pipeline {
         sh '''
           set -eu
           cd /workspace
+          # Overlay the bind-mounted dev-source forge-cli onto the
+          # container venv so unreleased changes flow through Jenkins
+          # builds. Idempotent (pip detects already-installed). When the
+          # bind-mount is missing (e.g. Jenkins running outside the lab
+          # container), fall back to the PyPI-installed forge-cli.
+          if [ -d /forge-cli-src ]; then
+            /opt/fluid-venv/bin/pip install --quiet -e /forge-cli-src \
+              || echo "warn: editable install of /forge-cli-src failed; using PyPI forge-cli" >&2
+          fi
           test -x "$FLUID" && "$FLUID" version || {
-            echo "FLUID dev venv not bootstrapped — run \\`task fluid:bootstrap:dev\\` on the host first" >&2
+            echo "FLUID venv at $FLUID not bootstrapped" >&2
             exit 1
           }
         '''
