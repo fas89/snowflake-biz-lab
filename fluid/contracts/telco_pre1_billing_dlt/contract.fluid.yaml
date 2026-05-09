@@ -1,8 +1,8 @@
 fluidVersion: "0.7.2"
 kind: DataProduct
 id: bronze.telco.billing_v1
-name: Telco Billing Bronze
-description: Bronze sources covering telco invoicing — invoice headers and their per-line charges.
+name: Telco Billing Bronze (pre-1 / dlt)
+description: Bronze invoice and invoice-charge sources ingested from the telco_source Postgres database via dlt and landed into the Snowflake stage schema.
 domain: telco
 
 metadata:
@@ -10,11 +10,25 @@ metadata:
   owner:
     team: telco-data-platform
     email: data-platform@example.com
+  ingestion:
+    scenario: pre-1
+    engine: dlt
+    source:
+      kind: postgres
+      database: "{{ env.PG_SOURCE_DATABASE }}"
+      schema: "{{ env.PG_SOURCE_SCHEMA }}"
+      tables:
+        - invoice
+        - invoice_charge
+    target:
+      kind: snowflake
+      database: "{{ env.SNOWFLAKE_DATABASE }}"
+      schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
 
 exposes:
   - exposeId: invoice_source
     title: Invoice Source
-    description: Source-shaped invoice records loaded into the telco landing schema.
+    description: Source-shaped invoice records loaded into the telco landing schema by the dlt pre-1 pipeline.
     kind: table
     binding:
       platform: snowflake
@@ -58,7 +72,7 @@ exposes:
 
   - exposeId: invoice_charge_source
     title: Invoice Charge Source
-    description: Source-shaped invoice charge records loaded into the telco landing schema.
+    description: Source-shaped invoice charge records loaded into the telco landing schema by the dlt pre-1 pipeline.
     kind: table
     binding:
       platform: snowflake

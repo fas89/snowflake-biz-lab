@@ -28,8 +28,8 @@ pipeline {
     )
     string(
       name: 'FLUID_CONTRACTS',
-      defaultValue: 'fluid/contracts/telco_seed_billing/contract.fluid.yaml fluid/contracts/telco_seed_party/contract.fluid.yaml fluid/contracts/telco_seed_usage/contract.fluid.yaml',
-      description: 'Space-separated contract paths to run through the 11-stage pipeline. Defaults to the three Bronze contracts.'
+      defaultValue: 'fluid/contracts/telco_pre1_billing_dlt/contract.fluid.yaml fluid/contracts/telco_pre2_party_airbyte/contract.fluid.yaml fluid/contracts/telco_pre3_usage_meltano/contract.fluid.yaml',
+      description: 'Space-separated contract paths to run through the 11-stage pipeline. Defaults to the three pre-* ingestion contracts (pre-1/dlt, pre-2/Airbyte, pre-3/Meltano) that replace the legacy Bronze contracts.'
     )
     string(
       name: 'FLUID_ENV',
