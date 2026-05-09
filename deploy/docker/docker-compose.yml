@@ -61,7 +61,7 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES:-airflow}
+      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES:-airflow,telco_source}
     ports:
       - "${LAB_BIND_ADDRESS:-127.0.0.1}:${LOCAL_POSTGRES_PORT:-5433}:5432"
     volumes:
@@ -124,6 +124,12 @@ services:
       TELCO_SEED_USAGE_EVENT_COUNT: ${TELCO_SEED_USAGE_EVENT_COUNT:-10000}
       TELCO_SEED_APP_EVENT_COUNT: ${TELCO_SEED_APP_EVENT_COUNT:-2000}
       TELCO_SEED_HISTORY_DAYS: ${TELCO_SEED_HISTORY_DAYS:-60}
+      PG_SOURCE_HOST: ${PG_SOURCE_HOST:-postgres}
+      PG_SOURCE_PORT: ${PG_SOURCE_PORT:-5432}
+      PG_SOURCE_DATABASE: ${PG_SOURCE_DATABASE:-telco_source}
+      PG_SOURCE_SCHEMA: ${PG_SOURCE_SCHEMA:-telco}
+      PG_SOURCE_USER: ${PG_SOURCE_USER:-${POSTGRES_USER}}
+      PG_SOURCE_PASSWORD: ${PG_SOURCE_PASSWORD:-${POSTGRES_PASSWORD}}
     volumes:
       - ../../dbt:/opt/project/dbt
       # config/ is a Python package imported by seed/, governance/, fluid/ scripts (e.g. config.snowflake_utils).
