@@ -18,10 +18,12 @@ RUN apt-get update && \
 # We use it to fetch Python 3.12 (sidesteps Debian's 3.13 default), then
 # create the canonical /opt/fluid-venv against that pinned interpreter.
 # uv is a single static binary, no system-Python dependency.
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python
 RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh && \
     uv python install 3.12 && \
     uv venv --seed --python 3.12 /opt/fluid-venv && \
-    /opt/fluid-venv/bin/python --version
+    /opt/fluid-venv/bin/python --version && \
+    chmod -R o+rX /opt/uv-python
 
 # Debian 13 enforces PEP 668: ``pip install`` against the system Python is
 # blocked. We provision a dedicated venv at /opt/fluid-venv and prepend its
