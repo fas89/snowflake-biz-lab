@@ -77,10 +77,11 @@ pipeline {
               || echo "warn: dev-source install failed; using PyPI forge-cli" >&2
           fi
           # Engine deps: dlt is the acquisition engine for pre-1. Not in
-          # forge-cli's pyproject (operator-installed per-scenario), so the
-          # bootstrap pulls it into the same venv. Pin to the version the
-          # host venv uses for parity with `task pre1:demo` runs.
-          /opt/fluid-venv/bin/pip install --quiet 'dlt[snowflake]>=1.0' \
+          # forge-cli's pyproject (operator-installed per-scenario), so
+          # the bootstrap pulls it into the same venv. ``sql_database``
+          # extra brings sqlalchemy + psycopg2 needed by the postgres
+          # source; ``snowflake`` extra brings the destination adapter.
+          /opt/fluid-venv/bin/pip install --quiet 'dlt[sql_database,snowflake]>=1.0' \
             || echo "warn: dlt install failed; pre-1 acquisition will fail at apply" >&2
           test -x "$FLUID" && "$FLUID" version || {
             echo "FLUID venv at $FLUID not bootstrapped" >&2
