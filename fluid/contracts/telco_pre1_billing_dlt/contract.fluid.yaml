@@ -33,6 +33,8 @@ builds:
           host: "{{ env.PG_SOURCE_HOST }}"
           port: "{{ env.PG_SOURCE_PORT }}"
           database: "{{ env.PG_SOURCE_DATABASE }}"
+          schema: "{{ env.PG_SOURCE_SCHEMA }}"
+          user: "{{ env.PG_SOURCE_USER }}"
           secretRef: env://PG_SOURCE_PASSWORD
         mode: full_refresh
         streams:

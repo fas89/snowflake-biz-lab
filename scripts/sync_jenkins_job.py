@@ -234,7 +234,11 @@ def render_parameter_definitions(params: dict[str, str]) -> str:
     return "\n".join("        " + line for line in "\n".join(lines).splitlines())
 
 
-def build_job_config(scenario: ScenarioConfig, bootstrap_params: dict[str, str]) -> bytes:
+def build_job_config(
+    scenario: ScenarioConfig,
+    bootstrap_params: dict[str, str],
+    branch: str = "main",
+) -> bytes:
     parameter_definitions = render_parameter_definitions(bootstrap_params)
     repo_url = container_repo_url(scenario)
     xml = dedent(
@@ -263,7 +267,7 @@ def build_job_config(scenario: ScenarioConfig, bootstrap_params: dict[str, str])
               </userRemoteConfigs>
               <branches>
                 <hudson.plugins.git.BranchSpec>
-                  <name>*/main</name>
+                  <name>*/{escape(branch)}</name>
                 </hudson.plugins.git.BranchSpec>
               </branches>
               <configVersion>2</configVersion>
@@ -292,11 +296,43 @@ def post_xml(
         return
 
 
+def _detect_current_branch(repo_root: Path) -> str:
+    """Return the current git branch in ``repo_root``, or ``"main"`` if
+    detection fails. Used as the default for the ``--branch`` flag so
+    operators don't have to remember which branch they're on."""
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        branch = result.stdout.strip()
+        return branch or "main"
+    except (OSError, subprocess.TimeoutExpired):
+        return "main"
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create or update the lab's Jenkins Pipeline-from-SCM job for scenario pre1, pre2, pre3, A1, A2, B1, or B2."
     )
     parser.add_argument("--scenario", required=True, choices=sorted(SCENARIOS))
+    parser.add_argument(
+        "--branch",
+        default=None,
+        help=(
+            "Git branch the Jenkins Pipeline-from-SCM job should track. "
+            "Defaults to the current git branch in the workspace repo "
+            "(falls back to 'main' when detection fails). Useful when "
+            "iterating on a feature branch — without this, Jenkins would "
+            "always check out 'main' and miss in-progress contracts."
+        ),
+    )
     args = parser.parse_args()
 
     scenario = SCENARIOS[args.scenario]
@@ -350,8 +386,11 @@ def main() -> None:
     for key, value in bootstrap_params.items():
         print(f"  - {key}={value}")
 
+    branch = args.branch or _detect_current_branch(repo_root)
+    print(f"SCM branch: {branch}")
+
     crumb_headers = fetch_crumb(opener, jenkins_url, jenkins_user, jenkins_password)
-    config_xml = build_job_config(scenario, bootstrap_params)
+    config_xml = build_job_config(scenario, bootstrap_params, branch=branch)
     exists = job_exists(opener, jenkins_url, jenkins_user, jenkins_password, scenario.job_name)
 
     if exists:
