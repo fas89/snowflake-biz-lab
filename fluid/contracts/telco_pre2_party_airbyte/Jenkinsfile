@@ -65,6 +65,9 @@ pipeline {
             /opt/fluid-venv/bin/pip install --quiet --force-reinstall --no-deps /tmp/forge-cli-build \
               || echo "warn: dev-source install failed; using PyPI forge-cli" >&2
           fi
+          # forge-cli hard-deps that --no-deps skipped (see pre-1 rationale).
+          /opt/fluid-venv/bin/pip install --quiet 'pydantic-settings>=2.0,<3' \
+            || echo "warn: pydantic-settings install failed" >&2
           # Engine deps: PyAirbyte for pre-2.
           /opt/fluid-venv/bin/pip install --quiet 'airbyte>=0.45' \
             || echo "warn: airbyte install failed; pre-2 acquisition will fail at apply" >&2

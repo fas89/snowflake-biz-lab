@@ -84,6 +84,14 @@ pipeline {
             /opt/fluid-venv/bin/pip install --quiet --force-reinstall --no-deps /tmp/forge-cli-build \
               || echo "warn: dev-source install failed; using PyPI forge-cli" >&2
           fi
+          # Hard deps that --no-deps skipped above. forge-cli's
+          # pyproject.toml requires pydantic-settings>=2.0 for the
+          # credential introspectors (without it, ``make_destination``
+          # returns an empty dict and dlt's SnowflakeCredentials raise
+          # "username and password required"). Pin major version to
+          # match what's tested.
+          /opt/fluid-venv/bin/pip install --quiet 'pydantic-settings>=2.0,<3' \
+            || echo "warn: pydantic-settings install failed" >&2
           # Engine deps: dlt is the acquisition engine for pre-1. Not in
           # forge-cli's pyproject (operator-installed per-scenario), so
           # the bootstrap pulls it into the same venv. ``sql_database``
