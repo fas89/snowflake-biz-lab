@@ -43,6 +43,7 @@ pipeline {
     // dev-source forge-cli at /forge-cli-src so unreleased changes flow
     // through. See pre-1 Jenkinsfile rationale comment.
     FLUID = '/opt/fluid-venv/bin/fluid'
+    FLUID_RUNNER_HOST_OVERRIDE = 'host.docker.internal'
   }
 
   stages {
