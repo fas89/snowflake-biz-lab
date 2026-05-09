@@ -194,7 +194,7 @@ EOM
                       # forge-cli hard-dep — required by the credential introspector.
                       pip install --quiet "pydantic-settings>=2.0,<3"
                       # Per-engine pip extras (engine='airbyte', source='postgres', sink='snowflake').
-                      pip install --quiet "airbyte>=0.45"
+                      pip install --quiet "airbyte>=0.20,<1"
                 '''
                 sh '''cd "fluid/contracts/telco_pre2_party_airbyte" && fluid --version'''
             }
