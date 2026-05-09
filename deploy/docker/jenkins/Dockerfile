@@ -5,9 +5,16 @@ USER root
 # runs ``pip install --quiet data-product-forge`` in its Setup stage.
 # python-is-python3 lets the generated scripts call ``python`` and ``pip``
 # without the ``3`` suffix, matching the local-dev shell story.
+# build-essential + python3-dev are needed for engine deps that don't
+# publish 3.13 wheels yet (notably airbyte 0.20.0 → numpy 1.26.x). Without
+# these the per-build ``pip install airbyte`` falls through to a source
+# build that fails with "Unknown compiler(s)".
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        python3 python3-pip python3-venv python-is-python3 git curl && \
+        python3 python3-pip python3-venv python3-dev python-is-python3 \
+        git curl \
+        build-essential \
+        && \
     rm -rf /var/lib/apt/lists/*
 
 # Debian 13 enforces PEP 668: ``pip install`` against the system Python is
