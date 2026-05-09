@@ -51,15 +51,19 @@ pipeline {
         sh '''
           set -eu
           cd /workspace
-          # Non-editable dev-source install (read-only mount, see pre-1
+          # Copy-then-install dev-source (read-only mount, see pre-1
           # Jenkinsfile rationale).
           if [ -d /forge-cli-src ]; then
-            /opt/fluid-venv/bin/pip install --quiet --force-reinstall --no-deps /forge-cli-src \
-              || echo "warn: dev-source install of /forge-cli-src failed; using PyPI forge-cli" >&2
+            mkdir -p /tmp/forge-cli-build
+            rsync -a --delete \
+              --exclude='.git' --exclude='.venv*' --exclude='__pycache__' \
+              --exclude='.pytest_cache' --exclude='*.egg-info' \
+              --exclude='build' --exclude='dist' --exclude='node_modules' \
+              /forge-cli-src/ /tmp/forge-cli-build/
+            /opt/fluid-venv/bin/pip install --quiet --force-reinstall --no-deps /tmp/forge-cli-build \
+              || echo "warn: dev-source install failed; using PyPI forge-cli" >&2
           fi
           # Meltano scenario also needs the Singer tap + target binaries.
-          # Install once into the same venv so /opt/fluid-venv/bin/tap-postgres
-          # and target-snowflake exist for the runner's discovery.
           /opt/fluid-venv/bin/pip install --quiet meltanolabs-tap-postgres meltanolabs-target-snowflake \
             || echo "warn: Singer tap/target install failed; meltano build will fail at discovery" >&2
           test -x "$FLUID" && "$FLUID" version || {
