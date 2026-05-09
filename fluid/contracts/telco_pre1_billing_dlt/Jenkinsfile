@@ -63,21 +63,16 @@ pipeline {
           # caches). When the bind-mount is missing (Jenkins outside the
           # lab container), fall back to PyPI.
           if [ -d /forge-cli-src ]; then
-            # cp instead of rsync (rsync not in the Jenkins base image).
-            # Skip .git + venvs + caches via find+cpio pipe — keeps the
-            # copy small and avoids hitting the read-only fs's symlinks.
+            # tar pipe instead of rsync/cpio (neither is in the Jenkins
+            # base image; only cp+tar+find are). tar's --exclude keeps
+            # the copy small.
             rm -rf /tmp/forge-cli-build
             mkdir -p /tmp/forge-cli-build
-            (cd /forge-cli-src && find . \
-              -path './.git' -prune -o \
-              -path './.venv*' -prune -o \
-              -name '__pycache__' -prune -o \
-              -name '.pytest_cache' -prune -o \
-              -name '*.egg-info' -prune -o \
-              -name 'build' -prune -o \
-              -name 'dist' -prune -o \
-              -name 'node_modules' -prune -o \
-              -type f -print | cpio -pdmu /tmp/forge-cli-build/ 2>/dev/null)
+            tar -C /forge-cli-src -cf - \
+              --exclude='.git' --exclude='.venv*' --exclude='__pycache__' \
+              --exclude='.pytest_cache' --exclude='*.egg-info' \
+              --exclude='build' --exclude='dist' --exclude='node_modules' \
+              . | tar -C /tmp/forge-cli-build -xf -
             /opt/fluid-venv/bin/pip install --quiet --force-reinstall --no-deps /tmp/forge-cli-build \
               || echo "warn: dev-source install failed; using PyPI forge-cli" >&2
           fi
