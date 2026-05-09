@@ -11,8 +11,19 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         git curl ca-certificates \
         build-essential \
+        docker.io \
         && \
     rm -rf /var/lib/apt/lists/*
+
+# PyAirbyte (used by pre-2 / Airbyte acquisition) spawns Airbyte source
+# connectors as Docker images on the host's daemon (the docker-compose
+# binds /var/run/docker.sock into the container). Add the jenkins user
+# to the docker group so it can talk to the socket. The group GID is
+# whatever Debian assigns at apt-install time; matches the host's
+# docker socket GID through the socket itself (the kernel checks GIDs
+# numerically), so the demo works on Linux too where the host docker
+# group is typically 999 or 998.
+RUN usermod -aG docker jenkins
 
 # Install ``uv`` (Astral) — a fast Python installer + version manager.
 # We use it to fetch Python 3.12 (sidesteps Debian's 3.13 default), then

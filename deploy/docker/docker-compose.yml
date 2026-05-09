@@ -224,6 +224,14 @@ services:
       # Override the host path via FORGE_CLI_REPO in the launchpad if your
       # checkout lives somewhere other than ../../../forge-cli.
       - ${FORGE_CLI_REPO:-../../../forge-cli}:/forge-cli-src:ro
+      # PyAirbyte (used by pre-2 / Airbyte acquisition) spawns each
+      # source connector as a Docker image (e.g. airbyte/source-postgres).
+      # The Jenkins container needs the host's Docker socket to launch
+      # those sibling containers. Read-write because Docker requires it.
+      # Lab-only convenience: never copy this mount into a shared/prod
+      # Jenkins controller — granting Docker socket access is equivalent
+      # to giving the container root on the host.
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login >/dev/null || exit 1"]
       interval: 20s
