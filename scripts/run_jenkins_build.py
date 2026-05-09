@@ -32,6 +32,21 @@ class ScenarioConfig:
 
 
 SCENARIOS: dict[str, ScenarioConfig] = {
+    "pre1": ScenarioConfig(
+        scenario="pre1",
+        job_name="pre1-billing-dlt",
+        default_params=(("PUBLISH_TARGETS", "datamesh-manager"),),
+    ),
+    "pre2": ScenarioConfig(
+        scenario="pre2",
+        job_name="pre2-party-airbyte",
+        default_params=(("PUBLISH_TARGETS", "datamesh-manager"),),
+    ),
+    "pre3": ScenarioConfig(
+        scenario="pre3",
+        job_name="pre3-usage-meltano",
+        default_params=(("PUBLISH_TARGETS", "datamesh-manager"),),
+    ),
     "A1": ScenarioConfig(
         scenario="A1",
         job_name="A1-external-reference",

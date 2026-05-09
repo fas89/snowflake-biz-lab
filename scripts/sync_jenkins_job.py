@@ -35,6 +35,27 @@ class ScenarioConfig:
 
 
 SCENARIOS: dict[str, ScenarioConfig] = {
+    "pre1": ScenarioConfig(
+        scenario="pre1",
+        job_name="pre1-billing-dlt",
+        workspace_name="",
+        script_path="fluid/contracts/telco_pre1_billing_dlt/Jenkinsfile",
+        description="Pre-1 acquisition (dlt) — Postgres telco_source.telco.{invoice,invoice_charge} → Snowflake bronze.telco.billing_v1 via FLUID 0.7.3 acquisition pattern.",
+    ),
+    "pre2": ScenarioConfig(
+        scenario="pre2",
+        job_name="pre2-party-airbyte",
+        workspace_name="",
+        script_path="fluid/contracts/telco_pre2_party_airbyte/Jenkinsfile",
+        description="Pre-2 acquisition (Airbyte) — Postgres telco_source.telco.{party,account,service,subscription,product_offering} → Snowflake bronze.telco.party_v1 via FLUID 0.7.3 acquisition pattern.",
+    ),
+    "pre3": ScenarioConfig(
+        scenario="pre3",
+        job_name="pre3-usage-meltano",
+        workspace_name="",
+        script_path="fluid/contracts/telco_pre3_usage_meltano/Jenkinsfile",
+        description="Pre-3 acquisition (Meltano) — Postgres telco_source.telco.{usage_event,customer_interaction,trouble_ticket} → Snowflake bronze.telco.usage_v1 via FLUID 0.7.3 acquisition pattern.",
+    ),
     "A1": ScenarioConfig(
         scenario="A1",
         job_name="A1-external-reference",
@@ -76,9 +97,12 @@ SCENARIOS: dict[str, ScenarioConfig] = {
 }
 
 CONTAINER_WORKSPACES_DIR = "/workspace/gitlab"
+CONTAINER_LAB_REPO_DIR = "/workspace"
 
 
 def container_repo_url(scenario: ScenarioConfig) -> str:
+    if not scenario.workspace_name:
+        return f"{CONTAINER_LAB_REPO_DIR}/.git"
     return f"{CONTAINER_WORKSPACES_DIR}/{scenario.workspace_name}/.git"
 
 
@@ -270,7 +294,7 @@ def post_xml(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Create or update the lab's Jenkins Pipeline-from-SCM job for scenario A1, A2, B1, or B2."
+        description="Create or update the lab's Jenkins Pipeline-from-SCM job for scenario pre1, pre2, pre3, A1, A2, B1, or B2."
     )
     parser.add_argument("--scenario", required=True, choices=sorted(SCENARIOS))
     args = parser.parse_args()
@@ -292,8 +316,11 @@ def main() -> None:
         urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
     )
 
-    workspaces_dir = resolve_workspaces_dir(env)
-    repo_root = workspaces_dir / scenario.workspace_name
+    if scenario.workspace_name:
+        workspaces_dir = resolve_workspaces_dir(env)
+        repo_root = workspaces_dir / scenario.workspace_name
+    else:
+        repo_root = REPO_ROOT
     host_git_dir = repo_root / ".git"
     host_script_path = repo_root / scenario.script_path
 
@@ -307,7 +334,7 @@ def main() -> None:
         )
     if not host_script_path.exists():
         raise FileNotFoundError(
-            f"Expected generated Jenkinsfile at {host_script_path}. Run `fluid generate ci ... --out Jenkinsfile` first."
+            f"Expected Jenkinsfile at {host_script_path}. For pre-* scenarios this lives next to the contract; for A*/B* run `fluid generate ci ... --out Jenkinsfile` first."
         )
 
     print(f"Preparing Jenkins sync for scenario {scenario.scenario}")
