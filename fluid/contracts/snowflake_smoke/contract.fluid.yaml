@@ -1,4 +1,4 @@
-fluidVersion: "0.7.2"
+fluidVersion: "0.7.3"
 kind: DataProduct
 id: bronze.telco.snowflake_smoke_072
 name: Snowflake Smoke Starter

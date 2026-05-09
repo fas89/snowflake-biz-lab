@@ -1,35 +1,66 @@
-fluidVersion: "0.7.2"
+fluidVersion: "0.7.3"
 kind: DataProduct
 id: bronze.telco.usage_v1
-name: Telco Usage Bronze (pre-3 / Meltano)
-description: Bronze usage event, customer interaction, and trouble ticket sources ingested from the telco_source Postgres database via Meltano (tap-postgres → target-snowflake).
+name: Telco Usage Bronze (pre-3 / Meltano acquisition)
+description: |
+  Bronze usage event, customer interaction, and trouble ticket sources,
+  ingested from the telco_source Postgres database via FLUID's acquisition
+  build pattern with engine `meltano`. fluid apply invokes the forge-cli
+  meltano runner (tap-postgres → target-snowflake) which moves data into the
+  contract-defined Snowflake bronze tables under `schemaEvolution.policy: strict`.
 domain: telco
 
 metadata:
   layer: Bronze
+  productType: SDP
+  experimental:
+    - acquisition
   owner:
     team: telco-data-platform
     email: data-platform@example.com
-  ingestion:
-    scenario: pre-3
+
+builds:
+  - id: ingest
+    pattern: acquisition
     engine: meltano
-    source:
-      kind: postgres
-      database: "{{ env.PG_SOURCE_DATABASE }}"
-      schema: "{{ env.PG_SOURCE_SCHEMA }}"
-      tables:
-        - usage_event
-        - customer_interaction
-        - trouble_ticket
-    target:
-      kind: snowflake
-      database: "{{ env.SNOWFLAKE_DATABASE }}"
-      schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
+    capabilities:
+      - full_refresh
+      - schema_discovery
+    properties:
+      source:
+        kind: postgres
+        connection:
+          host: "{{ env.PG_SOURCE_HOST }}"
+          port: "{{ env.PG_SOURCE_PORT }}"
+          database: "{{ env.PG_SOURCE_DATABASE }}"
+          secretRef: env://PG_SOURCE_PASSWORD
+        mode: full_refresh
+        streams:
+          - usage_event
+          - customer_interaction
+          - trouble_ticket
+      sink:
+        format: snowflake_table
+      delivery:
+        guarantee: at_least_once
+      schemaEvolution:
+        policy: strict
+        onAddedColumn: fail
+        onRemovedColumn: fail
+        onTypeChange: fail
+      meltano:
+        tap: tap-postgres
+        target: target-snowflake
+        project_dir: meltano/telco_pre3_usage
+    outputs:
+      - usage_event_source
+      - customer_interaction_source
+      - trouble_ticket_source
 
 exposes:
   - exposeId: usage_event_source
     title: Usage Event Source
-    description: Source-shaped usage event records ingested by the Meltano pre-3 pipeline.
+    description: Source-shaped usage event records, landed by the Meltano acquisition runner.
     kind: table
     binding:
       platform: snowflake
@@ -40,6 +71,7 @@ exposes:
         schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
         table: USAGE_EVENT
     contract:
+      schemaPolicy: strict
       schema:
         - name: USAGE_ID
           type: STRING
@@ -73,7 +105,7 @@ exposes:
 
   - exposeId: customer_interaction_source
     title: Customer Interaction Source
-    description: Source-shaped customer interaction records ingested by the Meltano pre-3 pipeline.
+    description: Source-shaped customer interaction records, landed by the Meltano acquisition runner.
     kind: table
     binding:
       platform: snowflake
@@ -84,6 +116,7 @@ exposes:
         schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
         table: CUSTOMER_INTERACTION
     contract:
+      schemaPolicy: strict
       schema:
         - name: INTERACTION_ID
           type: STRING
@@ -116,7 +149,7 @@ exposes:
 
   - exposeId: trouble_ticket_source
     title: Trouble Ticket Source
-    description: Source-shaped trouble ticket records ingested by the Meltano pre-3 pipeline.
+    description: Source-shaped trouble ticket records, landed by the Meltano acquisition runner.
     kind: table
     binding:
       platform: snowflake
@@ -127,6 +160,7 @@ exposes:
         schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
         table: TROUBLE_TICKET
     contract:
+      schemaPolicy: strict
       schema:
         - name: TICKET_ID
           type: STRING

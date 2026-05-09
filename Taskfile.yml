@@ -8,9 +8,6 @@ vars:
   DBT_RUNNER: '{{.COMPOSE}} exec -T dbt-runner'
   FLUID_DEMO_VENV: .venv.fluid-demo
   FLUID_DEV_VENV: .venv.fluid-dev
-  PRE1_DLT_VENV: .venv.pre1-dlt
-  PRE2_AIRBYTE_VENV: .venv.pre2-airbyte
-  PRE3_MELTANO_VENV: .venv.pre3-meltano
 
 tasks:
   up:
@@ -34,31 +31,36 @@ tasks:
     cmd: "{{.COMPOSE}} logs -f {{.SVC | default \"\"}}"
 
   fluid:bootstrap:demo:
-    # Installs the latest data-product-forge release published on TestPyPI by
-    # resolving the current top version first, then installing that exact
-    # package version with PyPI as the primary index. That keeps the FLUID
-    # package on the newest release candidate while avoiding prerelease drift in
-    # transitive dependencies like httpx / dbt-core.
-    #
-    # To pin a version: `FLUID_DEMO_PACKAGE_SPEC='data-product-forge[snowflake]==X.Y.Z' task fluid:bootstrap:demo`
-    # To swap to stable PyPI: `FLUID_TESTPYPI_SIMPLE_URL=https://pypi.org/simple/ task fluid:bootstrap:demo`
-    desc: Create the demo-release FLUID runtime from the latest TestPyPI release
+    # Demo and dev paths both install from the sibling forge-cli checkout so
+    # they exercise the same FLUID code (latest in source). Demo is a non-
+    # editable install (frozen snapshot at task-run time, reproducible), dev
+    # is editable (`pip install -e`) for iterative work. The previous
+    # TestPyPI-resolution behaviour is preserved as an opt-in: set
+    # `FLUID_DEMO_USE_TESTPYPI=1` and (optionally) `FLUID_DEMO_PACKAGE_SPEC=`
+    # to force-install a published release instead.
+    desc: Create the demo-release FLUID runtime from the sibling forge-cli checkout (set FLUID_DEMO_USE_TESTPYPI=1 to install a published release instead)
     cmds:
       - python3 -m venv {{.FLUID_DEMO_VENV}}
       - "{{.FLUID_DEMO_VENV}}/bin/pip install --upgrade pip"
       - |
-        DEMO_SPEC="${FLUID_DEMO_PACKAGE_SPEC:-data-product-forge[snowflake]}"
-        if printf '%s' "$DEMO_SPEC" | grep -Eq '(==|>=|<=|~=|>|<)'; then
-          INSTALL_SPEC="$DEMO_SPEC"
+        if [ "${FLUID_DEMO_USE_TESTPYPI:-0}" = "1" ]; then
+          DEMO_SPEC="${FLUID_DEMO_PACKAGE_SPEC:-data-product-forge[snowflake]}"
+          if printf '%s' "$DEMO_SPEC" | grep -Eq '(==|>=|<=|~=|>|<)'; then
+            INSTALL_SPEC="$DEMO_SPEC"
+          else
+            LATEST_TESTPYPI_VERSION="$("{{.FLUID_DEMO_VENV}}/bin/python" -m pip index versions --pre --index-url "${FLUID_TESTPYPI_SIMPLE_URL:-https://test.pypi.org/simple/}" data-product-forge | sed -n 's/^data-product-forge (\([^)]*\)).*/\1/p' | head -n1)"
+            INSTALL_SPEC="${DEMO_SPEC}==${LATEST_TESTPYPI_VERSION}"
+            printf 'Resolved latest TestPyPI data-product-forge release: %s\n' "$INSTALL_SPEC"
+          fi
+          "{{.FLUID_DEMO_VENV}}/bin/pip" install --index-url "${FLUID_PYPI_FALLBACK_URL:-https://pypi.org/simple/}" --extra-index-url "${FLUID_TESTPYPI_SIMPLE_URL:-https://test.pypi.org/simple/}" "$INSTALL_SPEC"
         else
-          LATEST_TESTPYPI_VERSION="$("{{.FLUID_DEMO_VENV}}/bin/python" -m pip index versions --pre --index-url "${FLUID_TESTPYPI_SIMPLE_URL:-https://test.pypi.org/simple/}" data-product-forge | sed -n 's/^data-product-forge (\([^)]*\)).*/\1/p' | head -n1)"
-          INSTALL_SPEC="${DEMO_SPEC}==${LATEST_TESTPYPI_VERSION}"
-          printf 'Resolved latest TestPyPI data-product-forge release: %s\n' "$INSTALL_SPEC"
+          SOURCE_REPO="${FLUID_DEV_SOURCE_REPO:-../forge-cli}"
+          printf 'Installing data-product-forge from sibling source: %s (non-editable demo install)\n' "$SOURCE_REPO"
+          "{{.FLUID_DEMO_VENV}}/bin/pip" install "${SOURCE_REPO}[snowflake]"
         fi
-        "{{.FLUID_DEMO_VENV}}/bin/pip" install --index-url "${FLUID_PYPI_FALLBACK_URL:-https://pypi.org/simple/}" --extra-index-url "${FLUID_TESTPYPI_SIMPLE_URL:-https://test.pypi.org/simple/}" "$INSTALL_SPEC"
 
   fluid:bootstrap:dev:
-    desc: Create the dev-source FLUID runtime from the sibling forge-cli checkout
+    desc: Create the dev-source FLUID runtime from the sibling forge-cli checkout (editable install)
     cmds:
       - python3 -m venv {{.FLUID_DEV_VENV}}
       - "{{.FLUID_DEV_VENV}}/bin/pip install --upgrade pip"
@@ -66,11 +68,11 @@ tasks:
 
   fluid:check:demo:
     desc: Verify the pinned demo-release FLUID runtime and bundled contract schema support
-    cmd: "{{.FLUID_DEMO_VENV}}/bin/python fluid/scripts/check_demo_release.py --fluid {{.FLUID_DEMO_VENV}}/bin/fluid --expected-package-spec \"${FLUID_DEMO_PACKAGE_SPEC:-data-product-forge}\" --expected-schema-version \"${FLUID_DEFAULT_CONTRACT_SCHEMA_VERSION:-0.7.2}\""
+    cmd: "{{.FLUID_DEMO_VENV}}/bin/python fluid/scripts/check_demo_release.py --fluid {{.FLUID_DEMO_VENV}}/bin/fluid --expected-package-spec \"${FLUID_DEMO_PACKAGE_SPEC:-data-product-forge}\" --expected-schema-version \"${FLUID_DEFAULT_CONTRACT_SCHEMA_VERSION:-0.7.3}\""
 
   fluid:check:dev:
     desc: Verify the dev-source checkout is pointed at forge-cli main expectations
-    cmd: "{{.FLUID_DEV_VENV}}/bin/python fluid/scripts/check_dev_source.py --repo \"${FLUID_DEV_SOURCE_REPO:-../forge-cli}\" --expected-schema-version \"${FLUID_DEFAULT_CONTRACT_SCHEMA_VERSION:-0.7.2}\""
+    cmd: "{{.FLUID_DEV_VENV}}/bin/python fluid/scripts/check_dev_source.py --repo \"${FLUID_DEV_SOURCE_REPO:-../forge-cli}\" --expected-schema-version \"${FLUID_DEFAULT_CONTRACT_SCHEMA_VERSION:-0.7.3}\""
 
   dbt:parse:
     desc: Parse the dbt project
@@ -153,53 +155,42 @@ tasks:
     cmd: "python3 scripts/run_jenkins_build.py --scenario \"{{.SCENARIO}}\" {{.CLI_ARGS}}"
 
   # ---------------------------------------------------------------------------
-  # Pre-* ingestion pipelines (Postgres telco_source → Snowflake bronze)
-  # Each pre-N pipeline uses a different ingestion engine to demonstrate the
-  # FLUID lifecycle staying engine-agnostic.
+  # Pre-* ingestion demos — each pre-N contract uses FLUID 0.7.3's
+  # `builds[].pattern: acquisition` block with a different engine
+  # (dlt / airbyte / meltano). `fluid apply` natively invokes the matching
+  # forge-cli runner, so there are no separate forge_pre* shim scripts.
+  # The only out-of-band step is seeding the Postgres source database.
   # ---------------------------------------------------------------------------
-  pre1:bootstrap:dlt:
-    desc: Create the .venv.pre1-dlt virtualenv with dlt[snowflake] + sqlalchemy + psycopg2-binary
-    cmds:
-      - python3 -m venv {{.PRE1_DLT_VENV}}
-      - "{{.PRE1_DLT_VENV}}/bin/pip install --upgrade pip"
-      - "{{.PRE1_DLT_VENV}}/bin/pip install 'dlt[snowflake]>=0.5.0' 'sqlalchemy>=2.0' 'psycopg2-binary==2.9.9'"
-
-  pre1:forge:dlt:
-    desc: Run pre-1 dlt acquisition (Postgres telco_source.telco.{invoice,invoice_charge} → Snowflake bronze billing)
-    vars:
-      DLT_PYTHON: '{{.DLT_PYTHON | default ".venv.pre1-dlt/bin/python"}}'
-    cmd: "{{.DLT_PYTHON}} scripts/forge_pre1_dlt.py {{.CLI_ARGS}}"
-
   pre1:demo:
-    desc: End-to-end pre-1 demo — load Postgres seed, dlt-ingest billing, run 11-stage FLUID pipeline
+    desc: End-to-end pre-1 demo (dlt billing) — load Postgres seed → run 11-stage FLUID pipeline (acquisition runs inside apply)
     cmds:
       - task: seed:postgres:load
-      - task: pre1:forge:dlt
       - task: fluid:11-stage
         vars:
           CONTRACT: fluid/contracts/telco_pre1_billing_dlt/contract.fluid.yaml
 
-  pre2:bootstrap:airbyte:
-    desc: Create the .venv.pre2-airbyte virtualenv with PyAirbyte (connectors install lazily on first run)
-    cmds:
-      - python3 -m venv {{.PRE2_AIRBYTE_VENV}}
-      - "{{.PRE2_AIRBYTE_VENV}}/bin/pip install --upgrade pip"
-      - "{{.PRE2_AIRBYTE_VENV}}/bin/pip install 'airbyte>=0.20.0' 'psycopg2-binary==2.9.9'"
-
-  pre2:forge:airbyte:
-    desc: Run pre-2 PyAirbyte acquisition (Postgres telco_source.telco.{party,account,service,subscription,product_offering} → Snowflake bronze party)
-    vars:
-      AIRBYTE_PYTHON: '{{.AIRBYTE_PYTHON | default ".venv.pre2-airbyte/bin/python"}}'
-    cmd: "{{.AIRBYTE_PYTHON}} scripts/forge_pre2_airbyte.py {{.CLI_ARGS}}"
-
   pre2:demo:
-    desc: End-to-end pre-2 demo — load Postgres seed, PyAirbyte-ingest party domain, run 11-stage FLUID pipeline
+    desc: End-to-end pre-2 demo (Airbyte party) — load Postgres seed → run 11-stage FLUID pipeline (acquisition runs inside apply)
     cmds:
       - task: seed:postgres:load
-      - task: pre2:forge:airbyte
       - task: fluid:11-stage
         vars:
           CONTRACT: fluid/contracts/telco_pre2_party_airbyte/contract.fluid.yaml
+
+  pre3:demo:
+    desc: End-to-end pre-3 demo (Meltano usage) — load Postgres seed → run 11-stage FLUID pipeline (acquisition runs inside apply)
+    cmds:
+      - task: seed:postgres:load
+      - task: fluid:11-stage
+        vars:
+          CONTRACT: fluid/contracts/telco_pre3_usage_meltano/contract.fluid.yaml
+
+  pre:all:demo:
+    desc: Run all three pre-* demos (pre-1 dlt, pre-2 Airbyte, pre-3 Meltano) sequentially so the bronze landing schema is fully populated for downstream silver scenarios
+    cmds:
+      - task: pre1:demo
+      - task: pre2:demo
+      - task: pre3:demo
 
   b1:forge:ai:
     desc: Live-forge the B1 AI external-reference contract with Gemini/OpenAI and lab guardrails

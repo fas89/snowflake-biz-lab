@@ -1,34 +1,64 @@
-fluidVersion: "0.7.2"
+fluidVersion: "0.7.3"
 kind: DataProduct
 id: bronze.telco.billing_v1
-name: Telco Billing Bronze (pre-1 / dlt)
-description: Bronze invoice and invoice-charge sources ingested from the telco_source Postgres database via dlt and landed into the Snowflake stage schema.
+name: Telco Billing Bronze (pre-1 / dlt acquisition)
+description: |
+  Bronze invoice and invoice-charge sources, ingested from the telco_source
+  Postgres database via FLUID's acquisition build pattern with engine `dlt`.
+  fluid apply invokes the forge-cli dlt runner, which moves data into the
+  contract-defined Snowflake bronze tables under `schemaEvolution.policy: strict`
+  (the engine cannot mutate the FLUID-applied DDL).
 domain: telco
 
 metadata:
   layer: Bronze
+  productType: SDP
+  experimental:
+    - acquisition
   owner:
     team: telco-data-platform
     email: data-platform@example.com
-  ingestion:
-    scenario: pre-1
+
+builds:
+  - id: ingest
+    pattern: acquisition
     engine: dlt
-    source:
-      kind: postgres
-      database: "{{ env.PG_SOURCE_DATABASE }}"
-      schema: "{{ env.PG_SOURCE_SCHEMA }}"
-      tables:
-        - invoice
-        - invoice_charge
-    target:
-      kind: snowflake
-      database: "{{ env.SNOWFLAKE_DATABASE }}"
-      schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
+    capabilities:
+      - full_refresh
+      - schema_discovery
+    properties:
+      source:
+        kind: postgres
+        connection:
+          host: "{{ env.PG_SOURCE_HOST }}"
+          port: "{{ env.PG_SOURCE_PORT }}"
+          database: "{{ env.PG_SOURCE_DATABASE }}"
+          secretRef: env://PG_SOURCE_PASSWORD
+        mode: full_refresh
+        streams:
+          - invoice
+          - invoice_charge
+      sink:
+        format: snowflake_table
+      delivery:
+        guarantee: at_least_once
+      schemaEvolution:
+        policy: strict
+        onAddedColumn: fail
+        onRemovedColumn: fail
+        onTypeChange: fail
+      dlt:
+        pipeline_name: telco_pre1_billing_dlt
+        destination: snowflake
+        dataset_name: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
+    outputs:
+      - invoice_source
+      - invoice_charge_source
 
 exposes:
   - exposeId: invoice_source
     title: Invoice Source
-    description: Source-shaped invoice records loaded into the telco landing schema by the dlt pre-1 pipeline.
+    description: Source-shaped invoice records, landed by the dlt acquisition runner.
     kind: table
     binding:
       platform: snowflake
@@ -39,6 +69,7 @@ exposes:
         schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
         table: INVOICE
     contract:
+      schemaPolicy: strict
       schema:
         - name: INVOICE_ID
           type: STRING
@@ -72,7 +103,7 @@ exposes:
 
   - exposeId: invoice_charge_source
     title: Invoice Charge Source
-    description: Source-shaped invoice charge records loaded into the telco landing schema by the dlt pre-1 pipeline.
+    description: Source-shaped invoice charge records, landed by the dlt acquisition runner.
     kind: table
     binding:
       platform: snowflake
@@ -83,6 +114,7 @@ exposes:
         schema: "{{ env.SNOWFLAKE_STAGE_SCHEMA }}"
         table: INVOICE_CHARGE
     contract:
+      schemaPolicy: strict
       schema:
         - name: CHARGE_ID
           type: STRING

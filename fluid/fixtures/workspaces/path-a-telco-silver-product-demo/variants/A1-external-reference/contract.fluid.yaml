@@ -1,4 +1,4 @@
-fluidVersion: "0.7.2"
+fluidVersion: "0.7.3"
 kind: DataProduct
 id: silver.telco.subscriber360_external_ref_v1
 name: Telco Subscriber 360 (External Reference)
@@ -10,6 +10,7 @@ domain: telco
 
 metadata:
   layer: Silver
+  productType: ADP
   owner:
     team: telco-customer-intelligence
     email: customer-intelligence@example.com
