@@ -8,6 +8,9 @@ vars:
   DBT_RUNNER: '{{.COMPOSE}} exec -T dbt-runner'
   FLUID_DEMO_VENV: .venv.fluid-demo
   FLUID_DEV_VENV: .venv.fluid-dev
+  PRE1_DLT_VENV: .venv.pre1-dlt
+  PRE2_AIRBYTE_VENV: .venv.pre2-airbyte
+  PRE3_MELTANO_VENV: .venv.pre3-meltano
 
 tasks:
   up:
@@ -148,6 +151,33 @@ tasks:
   jenkins:build:
     desc: Trigger the Jenkins Pipeline build for scenario A1, A2, B1, or B2 via buildWithParameters
     cmd: "python3 scripts/run_jenkins_build.py --scenario \"{{.SCENARIO}}\" {{.CLI_ARGS}}"
+
+  # ---------------------------------------------------------------------------
+  # Pre-* ingestion pipelines (Postgres telco_source → Snowflake bronze)
+  # Each pre-N pipeline uses a different ingestion engine to demonstrate the
+  # FLUID lifecycle staying engine-agnostic.
+  # ---------------------------------------------------------------------------
+  pre1:bootstrap:dlt:
+    desc: Create the .venv.pre1-dlt virtualenv with dlt[snowflake] + sqlalchemy + psycopg2-binary
+    cmds:
+      - python3 -m venv {{.PRE1_DLT_VENV}}
+      - "{{.PRE1_DLT_VENV}}/bin/pip install --upgrade pip"
+      - "{{.PRE1_DLT_VENV}}/bin/pip install 'dlt[snowflake]>=0.5.0' 'sqlalchemy>=2.0' 'psycopg2-binary==2.9.9'"
+
+  pre1:forge:dlt:
+    desc: Run pre-1 dlt acquisition (Postgres telco_source.telco.{invoice,invoice_charge} → Snowflake bronze billing)
+    vars:
+      DLT_PYTHON: '{{.DLT_PYTHON | default ".venv.pre1-dlt/bin/python"}}'
+    cmd: "{{.DLT_PYTHON}} scripts/forge_pre1_dlt.py {{.CLI_ARGS}}"
+
+  pre1:demo:
+    desc: End-to-end pre-1 demo — load Postgres seed, dlt-ingest billing, run 11-stage FLUID pipeline
+    cmds:
+      - task: seed:postgres:load
+      - task: pre1:forge:dlt
+      - task: fluid:11-stage
+        vars:
+          CONTRACT: fluid/contracts/telco_pre1_billing_dlt/contract.fluid.yaml
 
   b1:forge:ai:
     desc: Live-forge the B1 AI external-reference contract with Gemini/OpenAI and lab guardrails
