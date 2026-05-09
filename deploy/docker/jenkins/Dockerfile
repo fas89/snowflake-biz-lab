@@ -1,21 +1,27 @@
 FROM jenkins/jenkins:lts-jdk21
 
 USER root
-# python3-pip + python3-venv are required by the generated Jenkinsfile, which
-# runs ``pip install --quiet data-product-forge`` in its Setup stage.
-# python-is-python3 lets the generated scripts call ``python`` and ``pip``
-# without the ``3`` suffix, matching the local-dev shell story.
-# build-essential + python3-dev are needed for engine deps that don't
-# publish 3.13 wheels yet (notably airbyte 0.20.0 → numpy 1.26.x). Without
-# these the per-build ``pip install airbyte`` falls through to a source
-# build that fails with "Unknown compiler(s)".
+# git + curl for SCM checkout; build-essential + python3-dev for engine
+# source builds. Python is provisioned by `uv` (next RUN) so we don't
+# need the system python3* packages — Debian 13 ships Python 3.13 by
+# default but several engine deps (airbyte 0.20.x → pyarrow / numpy)
+# don't publish 3.13 wheels yet. Pinning to a known-good Python that
+# the data ecosystem already supports (3.12) sidesteps the wheel gap.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        python3 python3-pip python3-venv python3-dev python-is-python3 \
-        git curl \
+        git curl ca-certificates \
         build-essential \
         && \
     rm -rf /var/lib/apt/lists/*
+
+# Install ``uv`` (Astral) — a fast Python installer + version manager.
+# We use it to fetch Python 3.12 (sidesteps Debian's 3.13 default), then
+# create the canonical /opt/fluid-venv against that pinned interpreter.
+# uv is a single static binary, no system-Python dependency.
+RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh && \
+    uv python install 3.12 && \
+    uv venv --python 3.12 /opt/fluid-venv && \
+    /opt/fluid-venv/bin/python --version
 
 # Debian 13 enforces PEP 668: ``pip install`` against the system Python is
 # blocked. We provision a dedicated venv at /opt/fluid-venv and prepend its
@@ -28,8 +34,7 @@ ENV PATH="/opt/fluid-venv/bin:${PATH}"
 # live Snowflake (snowflake-connector-python, snowpark, dbt-snowflake).
 # Without this, `fluid test` trips on "snowflake-connector-python not
 # installed" even for a Snowflake-bound contract.
-RUN python3 -m venv /opt/fluid-venv && \
-    /opt/fluid-venv/bin/pip install --no-cache-dir --quiet --upgrade pip setuptools wheel && \
+RUN /opt/fluid-venv/bin/pip install --no-cache-dir --quiet --upgrade pip setuptools wheel && \
     /opt/fluid-venv/bin/pip install --no-cache-dir --quiet 'data-product-forge[snowflake]' && \
     chown -R jenkins:jenkins /opt/fluid-venv
 
