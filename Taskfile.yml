@@ -179,6 +179,28 @@ tasks:
         vars:
           CONTRACT: fluid/contracts/telco_pre1_billing_dlt/contract.fluid.yaml
 
+  pre2:bootstrap:airbyte:
+    desc: Create the .venv.pre2-airbyte virtualenv with PyAirbyte (connectors install lazily on first run)
+    cmds:
+      - python3 -m venv {{.PRE2_AIRBYTE_VENV}}
+      - "{{.PRE2_AIRBYTE_VENV}}/bin/pip install --upgrade pip"
+      - "{{.PRE2_AIRBYTE_VENV}}/bin/pip install 'airbyte>=0.20.0' 'psycopg2-binary==2.9.9'"
+
+  pre2:forge:airbyte:
+    desc: Run pre-2 PyAirbyte acquisition (Postgres telco_source.telco.{party,account,service,subscription,product_offering} → Snowflake bronze party)
+    vars:
+      AIRBYTE_PYTHON: '{{.AIRBYTE_PYTHON | default ".venv.pre2-airbyte/bin/python"}}'
+    cmd: "{{.AIRBYTE_PYTHON}} scripts/forge_pre2_airbyte.py {{.CLI_ARGS}}"
+
+  pre2:demo:
+    desc: End-to-end pre-2 demo — load Postgres seed, PyAirbyte-ingest party domain, run 11-stage FLUID pipeline
+    cmds:
+      - task: seed:postgres:load
+      - task: pre2:forge:airbyte
+      - task: fluid:11-stage
+        vars:
+          CONTRACT: fluid/contracts/telco_pre2_party_airbyte/contract.fluid.yaml
+
   b1:forge:ai:
     desc: Live-forge the B1 AI external-reference contract with Gemini/OpenAI and lab guardrails
     vars:
