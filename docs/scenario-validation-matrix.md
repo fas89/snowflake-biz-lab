@@ -4,25 +4,31 @@ Use this after `plan`, `apply`, `task jenkins:sync`, `task jenkins:build`, and t
 
 ## Scenario Matrix
 
-| Scenario | Contract or target | Expected build ID | dbt root | Source Airflow asset | Active Airflow output | Expected DAG ID | Jenkins job | Jenkinsfile path | Expected exposes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Bronze (billing) | `fluid/contracts/telco_seed_billing/contract.fluid.yaml` | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | `bronze.telco.billing_v1` |
-| Bronze (party) | `fluid/contracts/telco_seed_party/contract.fluid.yaml` | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | `bronze.telco.party_v1` |
-| Bronze (usage) | `fluid/contracts/telco_seed_usage/contract.fluid.yaml` | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | `bronze.telco.usage_v1` |
+| Scenario | Contract or target | Acquisition engine | Source (Postgres) | Expected build ID | dbt root | Source Airflow asset | Active Airflow output | Expected DAG ID | Jenkins job | Jenkinsfile path | Expected exposes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Pre-1 | `fluid/contracts/telco_pre1_billing_dlt/contract.fluid.yaml` | `dlt` (acquisition pattern, 0.7.3) | `telco_source.telco.{invoice, invoice_charge}` | `ingest` | Not applicable | Not applicable | Not applicable | Not applicable | `pre1-billing-dlt` | `fluid/contracts/telco_pre1_billing_dlt/Jenkinsfile` | `bronze.telco.billing_v1` (`invoice_source`, `invoice_charge_source`) |
+| Pre-2 | `fluid/contracts/telco_pre2_party_airbyte/contract.fluid.yaml` | `airbyte` (acquisition pattern, 0.7.3, embedded deployment) | `telco_source.telco.{party, account, service, subscription, product_offering}` | `ingest` | Not applicable | Not applicable | Not applicable | Not applicable | `pre2-party-airbyte` | `fluid/contracts/telco_pre2_party_airbyte/Jenkinsfile` | `bronze.telco.party_v1` (`party_source`, `account_source`, `service_source`, `subscription_source`, `product_offering_source`) |
+| Pre-3 | `fluid/contracts/telco_pre3_usage_meltano/contract.fluid.yaml` | `meltano` (acquisition pattern, 0.7.3, tap-postgres → target-snowflake) | `telco_source.telco.{usage_event, customer_interaction, trouble_ticket}` | `ingest` | Not applicable | Not applicable | Not applicable | Not applicable | `pre3-usage-meltano` | `fluid/contracts/telco_pre3_usage_meltano/Jenkinsfile` | `bronze.telco.usage_v1` (`usage_event_source`, `customer_interaction_source`, `trouble_ticket_source`) |
 | A1 | `gitlab/path-a-telco-silver-product-demo/variants/A1-external-reference/contract.fluid.yaml` | `dv2_subscriber360_reference_build` | `gitlab/path-a-telco-silver-product-demo/reference-assets/dbt_dv2_subscriber360` | `gitlab/path-a-telco-silver-product-demo/reference-assets/airflow_subscriber360/dags/telco_subscriber360_pipeline.py` | `airflow/dags/active/current/telco_subscriber360_pipeline.py` | `telco_subscriber360_reference` | `A1-external-reference` | `gitlab/path-a-telco-silver-product-demo/variants/A1-external-reference/Jenkinsfile` | `subscriber360_core`, `subscriber_health_scorecard` |
 | A2 | `gitlab/path-a-telco-silver-product-demo/variants/A2-internal-reference/contract.fluid.yaml` | `dv2_subscriber360_internal_build` | `gitlab/path-a-telco-silver-product-demo/variants/A2-internal-reference/dbt_dv2_subscriber360` | `gitlab/path-a-telco-silver-product-demo/variants/A2-internal-reference/airflow_subscriber360/dags/telco_subscriber360_pipeline.py` | `airflow/dags/active/current/telco_subscriber360_pipeline.py` | `telco_subscriber360_internal` | `A2-internal-reference` | `gitlab/path-a-telco-silver-product-demo/variants/A2-internal-reference/Jenkinsfile` | `subscriber360_core`, `subscriber_health_scorecard` |
 | B1 | `gitlab/path-b-ai-telco-silver-import-demo/variants/B1-ai-reference-external/subscriber360-external/contract.fluid.yaml` | `ai_subscriber360_external_build` | `gitlab/path-a-telco-silver-product-demo/reference-assets/dbt_dv2_subscriber360` | `gitlab/path-b-ai-telco-silver-import-demo/variants/B1-ai-reference-external/subscriber360-external/runtime/generated/airflow/silver_telco_subscriber360_ai_external_v1_dag.py` | `airflow/dags/active/current/silver_telco_subscriber360_ai_external_v1_dag.py` | `silver_telco_subscriber360_ai_external_v1` | `B1-ai-reference-external` | `gitlab/path-b-ai-telco-silver-import-demo/variants/B1-ai-reference-external/subscriber360-external/Jenkinsfile` | `subscriber360_core`, `subscriber_health_scorecard` |
 | B2 | `gitlab/path-b-ai-telco-silver-import-demo/variants/B2-ai-generate-in-workspace/subscriber360-generated/contract.fluid.yaml` | `ai_subscriber360_generated_build` | `gitlab/path-b-ai-telco-silver-import-demo/variants/B2-ai-generate-in-workspace/subscriber360-generated/generated/dbt/dbt_dv2_subscriber360` | `gitlab/path-b-ai-telco-silver-import-demo/variants/B2-ai-generate-in-workspace/subscriber360-generated/generated/airflow/silver_telco_subscriber360_ai_generated_v1_dag.py` | `airflow/dags/active/current/silver_telco_subscriber360_ai_generated_v1_dag.py` | `silver_telco_subscriber360_ai_generated_v1` | `B2-ai-generate-in-workspace` | `gitlab/path-b-ai-telco-silver-import-demo/variants/B2-ai-generate-in-workspace/subscriber360-generated/Jenkinsfile` | `subscriber360_core`, `subscriber_health_scorecard` |
 
+## Pre-Conditions
+
+Before any pre-N or A*/B* job runs:
+
+- Postgres source data must be loaded — run `task seed:postgres:load` to populate `telco_source.telco.*` (24 tables) from the generator's CSVs.
+
 ## What Should Stay Empty Until You Sync
 
 Before `task jenkins:sync`:
 
-- Jenkins should not show the A1, A2, B1, or B2 job
+- Jenkins should not show the pre1, pre2, pre3, A1, A2, B1, or B2 job
 
 Before `fluid schedule-sync --scheduler airflow ...`:
 
-- Airflow should not show the A1, A2, B1, or B2 DAG
+- Airflow should not show the A1, A2, B1, or B2 DAG (pre-* are SDP — no DAG to register)
 
 ## dbt Docs Refresh
 
@@ -108,9 +114,14 @@ For B2:
 - the expected exposes appear in DMM after the explicit local `publish` step
 - DMM has approved `Access` agreements from the Bronze output ports into the B2 silver product
 
-For Bronze:
+For Pre-1 / Pre-2 / Pre-3 (FLUID 0.7.3 acquisition pattern, replaces the legacy passive Bronze):
 
-- all three contracts validate and plan cleanly
-- all three products appear in DMM
-- each Bronze output port links to its per-expose ODCS contract
-- no Airflow, dbt, or Jenkins assets are expected
+- the contract validates against schema 0.7.3 and plans cleanly
+- the acquisition `builds[0]` block declares the engine (`dlt` / `airbyte` / `meltano`), Postgres source, and capabilities (`full_refresh`, `schema_discovery`)
+- `task seed:postgres:load` populated the matching `telco_source.telco.*` tables before the run
+- `fluid apply` (stage 7) creates the Snowflake bronze schema + tables AND invokes the matching forge-cli build runner under `schemaEvolution.policy: strict` so the engine cannot mutate the FLUID-applied DDL
+- `fluid verify --strict` (stage 9) finds the contract-defined DQ rules satisfied by the rows the engine landed
+- `fluid publish` (stage 10) registers the populated product in DMM with `productType: SDP`
+- each pre-* output port links to its per-expose ODCS contract
+- no Airflow DAG is expected — SDP contracts skip stage 11 (`schedule-sync`)
+- the corresponding Jenkins job (`pre1-billing-dlt`, `pre2-party-airbyte`, `pre3-usage-meltano`) appears after `task jenkins:sync SCENARIO=preN` and runs the same 11 stages from `fluid/contracts/telco_pre*_*/Jenkinsfile`
