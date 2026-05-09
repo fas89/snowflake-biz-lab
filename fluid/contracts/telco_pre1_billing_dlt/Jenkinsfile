@@ -205,7 +205,7 @@ EOM
         // Deterministic .tgz + MANIFEST.json (SHA-256 merkle root).
         // Root of trust for every downstream stage.
         // ═════════════════════════════════════════════════════════════
-        stage('1 · bundle') {
+        stage('1 - bundle') {
             when { expression { return params.RUN_STAGE_1_BUNDLE } }
             steps {
                 sh '''cd "fluid/contracts/telco_pre1_billing_dlt" && mkdir -p runtime
@@ -219,7 +219,7 @@ EOM
         // Extension-routed: schema + sqlglot (SQL) + openapi-spec-validator.
         // Fail early, fail loud.
         // ═════════════════════════════════════════════════════════════
-        stage('2 · validate') {
+        stage('2 - validate') {
             when { expression { return params.RUN_STAGE_2_VALIDATE } }
             environment {
                 VALIDATE_STRICT_FLAG = "${params.VALIDATE_STRICT ? '--strict' : ''}"
@@ -236,7 +236,7 @@ EOM
         // ODCS + ODPS-Bitol + schedule + policy fanout. dbt excluded.
         // Auto-skipped for hybrid-reference contracts.
         // ═════════════════════════════════════════════════════════════
-        stage('3 · generate artifacts') {
+        stage('3 - generate artifacts') {
             when { expression { return params.RUN_STAGE_3_GENERATE_ARTIFACTS } }
             steps {
                 sh '''cd "fluid/contracts/telco_pre1_billing_dlt" && fluid generate artifacts "${CONTRACT:-contract.fluid.yaml}" \
@@ -251,7 +251,7 @@ EOM
         // Re-verifies MANIFEST SHA-256 + per-format schema validators.
         // Defence-in-depth against in-flight CI tampering.
         // ═════════════════════════════════════════════════════════════
-        stage('4 · validate artifacts') {
+        stage('4 - validate artifacts') {
             // Self-gate: stage 4 re-verifies the output of stage 3
             // (generate artifacts). When stage 3 was skipped — either
             // because the contract is reference-only (RUN_STAGE_3_*
@@ -283,7 +283,7 @@ EOM
         // Live warehouse vs contract. --exit-on-drift forces a human
         // decision before plan proceeds against a drifted baseline.
         // ═════════════════════════════════════════════════════════════
-        stage('5 · diff (drift gate)') {
+        stage('5 - diff (drift gate)') {
             when { expression { return params.RUN_STAGE_5_DIFF } }
             // SECURITY: argument-smuggling defence (match stages 7, 9, 11).
             environment {
@@ -308,7 +308,7 @@ EOM
         // DDL operations + plan.json with bundleDigest + planDigest.
         // Terraform-style "apply consumes exact plan" binding.
         // ═════════════════════════════════════════════════════════════
-        stage('6 · plan') {
+        stage('6 - plan') {
             when { expression { return params.RUN_STAGE_6_PLAN } }
             // Pass APPLY_MODE through to plan so plan.json's recorded
             // ``mode`` matches what Stage 7 will request. The
@@ -335,7 +335,7 @@ EOM
         // Six-mode DDL matrix. Destructive modes (replace*) require
         // ALLOW_DATA_LOSS when FLUID_ENV != dev or target has rows.
         // ═════════════════════════════════════════════════════════════
-        stage('7 · apply') {
+        stage('7 - apply') {
             when { expression { return params.RUN_STAGE_7_APPLY } }
             // SECURITY: user-supplied params routed through plain
             // environment-block assignments as raw env vars — NOT
@@ -378,7 +378,7 @@ EOM
         // objects surfaces as policy failure, not masked build error).
         // Self-gated on dist/artifacts/policy/bindings.json existence.
         // ═════════════════════════════════════════════════════════════
-        stage('8 · policy apply') {
+        stage('8 - policy apply') {
             when { expression { return params.RUN_STAGE_8_POLICY_APPLY } }
             steps {
                 // ``fluid policy-apply`` does NOT accept a --report
@@ -403,7 +403,7 @@ EOM
         // Post-apply reconciliation. Catches silent DDL coercions
         // (TIMESTAMP_NTZ → LTZ, Redshift length truncations, etc.).
         // ═════════════════════════════════════════════════════════════
-        stage('9 · verify') {
+        stage('9 - verify') {
             when { expression { return params.RUN_STAGE_9_VERIFY } }
             // SECURITY: same argument-smuggling defence as stage 7 —
             // route VERIFY_STRICT through a plain env var and compose
@@ -434,7 +434,7 @@ EOM
         // Multi-target catalog publisher. Push to CC / DMM / DataHub /
         // Collibra / Alation / marketplace / blob storage.
         // ═════════════════════════════════════════════════════════════
-        stage('10 · publish') {
+        stage('10 - publish') {
             when { expression { return params.RUN_STAGE_10_PUBLISH } }
             steps {
                 // PUBLISH_TARGETS is a space-separated string; shell
@@ -463,7 +463,7 @@ EOM
         // Path B (EventBridge / MWAA / Snowflake Tasks) is applied in
         // Stage 7 via SchedulePlanner.
         // ═════════════════════════════════════════════════════════════
-        stage('11 · schedule sync') {
+        stage('11 - schedule sync') {
             when {
                 expression { return params.RUN_STAGE_11_SCHEDULE_SYNC && params.SCHEDULER?.trim() }
             }
