@@ -126,7 +126,7 @@ Validation:
 - Jenkins now lists `A2-internal-reference`; it did not exist before `task jenkins:sync`
 - `task jenkins:build SCENARIO=A2` runs the controller build through Jenkins `buildWithParameters` and confirms the pipeline reads `variants/A2-internal-reference/Jenkinsfile`
 - in the demo-release track, `task jenkins:sync` and `task jenkins:build` automatically carry the package resolved in `runtime/generated/demo-release.env`; do not add manual TestPyPI `--param` flags unless you are deliberately overriding the launchpad
-- the A2 Jenkins build should fail at stage `9 · verify` on `fluid verify ... --strict`; that failure is intentional in this lab and demonstrates the strict Snowflake contract gate on required vs nullable columns
+- the A2 Jenkins build should fail at stage `9 - verify` on `fluid verify ... --strict`; that failure is intentional in this lab and demonstrates the strict Snowflake contract gate on required vs nullable columns
 - Airflow now lists DAG `telco_subscriber360_internal`; it did not exist before the `schedule-sync` command
 - run `Set-Location $env:LAB_REPO; task dbt:docs:refresh SCENARIO=A2`, then confirm dbt docs shows `mart_subscriber360_core` and `mart_subscriber_health_scorecard`
 - DMM shows the A2 silver product with `subscriber360_core` and `subscriber_health_scorecard`; that comes from the explicit local `fluid publish` command above, not from the intentionally failing Jenkins build

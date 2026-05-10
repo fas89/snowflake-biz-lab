@@ -71,7 +71,7 @@ For A2:
 - `apply` finishes with build ID `dv2_subscriber360_internal_build`
 - the generated `Jenkinsfile` exists and is committed
 - `task jenkins:sync SCENARIO=A2` succeeds and `A2-internal-reference` appears
-- `task jenkins:build SCENARIO=A2` intentionally fails at stage `9 · verify` because `fluid verify ... --strict` treats the Snowflake required-vs-nullable mismatch as a hard gate
+- `task jenkins:build SCENARIO=A2` intentionally fails at stage `9 - verify` because `fluid verify ... --strict` treats the Snowflake required-vs-nullable mismatch as a hard gate
 - `fluid schedule-sync --scheduler airflow ...` succeeds against `airflow_subscriber360/dags`
 - DAG `telco_subscriber360_internal` appears only after schedule sync
 - `task dbt:docs:refresh SCENARIO=A2` succeeds
