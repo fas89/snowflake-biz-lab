@@ -126,7 +126,6 @@ pipeline {
                      defaultValue: false,
                      description: 'Stage 11: --dry-run (log the planned subprocess argv without executing).')
     }
-
     environment {
         FLUID_LOG_LEVEL = 'INFO'
         FLUID_CONFIG_PATH = './fluid_config'
@@ -452,8 +451,7 @@ EOM
                        for t in ${PUBLISH_TARGETS}; do \
                          TARGET_FLAGS="${TARGET_FLAGS} --target $t"; \
                        done; \
-                       fluid publish "${CONTRACT:-contract.fluid.yaml}" ${TARGET_FLAGS} \
-                         --env "${FLUID_ENV:-dev}"'''
+                       fluid publish "${CONTRACT:-contract.fluid.yaml}" ${TARGET_FLAGS}'''
             }
         }
 
