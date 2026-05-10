@@ -70,6 +70,13 @@ if [ "$(id -u)" = "0" ]; then
     chmod 666 /var/run/docker.sock 2>/dev/null || \
       echo "warn: could not chmod /var/run/docker.sock - PyAirbyte may fail" >&2
   fi
+  # PyAirbyte's docker executor writes connector configs to
+  # AIRBYTE_TEMP_DIR (defaults to /tmp/airbyte/tmp via the engine
+  # specs registry). The /tmp/airbyte bind survives across container
+  # restarts but the /tmp subdir gets wiped (host /tmp is volatile on
+  # macOS/Linux reboots; Docker Desktop also wipes it on engine
+  # restart). Recreating it here makes the lab self-healing.
+  mkdir -p /tmp/airbyte/tmp 2>/dev/null && chmod 777 /tmp/airbyte/tmp 2>/dev/null || true
   # exec replaces this shell so jenkins.sh runs as PID 1's child.
   exec runuser -u jenkins -- /usr/local/bin/jenkins.sh "$@"
 else
