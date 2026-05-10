@@ -131,7 +131,7 @@ pipeline {
     // engine='airbyte': PyAirbyte spawns source connectors as Docker images on the host daemon. The CI runner needs /var/run/docker.sock bind-mounted (Jenkins controller, GHA self-hosted, GitLab DinD, K8s privileged sidecar).
     // AIRBYTE_PROJECT_DIR pinned to /tmp/airbyte: PyAirbyte caches Path.cwd() at module-import time and reuses it for connector mount dirs. CI runners typically import from / (root) which makes /<connector-name> unwritable.
     // AIRBYTE_TEMP_DIR pinned to /tmp/airbyte/tmp: PyAirbyte passes its config file via tempfile.gettempdir() and mounts THAT path into the connector container. With DinD the host daemon needs the same path on both sides, so we keep the temp dir inside the bind-mounted project dir.
-    // REQUIRES BIND-MOUNT: <host>/runtime/airbyte → /tmp/airbyte (symmetric path on both sides so the host docker daemon can resolve the volume the runner asks it to mount).
+    // REQUIRES BIND-MOUNT: /tmp/airbyte (host) → /tmp/airbyte (runner). The path MUST be identical on both sides — when the runner tells the host docker daemon `docker run -v /tmp/airbyte/tmp:/airbyte/tmp ...`, the daemon resolves `/tmp/airbyte/tmp` against the HOST filesystem (it has no view of the runner container's paths). Asymmetric mounts (e.g. `<host>/runtime/airbyte:/tmp/airbyte` in the runner's compose) make the runner write succeed but the spawned connector hit NoSuchFileException because the host's `/tmp/airbyte/tmp` is empty.
 
     environment {
         FLUID_LOG_LEVEL = 'INFO'
@@ -370,12 +370,6 @@ EOM
             }
             steps {
                 sh '''cd "fluid/contracts/telco_pre2_party_airbyte" && set -eu
-                    echo "==== STAGE 7 DEBUG: env vars seen by apply ===="
-                    printenv | grep -E "AIRBYTE|FLUID_RUNNER" | sort || true
-                    ls -la /tmp/airbyte/ /tmp/airbyte/tmp/ || true
-                    echo "==== STAGE 7 DEBUG: PyAirbyte sees ===="
-                    /opt/fluid-venv/bin/python -c "from airbyte.constants import TEMP_DIR_OVERRIDE, DEFAULT_PROJECT_DIR; from airbyte._executors.docker import DEFAULT_AIRBYTE_CONTAINER_TEMP_DIR; print('TEMP_DIR_OVERRIDE =', repr(TEMP_DIR_OVERRIDE)); print('DEFAULT_PROJECT_DIR =', repr(DEFAULT_PROJECT_DIR)); print('container_temp =', DEFAULT_AIRBYTE_CONTAINER_TEMP_DIR); import tempfile; print('tempfile.gettempdir() =', tempfile.gettempdir())" 2>&1 | grep -v "^Thank you\\|^Anonymous"
-                    echo "==== END DEBUG ===="
                     set -- runtime/plan.json --mode "$APPLY_MODE" --env "${FLUID_ENV:-dev}" --yes --report runtime/apply-report.html
                     if [ -n "${APPLY_BUILD_ID_VAL:-}" ]; then set -- "$@" --build "$APPLY_BUILD_ID_VAL"; fi
                     if [ "${ALLOW_DATA_LOSS:-false}" = "true" ]; then set -- "$@" --allow-data-loss; fi
@@ -466,8 +460,7 @@ EOM
                        for t in ${PUBLISH_TARGETS}; do \
                          TARGET_FLAGS="${TARGET_FLAGS} --target $t"; \
                        done; \
-                       fluid publish "${CONTRACT:-contract.fluid.yaml}" ${TARGET_FLAGS} \
-                         --env "${FLUID_ENV:-dev}"'''
+                       fluid publish "${CONTRACT:-contract.fluid.yaml}" ${TARGET_FLAGS}'''
             }
         }
 
