@@ -4,8 +4,30 @@ import argparse
 import json
 from pathlib import Path
 
-from config.snowflake_utils import execute_many, fq_name, get_connection, get_env, quote_ident
+from config.snowflake_utils import (
+    canonical_ident,
+    execute_many,
+    fq_name,
+    get_connection,
+    get_env,
+    quote_ident,
+)
 from seed.telco_seed_data import TABLE_SPECS
+
+
+def _ident(name: str) -> str:
+    """Canonicalise to UPPERCASE before quoting.
+
+    Snowflake normalises unquoted identifiers to uppercase but PRESERVES
+    quoted identifiers verbatim. ``quote_ident("party")`` produces
+    ``"party"`` (case-sensitive lowercase), which downstream unquoted
+    SQL — dbt sources at ``gitlab/path-a-…/dbt_dv2_subscriber360/models/
+    staging/telco_stage_sources.yml`` and bronze contracts in
+    ``fluid/contracts/telco_seed_*/`` — cannot resolve. Routing through
+    ``canonical_ident`` first keeps the CREATE/TRUNCATE/COPY targets
+    matching the unquoted reads.
+    """
+    return quote_ident(canonical_ident(name))
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -31,10 +53,11 @@ def build_ddl_statements() -> list[str]:
     ]
     for spec in TABLE_SPECS.values():
         column_sql = ", ".join(
-            f"{quote_ident(column.name)} {column.snowflake_type}" for column in spec.columns
+            f"{_ident(column.name)} {column.snowflake_type}" for column in spec.columns
         )
         statements.append(
-            f"CREATE TABLE IF NOT EXISTS {fq_name(database, stage_schema, spec.name)} ({column_sql})"
+            f"CREATE TABLE IF NOT EXISTS "
+            f"{fq_name(database, stage_schema)}.{_ident(spec.name)} ({column_sql})"
         )
     return statements
 
@@ -55,7 +78,11 @@ def load_files(output_dir: Path) -> None:
                     raise FileNotFoundError(f"Missing seed file: {csv_path}")
 
                 stage_name = fq_name(database, stage_schema, internal_stage)
-                table_name_fq = fq_name(database, stage_schema, table_name)
+                # Same canonical (UPPERCASE) projection as build_ddl_statements
+                # so TRUNCATE / COPY hit the table that CREATE just made.
+                table_name_fq = (
+                    f"{fq_name(database, stage_schema)}.{_ident(table_name)}"
+                )
 
                 cursor.execute(f"TRUNCATE TABLE {table_name_fq}")
                 cursor.execute(
