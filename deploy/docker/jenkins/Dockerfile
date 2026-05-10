@@ -69,7 +69,10 @@ RUN chmod +x /usr/local/bin/lab-fix-docker-sock.sh
 # bind-mounted Docker socket can be made jenkins-readable. Final USER at
 # end of file controls who subsequent docker exec / cli commands run as.
 ENTRYPOINT ["/usr/local/bin/lab-fix-docker-sock.sh"]
-USER root  # keep root for the rest of the build steps
+# Keep root for the rest of the build steps (uv python install, pip install,
+# jenkins-plugin-cli). Final USER jenkins at the bottom of the file controls
+# who Jenkins-controller-spawned `docker exec` / shell commands run as.
+USER root
 
 # Install ``uv`` (Astral) — a fast Python installer + version manager.
 # We use it to fetch Python 3.12 (sidesteps Debian's 3.13 default), then
