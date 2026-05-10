@@ -117,9 +117,23 @@ stages. Each `RUN_STAGE_N_*` toggle on the Jenkins job can skip one.
   goes). Pre-* contracts use `strict` so engines cannot mutate the
   FLUID-applied DDL.
 - **SDP / ADP / CDP** — the Data Mesh data-product taxonomy added in 0.7.3:
-  Source-Aligned (Bronze, e.g. pre-1/2/3), Aggregated (Silver, e.g. A1/A2),
-  Consumption-Aligned (Gold). Set via `metadata.productType`; the validator
-  infers the missing one when only `metadata.layer` is set.
+  Source-Aligned (Bronze, e.g. pre-1/2/3), Aggregated (Silver, e.g. A1/A2/B1/B2),
+  Consumption-Aligned (Gold, e.g. C1's customer_360_cdp). Set via
+  `metadata.productType`; the validator infers the missing one when only
+  `metadata.layer` is set.
+- **C1 (compose-CDP)** — the gold-layer composition demo. Uses
+  `fluid forge --from-product` to compose a Customer 360 CDP from the
+  upstream B1 + B2 silver products, propagating PII tags and lineage
+  through the composition. Produced by `task c1:demo` (chains
+  `publish:pre → b1:forge → b2:forge → c1:forge → sync → build`) or
+  per-stage via `task c1:forge` then Jenkins.
+- **EngineRuntime registry** — the per-engine declarative facts table at
+  `fluid_build/forge/core/pipeline_systems/_engine_specs.py` in forge-cli.
+  Captures pip extras + runtime env vars (e.g. `AIRBYTE_PROJECT_DIR`,
+  `AIRBYTE_TEMP_DIR`) + `needs_docker_socket` + operator-facing notes
+  (e.g. `REQUIRES: /var/run/docker.sock`). Every CI emitter (jenkins,
+  github_actions, gitlab_ci, circle_ci, azure_devops, bitbucket, tekton)
+  consumes this registry so adding a new engine = one entry, not seven.
 
 ## Install tracks
 
@@ -136,7 +150,9 @@ stages. Each `RUN_STAGE_N_*` toggle on the Jenkins job can skip one.
   GitLab demo repo under `gitlab/`, hosts A1 + A2 variants + their
   `Jenkinsfile` checked out by the Jenkins SCM pipelines.
 - **Workspace B (`path-b-ai-telco-silver-import-demo`)** — the AI/MCP forge
-  equivalent for B1 / B2. Both variants are wired to the lab's Jenkins instance.
+  equivalent for B1 / B2 / C1. B1 + B2 are silver (subscriber360 from
+  AI-forged dbt); C1 is the gold-layer compose-CDP demo that takes B1 + B2
+  silver as inputs.
 
 Both workspaces live under `./gitlab/` (gitignored) and are bootstrapped
 from templates at `fluid/fixtures/workspaces/` via

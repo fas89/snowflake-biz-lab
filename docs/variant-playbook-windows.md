@@ -138,9 +138,9 @@ B1 starts with a live provider-backed AI forge. The lab command stores the raw A
 
 ```powershell
 Set-Location $env:LAB_REPO
-task b1:forge:ai FLUID_BIN="$env:FLUID_CLI" -- --provider gemini --model gemini-2.5-flash
+task b1:forge FLUID_BIN="$env:FLUID_CLI" -- --provider gemini --model gemini-2.5-flash
 # OpenAI equivalent when OPENAI_API_KEY is available:
-# task b1:forge:ai FLUID_BIN="$env:FLUID_CLI" -- --provider openai --model gpt-4.1-mini
+# task b1:forge FLUID_BIN="$env:FLUID_CLI" -- --provider openai --model gpt-4.1-mini
 
 Set-Location "$env:EXISTING_DBT_WORKSPACE\variants\B1-ai-reference-external\subscriber360-external"
 Get-Content $env:FLUID_SECRETS_FILE | ForEach-Object { if ($_ -match '^(?!#)([^=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2]) } }
@@ -189,7 +189,7 @@ B2 starts with the forge-cli MCP server reading the seeded Snowflake schema. The
 
 ```powershell
 Set-Location $env:LAB_REPO
-task b2:forge:mcp FLUID_BIN="$env:FLUID_CLI"
+task b2:forge FLUID_BIN="$env:FLUID_CLI"
 
 Set-Location "$env:EXISTING_DBT_WORKSPACE\variants\B2-ai-generate-in-workspace\subscriber360-generated"
 Get-Content $env:FLUID_SECRETS_FILE | ForEach-Object { if ($_ -match '^(?!#)([^=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2]) } }

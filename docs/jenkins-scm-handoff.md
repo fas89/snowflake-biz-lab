@@ -55,8 +55,8 @@ The Jenkins container reads the repo from the local bind mount. No `git push` is
 
 - A1 is lab-tuned to generate `VERIFY_STRICT=false`, `RUN_STAGE_10_PUBLISH=true`, and a `fluid publish` command without the stage-level `--env` flag. The reference dbt assets build and publish successfully, but the live Snowflake tables still report nullable-vs-required mismatches that would fail a strict verify gate.
 - A2 keeps the generated strict default. Its Jenkins run is expected to stop at stage `9 - verify` on `fluid verify ... --strict`, which is part of the teaching flow rather than a broken lab.
-- B1 starts with `task b1:forge:ai`, then uses the same non-strict verify and publish defaults as A1, plus bootstrap parameters `APPLY_MODE=amend-and-build` and `APPLY_BUILD_ID=ai_subscriber360_external_build` so the Path B Jenkins run executes the external dbt build.
-- B2 starts with `task b2:forge:mcp`, then uses the same non-strict verify and publish defaults as B1, plus bootstrap parameters `APPLY_MODE=amend-and-build` and `APPLY_BUILD_ID=ai_subscriber360_generated_build` so the Path B Jenkins run executes the generated in-workspace dbt build.
+- B1 starts with `task b1:forge`, then uses the same non-strict verify and publish defaults as A1, plus bootstrap parameters `APPLY_MODE=amend-and-build` and `APPLY_BUILD_ID=ai_subscriber360_external_build` so the Path B Jenkins run executes the external dbt build.
+- B2 starts with `task b2:forge`, then uses the same non-strict verify and publish defaults as B1, plus bootstrap parameters `APPLY_MODE=amend-and-build` and `APPLY_BUILD_ID=ai_subscriber360_generated_build` so the Path B Jenkins run executes the generated in-workspace dbt build.
 
 ## Jenkins Container Privilege Model
 
