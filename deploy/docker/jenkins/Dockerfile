@@ -44,9 +44,8 @@ fi
 exec /usr/local/bin/jenkins.sh "$@"
 EOF
 RUN chmod +x /usr/local/bin/lab-fix-docker-sock.sh
-USER root
 ENTRYPOINT ["/usr/local/bin/lab-fix-docker-sock.sh"]
-USER jenkins
+# Stay as root for subsequent install steps; final USER directive at end of file.
 
 # Install ``uv`` (Astral) — a fast Python installer + version manager.
 # We use it to fetch Python 3.12 (sidesteps Debian's 3.13 default), then
