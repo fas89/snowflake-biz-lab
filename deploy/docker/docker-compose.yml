@@ -233,18 +233,25 @@ services:
       # to giving the container root on the host.
       - /var/run/docker.sock:/var/run/docker.sock
       # Docker-in-Docker volume sharing for PyAirbyte connector configs.
-      # PyAirbyte writes the connector spec to ``$AIRBYTE_PROJECT_DIR``
-      # then spawns ``airbyte/source-postgres`` with ``-v <that_dir>:/airbyte``.
-      # The bind goes through the HOST's docker daemon, so the path must
-      # exist on the host filesystem at the SAME absolute path as the
-      # Jenkins container sees it. Solved by bind-mounting a host dir
-      # at the matching path on both sides — Jenkins writes to
-      # ``/tmp/airbyte`` (which is the host's ``./runtime/airbyte``),
-      # then ``docker run -v /tmp/airbyte:/airbyte`` resolves on the host.
-      # forge-cli's render_runtime_notes() splices a
-      # ``REQUIRES: docker.sock`` line into the airbyte Jenkinsfile;
-      # this mount is the lab's matching answer.
-      - ../../runtime/airbyte:/tmp/airbyte
+      # When Jenkins (in container) tells the host docker daemon
+      # ``docker run -v /tmp/airbyte/tmp:/airbyte/tmp ...``, the daemon
+      # resolves ``/tmp/airbyte/tmp`` on the HOST'S filesystem — NOT
+      # the Jenkins container's. So the path that Jenkins writes to
+      # MUST also exist at the IDENTICAL absolute path on the host.
+      # Use ``/tmp/airbyte`` on BOTH sides so the bind is symmetric
+      # in path, not just contents.
+      #
+      # Why not the previous ``../../runtime/airbyte:/tmp/airbyte`` mount:
+      # Jenkins-side write to ``/tmp/airbyte/tmp/x.json`` mapped to host
+      # ``./runtime/airbyte/tmp/x.json`` — but the docker daemon only
+      # sees host paths, so it tried to mount the host's ``/tmp/airbyte/tmp``
+      # (empty, distinct from the lab repo) and the connector hit
+      # NoSuchFileException. The fix is path symmetry, not content sharing.
+      #
+      # forge-cli's render_runtime_notes() emits ``REQUIRES BIND-MOUNT:
+      # /tmp/airbyte → /tmp/airbyte`` for engine='airbyte'; this line is
+      # the lab's matching answer.
+      - /tmp/airbyte:/tmp/airbyte
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login >/dev/null || exit 1"]
       interval: 20s
