@@ -1,4 +1,15 @@
-telco:
+# Lab dbt profiles. The Jenkins jobs invoke dbt with
+#   --profiles-dir /workspace/config/dbt --profile <NAME>
+# where NAME comes from the dbt project's `profile:` field. Each
+# AI-generated silver demo (B1, B2) bakes its own profile name into
+# the project, so we keep YAML anchors that resolve to the same
+# Snowflake credentials and stage schema. Add a new alias whenever a
+# new generated dbt project lands.
+#
+# Extending: add `<new_profile>: *snowflake_default` at the bottom.
+# The anchor pattern keeps this file noise-free even with N profiles.
+
+x-snowflake-output: &snowflake_default
   target: "{{ env_var('DBT_TARGET', 'snowflake') }}"
   outputs:
     snowflake:
@@ -18,3 +29,12 @@ telco:
       client_session_keep_alive: false
       query_tag: snowflake-telco-lab-dbt
 
+# Default lab profile (used by the seeded telco data product + A1/A2).
+telco: *snowflake_default
+
+# AI-generated silver variants — the dbt projects bake the profile
+# name into dbt_project.yml, so we add aliases here.
+# B1 (AI-reference-external):
+subscriber360_ai_external_v1: *snowflake_default
+# B2 (AI-generate-in-workspace):
+subscriber360_ai_generated_v1: *snowflake_default
