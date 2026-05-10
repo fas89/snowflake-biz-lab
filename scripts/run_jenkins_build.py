@@ -50,8 +50,38 @@ SCENARIOS: dict[str, ScenarioConfig] = {
     "A1": ScenarioConfig(
         scenario="A1",
         job_name="A1-external-reference",
-        default_params=(("PUBLISH_TARGETS", "datamesh-manager"),),
+        # A1 is a ``hybrid-reference`` + ``engine: dbt`` contract.
+        # APPLY_MODE=amend now safe — the forge-cli column-leak bug
+        # in the snowflake provider's provisionDataset (which silently
+        # ALTERed sibling-expose tables to add cross-expose columns)
+        # was fixed at provider_enhanced.py — action.get("id") changed
+        # to action.get("action_id") and the fallback target_id
+        # resolution was tightened.
+        default_params=(
+            ("PUBLISH_TARGETS", "datamesh-manager"),
+            ("APPLY_MODE", "amend"),
+            # Strict verify is now safe under forge-cli >=this-fix
+            # because verify --strict only fails on CRITICAL severity
+            # (missing fields, type mismatches). WARNING-only constraint
+            # drift (nullable vs required) emits a warning and the
+            # build continues. Operators can tighten the contract
+            # incrementally without breaking the pipeline.
+            ("VERIFY_STRICT", "true"),
+        ),
     ),
+    # A2 — DROPPED from the active demo set (2026-05-03). A2 is a
+    # "internal-reference dbt" variant of A1, but it produces the same
+    # silver tables in the same Snowflake schema, so running A1 + A2
+    # back-to-back makes them clobber each other. The "internal vs
+    # external dbt project location" distinction is a deployment-
+    # topology choice, not a product-mesh story. The variant tree at
+    # gitlab/path-a/.../variants/A2-internal-reference/ stays as a
+    # reference for operators who want to see the embedded-dbt
+    # layout, but it's no longer in the SCENARIOS rotation. To
+    # A2 — KEPT in active rotation (E2E-validated). The "internal vs
+    # external dbt project location" distinction is a deployment-
+    # topology choice, not a product-mesh story, but its strict-verify
+    # gate intentionally fails at stage 9 — useful teaching flow.
     "A2": ScenarioConfig(
         scenario="A2",
         job_name="A2-internal-reference",
@@ -73,6 +103,19 @@ SCENARIOS: dict[str, ScenarioConfig] = {
             ("PUBLISH_TARGETS", "datamesh-manager"),
             ("APPLY_MODE", "amend-and-build"),
             ("APPLY_BUILD_ID", "ai_subscriber360_generated_build"),
+        ),
+    ),
+    "C1": ScenarioConfig(
+        scenario="C1",
+        job_name="C1-compose-cdp",
+        # C1 is a CDP composed from B1+B2 silver products via
+        # `fluid forge --from-product`. Default params mirror the B1+B2
+        # post-fix pattern (amend + strict; safe under the column-leak
+        # + verify-strict severity fixes).
+        default_params=(
+            ("PUBLISH_TARGETS", "datamesh-manager"),
+            ("APPLY_MODE", "amend"),
+            ("VERIFY_STRICT", "true"),
         ),
     ),
 }

@@ -1,0 +1,156 @@
+fluidVersion: "0.7.3"
+kind: DataProduct
+id: gold.telco.customer_360_cdp_v1
+name: Telco Customer 360 CDP
+description: >
+  AI-composed Customer 360 gold product (CDP) aggregating the two
+  silver subscriber-360 products: B1 (external-reference) and B2
+  (in-workspace generated). Demonstrates SDP→ADP→CDP composition,
+  PII propagation across the chain, and cross-product join-key
+  inference by forge-cli's LogicalAgent.
+domain: telco
+
+labels:
+  c1ComposedFrom: B1+B2
+  c1Pattern: cdp-aggregate
+  c1AggregationGrain: account_month
+  provenance.scenario: C1-compose-cdp
+  provenance.aiContributions: contract,dbt,join-keys,pii-propagation
+
+metadata:
+  layer: Gold
+  productType: CDP
+  owner:
+    team: telco-customer-intelligence
+    email: customer-intelligence@example.com
+
+# Composition input ports — the from-product helper auto-fills these
+# from the upstream contracts and the LogicalAgent proposes the join
+# keys. PII tags from each upstream column propagate downstream by
+# name match (handled by propagate_pii_classifications).
+consumes:
+  - productId: silver.telco.subscriber360_ai_external_v1
+    exposeId: subscriber360_core
+    purpose: B1 silver Subscriber 360 core (TM Forum-aligned)
+  - productId: silver.telco.subscriber360_ai_external_v1
+    exposeId: subscriber_health_scorecard
+    purpose: B1 silver subscriber health scorecard
+  - productId: silver.telco.subscriber360_ai_generated_v1
+    exposeId: subscriber360_core
+    purpose: B2 AI-generated silver Subscriber 360 core
+  - productId: silver.telco.subscriber360_ai_generated_v1
+    exposeId: subscriber_health_scorecard
+    purpose: B2 AI-generated silver subscriber health scorecard
+
+builds:
+  - id: customer_360_cdp_build
+    description: >
+      Aggregate B1 + B2 silver products into a per-account-per-month
+      Customer 360 view. dbt project at ./dbt_customer_360 owns the
+      materialisation; forge apply provisions the schema only.
+    pattern: hybrid-reference
+    engine: dbt
+    repository: ./dbt_customer_360
+    properties:
+      model: customer_360_cdp
+      vars:
+        materialization: table
+    execution:
+      trigger:
+        type: schedule
+        cron: "0 4 * * *"
+      runtime:
+        platform: snowflake
+        resources:
+          cpu: "2"
+          memory: "8Gi"
+      retries:
+        count: 2
+        delaySeconds: 60
+        backoff: exponential
+
+exposes:
+  - exposeId: customer_360
+    title: Customer 360
+    description: Account-level aggregated 360 view across telco subscriber data.
+    version: "1.0.0"
+    kind: table
+    binding:
+      platform: snowflake
+      format: snowflake_table
+      location:
+        account: "{{ env.SNOWFLAKE_ACCOUNT }}"
+        database: "{{ env.SNOWFLAKE_DATABASE }}"
+        schema: "{{ env.SNOWFLAKE_FLUID_SCHEMA }}"
+        table: CUSTOMER_360_CDP_V1
+    contract:
+      schema:
+        - name: ACCOUNT_ID
+          type: STRING
+          required: true
+        - name: ACCOUNT_NUMBER
+          type: STRING
+          required: true
+          # PII tag propagated from B1.subscriber360_core.ACCOUNT_NUMBER
+          # by forge-cli's propagate_pii_classifications helper.
+          sensitivity: pii
+        - name: SUBSCRIPTION_COUNT
+          type: INTEGER
+          required: true
+        - name: ACTIVE_SERVICE_COUNT
+          type: INTEGER
+          required: true
+        - name: TOTAL_REVENUE_30D
+          type: NUMBER
+          required: true
+        - name: AVG_HEALTH_SCORE
+          type: NUMBER
+          required: true
+        - name: HIGH_RISK_FLAG
+          type: BOOLEAN
+          required: true
+        - name: LAST_INTERACTION_AT
+          type: TIMESTAMP
+        - name: SNAPSHOT_AT
+          type: TIMESTAMP
+          required: true
+      dq:
+        rules:
+          - id: account_id_not_null
+            type: completeness
+            selector: ACCOUNT_ID
+            threshold: 1.0
+            operator: ">="
+            severity: error
+          - id: subscription_count_non_negative
+            type: accuracy
+            selector: SUBSCRIPTION_COUNT
+            threshold: 0
+            operator: ">="
+            severity: error
+          - id: avg_health_in_range
+            type: accuracy
+            selector: AVG_HEALTH_SCORE
+            threshold: 0
+            operator: ">="
+            severity: warn
+    qos:
+      availability: "99.9%"
+      freshnessSLO: "PT24H"
+    semantics:
+      name: customer_360_cdp_semantic_model
+      description: Account-level 360 KPI layer for product, sales, and care.
+      defaultAggTimeDimension: SNAPSHOT_AT
+      entities:
+        - name: ACCOUNT_ID
+          type: primary
+      measures:
+        - name: SUBSCRIPTION_COUNT
+          agg: sum
+          createMetric: true
+        - name: TOTAL_REVENUE_30D
+          agg: sum
+          createMetric: true
+        - name: AVG_HEALTH_SCORE
+          agg: avg
+          createMetric: true
