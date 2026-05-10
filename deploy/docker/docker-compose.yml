@@ -232,6 +232,19 @@ services:
       # Jenkins controller — granting Docker socket access is equivalent
       # to giving the container root on the host.
       - /var/run/docker.sock:/var/run/docker.sock
+      # Docker-in-Docker volume sharing for PyAirbyte connector configs.
+      # PyAirbyte writes the connector spec to ``$AIRBYTE_PROJECT_DIR``
+      # then spawns ``airbyte/source-postgres`` with ``-v <that_dir>:/airbyte``.
+      # The bind goes through the HOST's docker daemon, so the path must
+      # exist on the host filesystem at the SAME absolute path as the
+      # Jenkins container sees it. Solved by bind-mounting a host dir
+      # at the matching path on both sides — Jenkins writes to
+      # ``/tmp/airbyte`` (which is the host's ``./runtime/airbyte``),
+      # then ``docker run -v /tmp/airbyte:/airbyte`` resolves on the host.
+      # forge-cli's render_runtime_notes() splices a
+      # ``REQUIRES: docker.sock`` line into the airbyte Jenkinsfile;
+      # this mount is the lab's matching answer.
+      - ../../runtime/airbyte:/tmp/airbyte
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login >/dev/null || exit 1"]
       interval: 20s
