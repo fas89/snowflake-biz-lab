@@ -10,15 +10,12 @@ __pycache__/
 *.pyc
 
 airflow/dags/active/current/
-
 dbt/dbt_packages/
 dbt/logs/
 dbt/target/
-
 seed/output/*.csv
 seed/output/*.csv.gz
 seed/output/manifest.json
-
 runtime/*
 !runtime/.gitkeep
 !runtime/generated/
@@ -29,16 +26,13 @@ runtime/generated/*
 !runtime/wheels/
 runtime/wheels/*
 !runtime/wheels/README.md
-
 fluid/generated/*
 !fluid/generated/README.md
 fluid/reports/*
 !fluid/reports/README.md
-
 .fluid/
-
 jenkins_home/
-
 # Demo GitLab workspaces — bootstrapped from fluid/fixtures/workspaces/
 # via `task workspaces:bootstrap`. Never committed; recreated on demand.
 gitlab/
+.claude/settings.local.json
