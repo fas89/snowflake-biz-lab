@@ -17,13 +17,16 @@ RUN apt-get update && \
 
 # PyAirbyte (used by pre-2 / Airbyte acquisition) spawns Airbyte source
 # connectors as Docker images on the host's daemon (the docker-compose
-# binds /var/run/docker.sock into the container). Add the jenkins user
-# to the docker group so it can talk to the socket. The group GID is
-# whatever Debian assigns at apt-install time; matches the host's
-# docker socket GID through the socket itself (the kernel checks GIDs
-# numerically), so the demo works on Linux too where the host docker
-# group is typically 999 or 998.
-RUN usermod -aG docker jenkins
+# binds /var/run/docker.sock into the container). docker-cli ships only
+# the client, not a docker group — create one and add jenkins. The
+# group GID matches whatever the kernel sees on the bound socket; on
+# Docker Desktop macOS the socket is owned by root with mode 0660 so
+# being in ANY non-root group AND having the right perms via sudoers
+# would be needed — but Docker Desktop's macOS socket is actually
+# 0660 root:root (no group restriction), so jenkins user just needs to
+# be allowed to read it. We mode-relax the socket on the daemon side
+# at compose time (see the volume mount).
+RUN groupadd -f docker && usermod -aG docker jenkins
 
 # Install ``uv`` (Astral) — a fast Python installer + version manager.
 # We use it to fetch Python 3.12 (sidesteps Debian's 3.13 default), then
