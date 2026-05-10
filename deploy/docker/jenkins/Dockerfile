@@ -52,16 +52,34 @@ RUN groupadd -f docker && usermod -aG docker jenkins
 COPY <<'EOF' /usr/local/bin/lab-fix-docker-sock.sh
 #!/bin/sh
 set -e
-# Container starts as root via the wrapper ENTRYPOINT so we can chmod
-# the bind-mounted Docker socket. Then drop to jenkins for the actual
-# Jenkins controller via su.
-if [ -S /var/run/docker.sock ]; then
-  chmod 666 /var/run/docker.sock 2>/dev/null || \
-    echo "warn: could not chmod /var/run/docker.sock - PyAirbyte may fail" >&2
+# Container starts as root (the final USER directive at the bottom is
+# intentionally NOT `USER jenkins` — we need root for the chmod). Then
+# drop to jenkins for the actual Jenkins controller via runuser.
+#
+# Why runuser, not su:
+#   `su -p jenkins` prompts for a password unless the caller is already
+#   jenkins (PAM behavior). When the ENTRYPOINT inherited USER jenkins
+#   from a previous image build, su silently switched to a password
+#   prompt and the container exited with `Authentication failure`.
+#   `runuser -u jenkins --` is the root-only counterpart: no PAM, no
+#   password prompt, designed exactly for "root drops to a service
+#   user before exec'ing the daemon" scenarios. Ships in util-linux
+#   (already present in jenkins/jenkins:lts-jdk21).
+if [ "$(id -u)" = "0" ]; then
+  if [ -S /var/run/docker.sock ]; then
+    chmod 666 /var/run/docker.sock 2>/dev/null || \
+      echo "warn: could not chmod /var/run/docker.sock - PyAirbyte may fail" >&2
+  fi
+  # exec replaces this shell so jenkins.sh runs as PID 1's child.
+  exec runuser -u jenkins -- /usr/local/bin/jenkins.sh "$@"
+else
+  # Not running as root (operator overrode `user:` in compose). Skip
+  # the socket chmod (we couldn't if we tried) and just exec jenkins.sh
+  # in-place. Engines that need the docker socket will hit a permission
+  # error at exec time — the generated Jenkinsfile's REQUIRES line tells
+  # the operator they need to run as root for those engines.
+  exec /usr/local/bin/jenkins.sh "$@"
 fi
-# su -p preserves env vars (HOME, PATH, etc) the Jenkins controller needs.
-# exec replaces this shell so jenkins.sh runs as PID 1's child.
-exec su -p jenkins -s /bin/bash -c '/usr/local/bin/jenkins.sh "$@"' jenkins "$@"
 EOF
 RUN chmod +x /usr/local/bin/lab-fix-docker-sock.sh
 # ENTRYPOINT runs as root (no USER override yet at container-start time);
@@ -69,10 +87,9 @@ RUN chmod +x /usr/local/bin/lab-fix-docker-sock.sh
 # bind-mounted Docker socket can be made jenkins-readable. Final USER at
 # end of file controls who subsequent docker exec / cli commands run as.
 ENTRYPOINT ["/usr/local/bin/lab-fix-docker-sock.sh"]
-# Keep root for the rest of the build steps (uv python install, pip install,
-# jenkins-plugin-cli). Final USER jenkins at the bottom of the file controls
-# who Jenkins-controller-spawned `docker exec` / shell commands run as.
-USER root
+# All subsequent build steps (uv install, pip install, jenkins-plugin-cli)
+# run as root because we never switch USER away. The ENTRYPOINT script
+# above is what drops to jenkins via runuser at container start.
 
 # Install ``uv`` (Astral) — a fast Python installer + version manager.
 # We use it to fetch Python 3.12 (sidesteps Debian's 3.13 default), then
@@ -105,4 +122,11 @@ RUN /opt/fluid-venv/bin/pip install --no-cache-dir --quiet --upgrade pip setupto
 COPY jenkins/plugins.txt /usr/share/jenkins/ref/plugins.txt
 RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
-USER jenkins
+# NOTE: container intentionally runs as root at PID 1 (no final
+# `USER jenkins` directive). The wrapper ENTRYPOINT chmods the
+# bind-mounted Docker socket then `exec runuser -u jenkins --` the
+# actual jenkins.sh. Switching back to USER jenkins here would make
+# the ENTRYPOINT inherit jenkins, which can't chmod a root-owned
+# socket and can't `runuser` (root-only). The Jenkins controller
+# itself still runs as jenkins (via runuser), so workspace files
+# get the right ownership.
