@@ -442,7 +442,10 @@ tasks:
   c1:demo:
     desc: C1 end-to-end — compose + publish + sync + trigger Jenkins
     cmds:
-      - task: publish:bronze
+      # publish:bronze was renamed to publish:pre when the FLUID 0.7.3
+      # "Pre-* acquisition pattern" terminology landed (commit 8ac9841).
+      # main's c1:demo still referenced the old name; updated post-merge.
+      - task: publish:pre
       - task: b1:forge
       - task: b2:forge
       - task: c1:forge

@@ -142,9 +142,9 @@ B1 starts with a live provider-backed AI forge. The lab command stores the raw A
 
 ```bash
 cd "$LAB_REPO"
-task b1:forge:ai FLUID_BIN="$FLUID_CLI" -- --provider gemini --model gemini-2.5-flash
+task b1:forge FLUID_BIN="$FLUID_CLI" -- --provider gemini --model gemini-2.5-flash
 # OpenAI equivalent when OPENAI_API_KEY is available:
-# task b1:forge:ai FLUID_BIN="$FLUID_CLI" -- --provider openai --model gpt-4.1-mini
+# task b1:forge FLUID_BIN="$FLUID_CLI" -- --provider openai --model gpt-4.1-mini
 
 cd "$EXISTING_DBT_WORKSPACE/variants/B1-ai-reference-external/subscriber360-external"
 set -a
@@ -194,7 +194,7 @@ B2 starts with the forge-cli MCP server reading the seeded Snowflake schema. The
 
 ```bash
 cd "$LAB_REPO"
-task b2:forge:mcp FLUID_BIN="$FLUID_CLI"
+task b2:forge FLUID_BIN="$FLUID_CLI"
 
 cd "$EXISTING_DBT_WORKSPACE/variants/B2-ai-generate-in-workspace/subscriber360-generated"
 set -a

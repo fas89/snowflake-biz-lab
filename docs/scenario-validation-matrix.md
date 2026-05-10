@@ -13,6 +13,7 @@ Use this after `plan`, `apply`, `task jenkins:sync`, `task jenkins:build`, and t
 | A2 | `gitlab/path-a-telco-silver-product-demo/variants/A2-internal-reference/contract.fluid.yaml` | `dv2_subscriber360_internal_build` | `gitlab/path-a-telco-silver-product-demo/variants/A2-internal-reference/dbt_dv2_subscriber360` | `gitlab/path-a-telco-silver-product-demo/variants/A2-internal-reference/airflow_subscriber360/dags/telco_subscriber360_pipeline.py` | `airflow/dags/active/current/telco_subscriber360_pipeline.py` | `telco_subscriber360_internal` | `A2-internal-reference` | `gitlab/path-a-telco-silver-product-demo/variants/A2-internal-reference/Jenkinsfile` | `subscriber360_core`, `subscriber_health_scorecard` |
 | B1 | `gitlab/path-b-ai-telco-silver-import-demo/variants/B1-ai-reference-external/subscriber360-external/contract.fluid.yaml` | `ai_subscriber360_external_build` | `gitlab/path-a-telco-silver-product-demo/reference-assets/dbt_dv2_subscriber360` | `gitlab/path-b-ai-telco-silver-import-demo/variants/B1-ai-reference-external/subscriber360-external/runtime/generated/airflow/silver_telco_subscriber360_ai_external_v1_dag.py` | `airflow/dags/active/current/silver_telco_subscriber360_ai_external_v1_dag.py` | `silver_telco_subscriber360_ai_external_v1` | `B1-ai-reference-external` | `gitlab/path-b-ai-telco-silver-import-demo/variants/B1-ai-reference-external/subscriber360-external/Jenkinsfile` | `subscriber360_core`, `subscriber_health_scorecard` |
 | B2 | `gitlab/path-b-ai-telco-silver-import-demo/variants/B2-ai-generate-in-workspace/subscriber360-generated/contract.fluid.yaml` | `ai_subscriber360_generated_build` | `gitlab/path-b-ai-telco-silver-import-demo/variants/B2-ai-generate-in-workspace/subscriber360-generated/generated/dbt/dbt_dv2_subscriber360` | `gitlab/path-b-ai-telco-silver-import-demo/variants/B2-ai-generate-in-workspace/subscriber360-generated/generated/airflow/silver_telco_subscriber360_ai_generated_v1_dag.py` | `airflow/dags/active/current/silver_telco_subscriber360_ai_generated_v1_dag.py` | `silver_telco_subscriber360_ai_generated_v1` | `B2-ai-generate-in-workspace` | `gitlab/path-b-ai-telco-silver-import-demo/variants/B2-ai-generate-in-workspace/subscriber360-generated/Jenkinsfile` | `subscriber360_core`, `subscriber_health_scorecard` |
+| C1 | `gitlab/path-b-ai-telco-silver-import-demo/variants/C1-compose-cdp/customer_360_cdp/contract.fluid.yaml` | `customer_360_cdp_build` (CDP composition via `fluid forge --from-product` over B1 + B2 silver) | `silver.telco.subscriber360_v1` (B1) + `silver.telco.subscriber360_ai_generated_v1` (B2) | `gitlab/path-b-ai-telco-silver-import-demo/variants/C1-compose-cdp/customer_360_cdp/dbt_customer_360_cdp` | `gitlab/path-b-ai-telco-silver-import-demo/variants/C1-compose-cdp/customer_360_cdp/runtime/generated/airflow/customer_360_cdp_dag.py` | `airflow/dags/active/current/customer_360_cdp_dag.py` | `customer_360_cdp` | `C1-compose-cdp` | `gitlab/path-b-ai-telco-silver-import-demo/variants/C1-compose-cdp/customer_360_cdp/Jenkinsfile` | `gold.telco.customer_360_cdp` (composed CDP — propagates PII tags from upstream silver products) |
 
 ## Pre-Conditions
 
@@ -81,7 +82,7 @@ For A2:
 
 For B1:
 
-- `task b1:forge:ai` performs a live Gemini/OpenAI forge and writes `contract.fluid.yaml`
+- `task b1:forge` performs a live Gemini/OpenAI forge and writes `contract.fluid.yaml`
 - `runtime/generated/ai-forge/summary.json` and `runtime/generated/ai-forge/raw/.fluid/ai-work-receipt.json` identify the provider/model used for the run
 - the live AI-hardened contract validates and plans cleanly
 - `fluid generate transformation ... -o runtime/generated/dbt-preview` and `fluid generate schedule ... -o runtime/generated/airflow` both succeed before CI generation
@@ -98,7 +99,7 @@ For B1:
 
 For B2:
 
-- `task b2:forge:mcp` starts the forge-cli MCP server, reads the seeded Snowflake schema, and writes `contract.fluid.yaml`
+- `task b2:forge` starts the forge-cli MCP server, reads the seeded Snowflake schema, and writes `contract.fluid.yaml`
 - `runtime/generated/mcp-forge/summary.json` and `runtime/generated/mcp-forge/receipt.json` identify the MCP server, Snowflake source, schema, and table count
 - the MCP-hardened contract validates and plans cleanly
 - generated dbt assets exist under `generated/dbt/dbt_dv2_subscriber360`

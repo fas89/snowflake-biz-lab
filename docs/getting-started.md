@@ -8,7 +8,11 @@ The recommended reading order is now intentionally short:
    - [Demo Release Launchpad (Windows)](demo-release-launchpad-windows.md)
    - [Dev Source Launchpad (Mac)](dev-source-launchpad-mac.md)
    - [Dev Source Launchpad (Windows)](dev-source-launchpad-windows.md)
-3. Run Bronze, A1, and A2 from the matching variant playbook.
+3. Run the scenarios from the matching variant playbook:
+   - **Pre-1 / Pre-2 / Pre-3** — bronze acquisition (dlt / PyAirbyte / Meltano → Snowflake)
+   - **A1 / A2** — silver via curated dbt (external-reference / internal-reference)
+   - **B1 / B2** — silver via AI-forged dbt (live AI reference / MCP-discovered generation)
+   - **C1** — gold composition (CDP from B1+B2 silver products)
 
 ## What You Need
 
