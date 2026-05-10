@@ -53,7 +53,9 @@ USER jenkins
 # create the canonical /opt/fluid-venv against that pinned interpreter.
 # uv is a single static binary, no system-Python dependency.
 ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python
-RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh && \
+RUN curl -LsSf https://astral.sh/uv/install.sh -o /tmp/uv-install.sh && \
+    UV_INSTALL_DIR=/usr/local/bin sh /tmp/uv-install.sh && \
+    rm -f /tmp/uv-install.sh && \
     uv python install 3.12 && \
     uv venv --seed --python 3.12 /opt/fluid-venv && \
     /opt/fluid-venv/bin/python --version && \
