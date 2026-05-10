@@ -132,6 +132,7 @@ pipeline {
         FLUID_CONFIG_PATH = './fluid_config'
         PYTHONPATH = '/forge-cli-src'
         FLUID_RUNNER_HOST_OVERRIDE = 'host.docker.internal'
+        AIRBYTE_PROJECT_DIR = '/tmp/airbyte'
 
         // ── Provider credential bindings (pick ONE pattern) ──────
         // See the top-of-file banner for the full env-var list per
