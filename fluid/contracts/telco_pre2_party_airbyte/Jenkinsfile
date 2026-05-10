@@ -126,13 +126,20 @@ pipeline {
                      defaultValue: false,
                      description: 'Stage 11: --dry-run (log the planned subprocess argv without executing).')
     }
+    // ── Engine runtime requirements (from the shared engine_specs registry) ──
+    // REQUIRES: /var/run/docker.sock bind-mounted into the runner (engine spawns containers at exec time).
+    // engine='airbyte': PyAirbyte spawns source connectors as Docker images on the host daemon. The CI runner needs /var/run/docker.sock bind-mounted (Jenkins controller, GHA self-hosted, GitLab DinD, K8s privileged sidecar).
+    // AIRBYTE_PROJECT_DIR pinned to /tmp/airbyte: PyAirbyte caches Path.cwd() at module-import time and reuses it for connector mount dirs. CI runners typically import from / (root) which makes /<connector-name> unwritable.
+    // AIRBYTE_TEMP_DIR pinned to /tmp/airbyte/tmp: PyAirbyte passes its config file via tempfile.gettempdir() and mounts THAT path into the connector container. With DinD the host daemon needs the same path on both sides, so we keep the temp dir inside the bind-mounted project dir.
+    // REQUIRES BIND-MOUNT: <host>/runtime/airbyte → /tmp/airbyte (symmetric path on both sides so the host docker daemon can resolve the volume the runner asks it to mount).
 
     environment {
         FLUID_LOG_LEVEL = 'INFO'
         FLUID_CONFIG_PATH = './fluid_config'
         PYTHONPATH = '/forge-cli-src'
-        FLUID_RUNNER_HOST_OVERRIDE = 'host.docker.internal'
         AIRBYTE_PROJECT_DIR = '/tmp/airbyte'
+        AIRBYTE_TEMP_DIR = '/tmp/airbyte/tmp'
+        FLUID_RUNNER_HOST_OVERRIDE = 'host.docker.internal'
 
         // ── Provider credential bindings (pick ONE pattern) ──────
         // See the top-of-file banner for the full env-var list per
@@ -363,6 +370,10 @@ EOM
             }
             steps {
                 sh '''cd "fluid/contracts/telco_pre2_party_airbyte" && set -eu
+                    echo "==== STAGE 7 DEBUG: env vars seen by apply ===="
+                    printenv | grep -E "AIRBYTE|FLUID_RUNNER" | sort || true
+                    ls -la /tmp/airbyte/ /tmp/airbyte/tmp/ || true
+                    echo "==== END DEBUG ===="
                     set -- runtime/plan.json --mode "$APPLY_MODE" --env "${FLUID_ENV:-dev}" --yes --report runtime/apply-report.html
                     if [ -n "${APPLY_BUILD_ID_VAL:-}" ]; then set -- "$@" --build "$APPLY_BUILD_ID_VAL"; fi
                     if [ "${ALLOW_DATA_LOSS:-false}" = "true" ]; then set -- "$@" --allow-data-loss; fi
