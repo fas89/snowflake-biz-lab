@@ -28,6 +28,26 @@ RUN apt-get update && \
 # at compose time (see the volume mount).
 RUN groupadd -f docker && usermod -aG docker jenkins
 
+# Lab-only socket-perm relaxation: Docker Desktop on macOS bind-mounts
+# /var/run/docker.sock as srw-rw---- root:root (mode 660). The jenkins
+# user can't open it without matching the host's docker group GID,
+# which differs by host. For lab simplicity, chmod the socket to 666
+# at container-init via a Jenkins init.groovy hook. NEVER do this in
+# production — granting docker socket access is root-equivalent.
+COPY <<'EOF' /usr/local/bin/lab-fix-docker-sock.sh
+#!/bin/sh
+set -e
+if [ -S /var/run/docker.sock ]; then
+  chmod 666 /var/run/docker.sock 2>/dev/null || \
+    echo "warn: could not chmod /var/run/docker.sock — PyAirbyte may fail" >&2
+fi
+exec /usr/local/bin/jenkins.sh "$@"
+EOF
+RUN chmod +x /usr/local/bin/lab-fix-docker-sock.sh
+USER root
+ENTRYPOINT ["/usr/local/bin/lab-fix-docker-sock.sh"]
+USER jenkins
+
 # Install ``uv`` (Astral) — a fast Python installer + version manager.
 # We use it to fetch Python 3.12 (sidesteps Debian's 3.13 default), then
 # create the canonical /opt/fluid-venv against that pinned interpreter.
