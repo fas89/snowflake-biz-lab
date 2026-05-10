@@ -180,6 +180,79 @@ Then reopen [http://localhost:8086](http://localhost:8086).
 
 See [Scenario Validation Matrix](scenario-validation-matrix.md) for the valid scenario names and expected dbt roots.
 
+## Pre-2 (Airbyte) Build Fails With `NoSuchFileException: /airbyte/tmp/tmpXXX.json`
+
+Spawned source-postgres connector cannot find the config file PyAirbyte wrote. Root cause is one of:
+
+1. **The host's `/tmp/airbyte/tmp` directory is missing.** Docker Desktop wipes `/tmp` on engine restart and macOS wipes it on reboot. The Jenkins container's ENTRYPOINT `mkdir -p`s it on every start, but if you bypassed that wrapper or are testing with a different image, recreate it manually:
+
+   ```bash
+   mkdir -p /tmp/airbyte/tmp && chmod 777 /tmp/airbyte/tmp
+   ```
+
+2. **The compose bind mount is asymmetric.** The compose file MUST mount `/tmp/airbyte:/tmp/airbyte` (same path both sides). When the runner Jenkins container tells the host docker daemon `docker run -v /tmp/airbyte/tmp:/airbyte/tmp ...`, the daemon resolves `/tmp/airbyte/tmp` against the **host filesystem** — it has no view of the runner container's bind translations. Asymmetric mounts (e.g. `runtime/airbyte:/tmp/airbyte`) silently produce empty connector mounts. See [Architecture > DinD Volume Sharing](architecture.md#dind-volume-sharing-for-pyairbyte) for the full rationale.
+
+3. **The Jenkinsfile is missing `AIRBYTE_TEMP_DIR=/tmp/airbyte/tmp`.** Regenerate with the latest forge-cli:
+
+   ```bash
+   fluid generate ci --system jenkins --install-mode dev-source --runner-host-override host.docker.internal --no-publish-include-env
+   ```
+
+## Stage 10 Publish Fails With `fluid: error: unrecognized arguments: --env dev`
+
+`fluid publish` does not accept `--env`. Older Jenkinsfiles generated with the default `--publish-include-env` emit it anyway and Stage 10 dies. Regenerate the Jenkinsfile with `--no-publish-include-env` (now the default in current forge-cli):
+
+```bash
+cd fluid/contracts/<your-contract>/
+fluid generate ci --system jenkins --install-mode dev-source --runner-host-override host.docker.internal --no-publish-include-env
+```
+
+For the silver scenarios (A1/A2/B1/B2), the Jenkinsfiles live in `gitlab/path-*/variants/*/`. Regenerate from inside each variant dir and commit to that variant's git repo.
+
+## B2 (or B1) dbt Build Fails With `Could not find profile named 'subscriber360_ai_*_v1'`
+
+The AI-generated dbt projects bake the data product id into `dbt_project.yml`'s `profile:` field, so `config/dbt/profiles.yml` needs a matching named profile. The lab keeps these as YAML anchors:
+
+```yaml
+x-snowflake-output: &snowflake_default
+  target: "{{ env_var('DBT_TARGET', 'snowflake') }}"
+  outputs:
+    snowflake: { ... }
+
+telco: *snowflake_default
+subscriber360_ai_external_v1: *snowflake_default
+subscriber360_ai_generated_v1: *snowflake_default
+```
+
+When you onboard a new AI-generated dbt project, add a one-line alias next to the existing ones; no other changes needed.
+
+## Pre-* Build Fails With `psycopg.OperationalError: connection ... port 5433 ... refused`
+
+The lab source Postgres container (`snowflake-telco-postgres`) is not running. It hosts the `telco_source` database that pre-1 (dlt), pre-2 (Airbyte), and pre-3 (Meltano) ingest from. Start it:
+
+```bash
+docker compose -f deploy/docker/docker-compose.yml --env-file .env up -d postgres
+```
+
+After Docker Desktop restarts, only Jenkins + the catalogs stack come back automatically; you have to start `postgres` again. `task up` brings everything up in one shot.
+
+## SnowflakeCache Validation Fails With `Field required: account, username, warehouse, database, role`
+
+The Snowflake env vars are empty inside the Jenkins container. Most common cause: invoking compose directly without `--env-file .env`:
+
+```bash
+# WRONG — Snowflake creds resolve to empty
+docker compose -f deploy/docker/docker-compose.yml up -d jenkins
+
+# RIGHT
+docker compose -f deploy/docker/docker-compose.yml --env-file .env up -d jenkins
+
+# OR (always correct)
+task jenkins:up
+```
+
+The compose file's `environment:` block uses YAML anchors that resolve `${SNOWFLAKE_ACCOUNT}` etc. at compose-startup time. Without `--env-file .env`, those expand to empty and override the values that `env_file: runtime/generated/fluid.local.env` would otherwise inject into the container.
+
 ## I Want The Shortest Demo Rescue Path
 
 Use [Backup Demo](../fluid/demo/backup-demo.md). It keeps the story small and dependency-light.

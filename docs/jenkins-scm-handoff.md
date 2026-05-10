@@ -54,11 +54,33 @@ The Jenkins container reads the repo from the local bind mount. No `git push` is
 ## Scenario Defaults
 
 - A1 is lab-tuned to generate `VERIFY_STRICT=false`, `RUN_STAGE_10_PUBLISH=true`, and a `fluid publish` command without the stage-level `--env` flag. The reference dbt assets build and publish successfully, but the live Snowflake tables still report nullable-vs-required mismatches that would fail a strict verify gate.
-- A2 keeps the generated strict default. Its Jenkins run is expected to stop at stage `9 · verify` on `fluid verify ... --strict`, which is part of the teaching flow rather than a broken lab.
+- A2 keeps the generated strict default. Its Jenkins run is expected to stop at stage `9 - verify` on `fluid verify ... --strict`, which is part of the teaching flow rather than a broken lab.
 - B1 starts with `task b1:forge:ai`, then uses the same non-strict verify and publish defaults as A1, plus bootstrap parameters `APPLY_MODE=amend-and-build` and `APPLY_BUILD_ID=ai_subscriber360_external_build` so the Path B Jenkins run executes the external dbt build.
 - B2 starts with `task b2:forge:mcp`, then uses the same non-strict verify and publish defaults as B1, plus bootstrap parameters `APPLY_MODE=amend-and-build` and `APPLY_BUILD_ID=ai_subscriber360_generated_build` so the Path B Jenkins run executes the generated in-workspace dbt build.
+
+## Jenkins Container Privilege Model
+
+The lab Jenkins container is intentionally root-at-PID-1 and chmods the bind-mounted Docker socket so PyAirbyte (pre-2) can spawn source connectors via the host daemon. The wrapper ENTRYPOINT then drops to the `jenkins` user via `runuser` for the controller process. This is **lab-only** — the Dockerfile and compose file both warn "NEVER do this in production". See [Architecture > Jenkins Container — Privilege Model](architecture.md#jenkins-container--privilege-model) for the full rationale.
+
+The compose file also bind-mounts:
+
+- `/var/run/docker.sock:/var/run/docker.sock` — gives the container root-equivalent on the host. Required for `engine: airbyte` contracts (PyAirbyte spawns sibling Docker containers).
+- `/tmp/airbyte:/tmp/airbyte` — symmetric path on host and container. Required for the host docker daemon to find the connector config files PyAirbyte writes (Docker-in-Docker volume sharing pattern). See [Architecture > DinD Volume Sharing for PyAirbyte](architecture.md#dind-volume-sharing-for-pyairbyte).
+
+## Generated Jenkinsfile env block
+
+`fluid generate ci --system jenkins --runner-host-override host.docker.internal` emits these env vars into the Jenkinsfile's `environment {}` block via the forge-cli engine specs registry:
+
+| Env var | Purpose | Engines that need it |
+| --- | --- | --- |
+| `FLUID_RUNNER_HOST_OVERRIDE` | Rewrites contract-author `host: localhost` to a host-reachable address (Docker Desktop = `host.docker.internal`). | All acquisition engines (dlt / PyAirbyte / Meltano source adapters). |
+| `AIRBYTE_PROJECT_DIR` | Pins PyAirbyte's `Path.cwd()` cache to a writable bind-mounted dir (`/tmp/airbyte`). | airbyte only. |
+| `AIRBYTE_TEMP_DIR` | Overrides PyAirbyte's `tempfile.gettempdir()` so connector config JSON lands in the bind-mounted dir (`/tmp/airbyte/tmp`). Required for DinD volume sharing. | airbyte only. |
+
+For the runtime-notes block above the `environment {}` (Jenkinsfile `// REQUIRES:` comments), forge-cli reads these from the same registry. Adding a new engine = one entry in `_engine_specs.py` and every CI emitter picks it up.
 
 ## What Is Not Wired
 
 - `fluid apply` does not trigger Jenkins directly
 - multibranch or repo auto-discovery is not configured
+- only the Jenkins emitter (not GitHub Actions / GitLab CI / Tekton / Azure / Bitbucket / CircleCI) consumes the engine specs registry today; for those CI systems, generated configs do not yet inject per-engine pip extras or runtime env vars
