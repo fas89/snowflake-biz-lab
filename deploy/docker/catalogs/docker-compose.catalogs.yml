@@ -18,7 +18,7 @@ services:
       - ./entropy-postgres-init.sql:/docker-entrypoint-initdb.d/00-extensions.sql:ro
 
   mailhog:
-    image: axllent/mailpit:v1.29.7
+    image: axllent/mailpit:v1.30.0
     restart: unless-stopped
     ports:
       - "${LAB_BIND_ADDRESS:-127.0.0.1}:${MAILHOG_UI_PORT:-8026}:8025"
